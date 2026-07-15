@@ -1,0 +1,14 @@
+-- Shared source for every generated apple.
+prototype apple
+    tag = "food"
+    mass = 140
+    nutrition = 20
+    color = "c94f45"
+    ripe = true
+
+    on use(actor)
+        actor.hunger = max(0, actor.hunger - self.nutrition)
+        message("The apple becomes less real.")
+        destroy(self)
+    end
+end

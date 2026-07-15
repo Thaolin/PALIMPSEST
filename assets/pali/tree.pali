@@ -1,0 +1,10 @@
+prototype tree
+    tag = "living"
+    mass = 24000
+    color = "526b3f"
+    solid = true
+
+    on use(actor)
+        message("Its rings resemble nested parentheses.")
+    end
+end

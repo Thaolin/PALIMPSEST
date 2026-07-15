@@ -1,0 +1,13 @@
+-- Heat also controls the visible halo radius.
+prototype fire
+    tag = "warmth"
+    mass = 0
+    heat = 18
+    color = "ef8b45"
+    alive = true
+
+    on use(actor)
+        actor.warmth = min(100, actor.warmth + self.heat)
+        message("The fire edits the cold out of you.")
+    end
+end

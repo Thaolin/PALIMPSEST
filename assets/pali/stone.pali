@@ -1,0 +1,10 @@
+prototype stone
+    tag = "mineral"
+    mass = 900
+    color = "8b806d"
+    solid = true
+
+    on use(actor)
+        message("The stone remembers pressure.")
+    end
+end

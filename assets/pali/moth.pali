@@ -1,0 +1,10 @@
+prototype moth
+    tag = "creature"
+    mass = 2
+    color = "e9d99a"
+    friendly = true
+
+    on use(actor)
+        message("It circles a symbol you cannot read yet.")
+    end
+end
