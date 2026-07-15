@@ -33,12 +33,14 @@ changes, and player state.
 
 During play, raylib input becomes a `WorldInput`. The accumulator advances the
 world only in 1/60-second steps. Inspecting pauses simulation. The normal Lens
-projects a typed `PaliDocument` through Knowledge and records a Draft against a
-stable concept ID. Inscribing compiles a resolved candidate and commits only
-after validation. Developer source follows the same parse-document-compile
-pipeline. Using an entity executes its Prototype bytecode while host property
-resolution composes any narrower Entity value through a callback-only
-whitelist.
+derives visible rows from the selected Entity's typed document and projects
+them through Knowledge. Attending records a distinct Prototype kind against a
+stable concept ID; it can change only Knowledge. Patch controls record a Draft
+against a stable concept ID. Inscribing compiles a resolved candidate and
+commits only after validation. Developer source follows the same
+parse-document-compile pipeline. Using an entity executes its Prototype
+bytecode while host property resolution composes any narrower Entity value
+through a callback-only whitelist.
 
 The presentation canvas is 720x405 and reaches the default 1440x810 window at
 an exact 2x scale. World geometry remains in its original 320x224 coarse
@@ -64,11 +66,36 @@ normal Lens exposes Entity Reach and does not reveal the broader target.
 universe:
 
 - `UniverseState`: root seed, tick, terrain, entities, definitions, overrides;
-- `KnowledgeState`: known concepts and access capability bits;
+- `KnowledgeState`: known concepts, access capability bits, concept-indexed
+  notation bits, and bounded per-concept Prototype Observation masks;
 - `EmbodimentState`: stable body ID, position, hunger, and warmth.
 
 This is the seam for future knowledge progression and embodiment transfer; no
 speculative transfer system is built.
+
+## Future Semantic Construction boundary
+
+Semantic Construction is not implemented. When introduced, it must preserve
+the existing separation of identity, meaning, and history:
+
+- A construction remains a bounded set of stable Entities and explicit
+  relations recognized through an Archetype; it is not flattened into a tile
+  prefab or silently converted into a Prototype.
+- A Patch Anchor references one material Entity or recognized construction.
+  Saves retain sparse placement changes, the taught Archetype, and the typed
+  binding belonging to the Patch Anchor rather than copying surrounding
+  terrain.
+- A Scarred Zone combines a deterministic boundary recipe, Patch Anchor,
+  bounded typed Patches, and Provenance. The Site Blueprint may supply its
+  physical location but does not own its semantic rule.
+- Overlapping-zone precedence and spatial binding remain unresolved by design.
+  They require an acceptance slice and save migration before runtime records
+  are added; current population-based Reach must not be overloaded implicitly.
+- A Scar Package may contain versioned PALI, semantic identities, an ordered
+  Patch and Scar history, and Provenance but never native executable code.
+  Cross-Genesis import remaps by compatible Archetype or versioned Site
+  Blueprint kind and role, then explicitly selects a destination materialized
+  Site or Patch Anchor rather than replaying seed-derived identities.
 
 ## Memory and trust contract
 
@@ -122,7 +149,10 @@ Saving writes `PATH.tmp`, flushes it to durable storage, rereads and validates
 the complete file, then atomically replaces the previous save where the OS
 supports it. A failed compile or failed load does not mutate the live world.
 
-The payload stores the root recipe plus player/tick/Knowledge state, changed
+The v3 payload stores the root recipe plus player/tick/Knowledge state, changed
 normalized Prototype source, stable concept IDs and typed Entity Patch values,
-and only dirty generated Entities. Terrain and unchanged definitions are
-regenerated rather than duplicated.
+only dirty generated Entities, and concept-indexed Observation masks appended
+after the former v2 payload. Terrain and unchanged definitions are regenerated
+rather than duplicated. The loader accepts v2 transactionally, begins its
+Observation ledger empty, and grants exact nutrition Notation to preserve the
+precision that the v2 Lens already displayed.

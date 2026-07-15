@@ -2,10 +2,12 @@
 
 ## Status
 
-Implemented for the 0.2 vertical slice. The normal inspector is the structured
-Lens; the raw-source inspector is available only in explicit developer mode.
-Behavior is readable but not yet Patchable, and Prototype Reach remains hidden
-from ordinary Knowledge.
+Implemented through the 0.3 vertical slice. The normal inspector is the
+structured, Entity-derived Lens; the raw-source inspector is available only in
+explicit developer mode. The player can now turn one Veiled concept into
+qualitative and then exact meaning through persistent Observation. Behavior is
+readable but not yet Patchable, and Prototype Reach remains hidden from
+ordinary Knowledge.
 
 ## Intent
 
@@ -78,6 +80,9 @@ APPLE                                      THIS APPLE
 SENSORY
   color          [red swatch]                    readable
 
+MATERIAL
+  { ? }                                           attend
+
 VITAL
   nourishment    [ - ] [■■■■□□] [ + ]           patchable
   ripeness       [ripe]                          readable
@@ -122,10 +127,34 @@ states:
 Knowledge is normally persistent and monotonic. A temporary condition may
 prevent applying a known operation without erasing the player's understanding.
 
-Representation precision is also learned. A readable nourishment concept may
-first appear as a qualitative meter, then as an exact number after the player
-learns a suitable notation. Likewise, color may begin as a swatch and acquire a
-name or encoded value later.
+Representation precision is also learned. Mass first appears as a qualitative
+meter, then as an exact number after the player learns its Notation. Color
+begins as a swatch and may acquire a name or encoded value later. Nutrition is
+the initial exception: its exact Notation is known at Genesis because its
+bounded numeric control is the first Patch grammar.
+
+## Observation, Revelation, and Notation
+
+An **Observation** is an explicit click on an attendable concept row for one
+active Entity. It retains the Entity's Prototype kind for that concept. Kind
+means `PrototypeId` in this slice; Archetype membership is not introduced until
+0.7.
+
+- The same Prototype kind is idempotent, even when a different Entity is used.
+- Only the explicitly attended, currently perceivable, type-valid concept can
+  progress. Unperceived vocabulary is never scanned or leaked.
+- For mass, one kind leaves the concept Veiled. A second distinct kind causes a
+  Revelation and makes mass Readable as a logarithmic qualitative meter. A
+  third distinct kind grants exact numeric Notation.
+- Revelation does not grant Patchability. Exact mass remains Readable.
+- Observation changes `KnowledgeState` only. It cannot advance time, consume
+  randomness, alter an Entity, move an Embodiment, or create a Scar.
+- The ledger is monotonic. Destroying an observed Entity does not erase what
+  was learned, while new Observations still require an active Entity that
+  currently resolves the concept.
+
+The tracker called **The Weight of Things** derives its phase from this ledger
+and Notation bit. It has no independent quest-completion flags.
 
 ## Lexicon
 
@@ -197,11 +226,12 @@ later history milestone.
    accelerator for the nearest Entity.
 3. The Universe remains visible behind or beside the Lens so the target retains
    physical context. Simulation pauses while a Patch Draft is open.
-4. Clicking a readable value explains it and, when known, shows Provenance.
-5. Clicking a patchable value changes a draft through its typed control.
-6. The Lens continuously summarizes the target and Reach without mutating the
+4. Clicking an attendable Veiled or imprecise value records one Observation.
+5. Clicking a readable value explains it and, when known, shows Provenance.
+6. Clicking a patchable value changes a draft through its typed control.
+7. The Lens continuously summarizes the target and Reach without mutating the
    Universe.
-7. **INSCRIBE** validates and commits the Patch. **UNDO** changes the draft;
+8. **INSCRIBE** validates and commits the Patch. **UNDO** changes the draft;
    **CLOSE** discards it. Keyboard shortcuts remain accelerators, not required
    knowledge.
 
@@ -252,6 +282,32 @@ deallocates arbitrary C storage.
 The first structured Lens may render Behavior as readable but not patchable.
 Clause composition becomes its own complete milestone after State interaction
 and Knowledge projection are proven.
+
+## Future Semantic Construction interaction
+
+Semantic Construction must remain a complete mouse-first play loop rather than
+turning ordinary building into raw-code authoring:
+
+1. Place known material Entities and designate a bounded Arrangement.
+2. Offer Arrangements or known things as Exemplars and, when learned,
+   contrasting Counterexamples.
+3. Let the Lens project their shared known relations as candidate Archetype
+   conditions without exposing unperceived vocabulary.
+4. Name the new Archetype and preview which present constructions qualify.
+5. Bind only known, type-compatible meaning or Behavior to one Patch Anchor.
+6. Preview the Patch Anchor, declared boundary, affected Entities, cost, and
+   known conflicts without mutating the Universe.
+7. Inscribe transactionally; rejected definitions leave placement, Knowledge,
+   and live behavior unchanged.
+
+The first proof is a ring of stones around a fire taught as a **Hearth**. The
+Arrangement is offered as an Exemplar; the player teaches a Hearth Archetype,
+and the recognized result becomes a Semantic Construction. The Archetype is not
+a Prototype because it describes what qualifies independently of how the
+component Entities were generated. A later proof may give one Hearth an
+`on use(actor)` Behavior that transfers warmth to its invoker. Occupant fields,
+broad Law, and other spatially bounded effects wait until regional binding and
+conflict precedence have an explicit model.
 
 ## Patch lifecycle
 
@@ -316,9 +372,30 @@ The first Lens milestone is complete when:
     node-level Entity-versus-Prototype resolution, unrelated inheritance after
     a Local Override, typed-document round-trip, and save restoration.
 
+## 0.3 acceptance slice
+
+The first Knowledge-progression milestone is complete when:
+
+1. Lens State rows are derived from the selected Entity and bounded Lexicon,
+   grouped into only the Facets that survive Knowledge projection.
+2. Normal Genesis visibly proves Unperceived, Veiled, Readable, and Patchable
+   Concept Access without advertising the Unperceived concept.
+3. A mouse click records an Observation for an attendable mass row; another
+   Entity of the same Prototype cannot advance it.
+4. Two distinct Prototype kinds reveal mass as a numberless logarithmic meter,
+   including a defined zero-mass presentation.
+5. A third kind grants exact numeric Notation as a separate event and does not
+   grant mass Patch access.
+6. Observation leaves Universe, Embodiment, tick, randomness, message, and
+   Scars untouched in the core model.
+7. The next Inquiry is derived from Knowledge and tells the player what can be
+   attended without becoming a tutorial modal.
+8. Save v3 restores partial and complete Observation progress, rejects invalid
+   masks, and migrates a genuine v2 payload without inventing history.
+
 ## Deferred
 
-- Discovering concepts through ordinary play rather than a fixed test profile.
+- Discovery rules for concepts beyond the first mass Revelation.
 - Patchable Behavior Clauses.
 - Lineage, Archetype, and Universe Reach.
 - Causal cost, resistance, gods protecting definitions, and broad-impact

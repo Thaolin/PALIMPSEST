@@ -26,12 +26,25 @@ typedef enum TileKind {
 
 typedef enum PrototypeId {
     PROTOTYPE_STONE = 0,
-    PROTOTYPE_TREE,
-    PROTOTYPE_APPLE,
-    PROTOTYPE_FIRE,
-    PROTOTYPE_MOTH,
-    PROTOTYPE_COUNT
+    PROTOTYPE_TREE = 1,
+    PROTOTYPE_APPLE = 2,
+    PROTOTYPE_FIRE = 3,
+    PROTOTYPE_MOTH = 4,
+    PROTOTYPE_COUNT = 5
 } PrototypeId;
+
+_Static_assert(PROTOTYPE_COUNT <= 32,
+               "observed Prototype kinds must fit in a 32-bit mask");
+_Static_assert(CONCEPT_COUNT <= 32,
+               "known concept notations must fit in a 32-bit mask");
+
+typedef enum ObservationResult {
+    OBSERVATION_REJECTED = 0,
+    OBSERVATION_REPEATED,
+    OBSERVATION_RECORDED,
+    OBSERVATION_REVELATION,
+    OBSERVATION_NOTATION
+} ObservationResult;
 
 typedef struct PrototypeDefinition {
     char name[PALI_NAME_CAP];
@@ -85,6 +98,7 @@ typedef struct KnowledgeState {
     uint64_t readable_concepts;
     uint64_t patchable_concepts;
     uint32_t known_notations;
+    uint32_t observed_prototypes[CONCEPT_COUNT];
     uint32_t reach_mask;
     uint8_t access_depth;
 } KnowledgeState;
@@ -142,6 +156,12 @@ bool world_get_entity_concept(const World *world, const Entity *entity,
 bool world_tile_is_blocking(uint8_t tile);
 
 ConceptAccess world_concept_access(const World *world, ConceptId concept);
+ObservationResult world_observe_entity_concept(World *world,
+                                               uint64_t entity_id,
+                                               ConceptId concept);
+uint8_t world_concept_observation_count(const World *world,
+                                        ConceptId concept);
+bool world_knows_exact_notation(const World *world, ConceptId concept);
 bool world_has_reach(const World *world, PatchReach reach);
 void world_grant_developer_knowledge(World *world);
 

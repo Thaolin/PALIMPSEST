@@ -37,6 +37,30 @@ stamp.
     scratch storage, reports overflow, and performs no unbounded host allocation
     during simulation.
 
+## Scarred Zones are not Site Blueprints
+
+A Site Blueprint answers where a place and its material parts come from. A
+Scarred Zone answers why meaning resolves differently within a bounded place.
+A ruin may host a Scarred Zone, but either may exist without the other. Site
+connection anchors and sockets remain spatial-generation vocabulary; an
+in-fiction holder of a semantic change is always called a Patch Anchor.
+
+Future Scarred Zone generation must obey these additional constraints:
+
+1. Give the zone a stable identity, deterministic boundary, Patch Anchor, and
+   Provenance.
+2. Express the changed meaning through bounded typed Patches and Clauses rather
+   than a bespoke biome callback.
+3. Begin with one dominant violated assumption so symptoms remain learnable.
+4. Apply the rule consistently inside its boundary and leave the ordinary
+   baseline legible outside it.
+5. Let Knowledge reveal symptoms, concept, author, and Clause progressively;
+   valid altered behavior is not an Anomaly.
+6. Store the recipe and sparse Scars rather than materializing a second map.
+7. Define spatial binding, overlapping-zone precedence, and Patch conflicts in
+   an acceptance milestone before adding runtime records. Current Reach does
+   not yet contain a regional form.
+
 ## First proofs when implemented
 
 - **Cave:** one guaranteed entrance and one connected objective chamber, with
@@ -49,3 +73,8 @@ stamp.
 The first runtime slice should implement only one of these and test same-seed
 identity, different-seed variation, connectivity, bounded failure, provenance,
 and save regeneration before a second blueprint kind is added.
+
+The first later Scarred Zone proof should likewise contain only one altered
+rule, one inspectable Patch Anchor, and one deterministic boundary. Its complete
+loop is to witness the symptoms, survive them, reveal the rule through
+Observation, and extract or repair a compatible piece of its grammar.

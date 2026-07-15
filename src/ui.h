@@ -28,6 +28,7 @@ typedef struct UiState {
     bool has_error;
     bool has_nourishment_draft;
     uint64_t inspected_entity_id;
+    ConceptId hovered_concept;
     PaliValue nourishment_draft;
     SourceEditor editor;
     PaliError error;

@@ -12,6 +12,8 @@ static World world_a;
 static World world_b;
 static World world_c;
 static World loaded_world;
+static World knowledge_world;
+static UniverseState universe_snapshot;
 static uint8_t save_mutation[16384];
 
 #define CHECK(condition, message)                                             \
@@ -59,6 +61,60 @@ static bool rewrite_save_bytes(const char *path, size_t offset,
         rewound && fwrite(save_mutation, 1, length, file) == length;
     const bool closed = fclose(file) == 0;
     return written && closed;
+}
+
+static void write_u32_le(uint8_t *bytes, uint32_t value) {
+    for (int index = 0; index < 4; ++index) {
+        bytes[index] = (uint8_t)(value >> (index * 8));
+    }
+}
+
+static bool downgrade_save_to_v2(const char *path) {
+    const size_t observation_tail = (size_t)CONCEPT_COUNT * sizeof(uint32_t);
+    FILE *file = fopen(path, "rb");
+    if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
+        if (file != NULL) {
+            (void)fclose(file);
+        }
+        return false;
+    }
+    const long measured = ftell(file);
+    if (measured < 24 || (unsigned long)measured > sizeof(save_mutation) ||
+        (size_t)measured < 24u + observation_tail ||
+        fseek(file, 0, SEEK_SET) != 0) {
+        (void)fclose(file);
+        return false;
+    }
+    const size_t original_length = (size_t)measured;
+    const bool read_ok =
+        fread(save_mutation, 1, original_length, file) == original_length;
+    const bool read_closed = fclose(file) == 0;
+    if (!read_ok || !read_closed) {
+        return false;
+    }
+    const size_t v2_length = original_length - observation_tail;
+    const size_t payload_length = v2_length - 24u;
+    if (payload_length > UINT32_MAX) {
+        return false;
+    }
+    write_u32_le(save_mutation + 8u, 2u);
+    write_u32_le(save_mutation + 12u, (uint32_t)payload_length);
+    uint64_t hash = UINT64_C(1469598103934665603);
+    for (size_t index = 24; index < v2_length; ++index) {
+        hash ^= save_mutation[index];
+        hash *= UINT64_C(1099511628211);
+    }
+    for (int index = 0; index < 8; ++index) {
+        save_mutation[16u + (size_t)index] =
+            (uint8_t)(hash >> (index * 8));
+    }
+    file = fopen(path, "wb");
+    if (file == NULL) {
+        return false;
+    }
+    const bool written =
+        fwrite(save_mutation, 1, v2_length, file) == v2_length;
+    return fclose(file) == 0 && written;
 }
 
 static int first_entity(const World *world, PrototypeId prototype) {
@@ -428,6 +484,211 @@ static void test_generation(void) {
           "Behavior cannot inject out-of-domain physics through self state");
 }
 
+static void test_knowledge_revelation(void) {
+    PaliError error;
+    CHECK(world_init(&knowledge_world, UINT64_C(0x0b5e77ed5ca1e),
+                     PAL_TEST_ASSET_ROOT, &error),
+          error.message);
+    CHECK(world_concept_access(&knowledge_world, CONCEPT_HEAT) ==
+                  CONCEPT_ACCESS_UNPERCEIVED &&
+              world_concept_access(&knowledge_world, CONCEPT_MASS) ==
+                  CONCEPT_ACCESS_VEILED &&
+              world_concept_access(&knowledge_world, CONCEPT_COLOR) ==
+                  CONCEPT_ACCESS_READABLE &&
+              world_concept_access(&knowledge_world, CONCEPT_NUTRITION) ==
+                  CONCEPT_ACCESS_PATCHABLE,
+          "Genesis Knowledge proves all four Concept Access states");
+    CHECK(world_knows_exact_notation(&knowledge_world,
+                                     CONCEPT_NUTRITION) &&
+              !world_knows_exact_notation(&knowledge_world, CONCEPT_MASS),
+          "exact notation is concept-specific rather than numeric-global");
+
+    const int apple_index = first_entity(&knowledge_world, PROTOTYPE_APPLE);
+    const int second_apple_index =
+        next_entity(&knowledge_world, PROTOTYPE_APPLE, apple_index);
+    const int stone_index = first_entity(&knowledge_world, PROTOTYPE_STONE);
+    const int tree_index = first_entity(&knowledge_world, PROTOTYPE_TREE);
+    CHECK(apple_index >= 0 && second_apple_index >= 0 && stone_index >= 0 &&
+              tree_index >= 0,
+          "comparison proof has three distinct material kinds");
+    if (apple_index < 0 || second_apple_index < 0 || stone_index < 0 ||
+        tree_index < 0) {
+        return;
+    }
+
+    universe_snapshot = knowledge_world.universe;
+    const EmbodimentState embodiment_snapshot = knowledge_world.embodiment;
+    char message_snapshot[WORLD_MESSAGE_CAP];
+    (void)snprintf(message_snapshot, sizeof(message_snapshot), "%s",
+                   knowledge_world.message);
+
+    const Entity *apple = &knowledge_world.universe.entities[apple_index];
+    const Entity *second_apple =
+        &knowledge_world.universe.entities[second_apple_index];
+    const Entity *stone = &knowledge_world.universe.entities[stone_index];
+    const Entity *tree = &knowledge_world.universe.entities[tree_index];
+    CHECK(world_observe_entity_concept(&knowledge_world, apple->id,
+                                       CONCEPT_MASS) ==
+                  OBSERVATION_RECORDED &&
+              world_concept_observation_count(&knowledge_world,
+                                              CONCEPT_MASS) == 1 &&
+              world_concept_access(&knowledge_world, CONCEPT_MASS) ==
+                  CONCEPT_ACCESS_VEILED,
+          "one kind leaves mass Veiled while retaining an Observation");
+
+    CHECK(platform_ensure_directory(PAL_TEST_TMP_ROOT, &error),
+          error.message);
+    char knowledge_save[PLATFORM_PATH_CAP];
+    (void)snprintf(knowledge_save, sizeof(knowledge_save),
+                   "%s/knowledge-v3.pal", PAL_TEST_TMP_ROOT);
+    CHECK(save_write_atomic(&knowledge_world, knowledge_save, &error) &&
+              save_load(&loaded_world, knowledge_save, PAL_TEST_ASSET_ROOT,
+                        &error) &&
+              world_concept_observation_count(&loaded_world,
+                                              CONCEPT_MASS) == 1 &&
+              !world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
+          "save v3 restores partial Observation progress exactly");
+    const uint8_t no_old_notations[4] = {0u, 0u, 0u, 0u};
+    CHECK(rewrite_save_bytes(knowledge_save, 64u, no_old_notations,
+                             sizeof(no_old_notations)) &&
+              downgrade_save_to_v2(knowledge_save) &&
+              save_validate_file(knowledge_save, &error) &&
+              save_load(&loaded_world, knowledge_save, PAL_TEST_ASSET_ROOT,
+                        &error) &&
+              world_concept_observation_count(&loaded_world,
+                                              CONCEPT_MASS) == 0 &&
+              world_knows_exact_notation(&loaded_world,
+                                         CONCEPT_NUTRITION) &&
+              !world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
+          "save v2 migrates with no invented Observations and exact nutrition");
+    CHECK(world_observe_entity_concept(&knowledge_world, second_apple->id,
+                                       CONCEPT_MASS) ==
+                  OBSERVATION_REPEATED &&
+              world_concept_observation_count(&knowledge_world,
+                                              CONCEPT_MASS) == 1,
+          "another Entity of the same Prototype cannot advance Knowledge");
+    CHECK(world_observe_entity_concept(&knowledge_world, apple->id,
+                                       CONCEPT_HEAT) ==
+                  OBSERVATION_REJECTED &&
+              world_concept_observation_count(&knowledge_world,
+                                              CONCEPT_HEAT) == 0,
+          "an Unperceived concept cannot be observed or leaked");
+    CHECK(world_observe_entity_concept(&knowledge_world, stone->id,
+                                       CONCEPT_MASS) ==
+                  OBSERVATION_REVELATION &&
+              world_concept_observation_count(&knowledge_world,
+                                              CONCEPT_MASS) == 2 &&
+              world_concept_access(&knowledge_world, CONCEPT_MASS) ==
+                  CONCEPT_ACCESS_READABLE &&
+              !world_knows_exact_notation(&knowledge_world, CONCEPT_MASS),
+          "a second kind reveals qualitative mass but not its notation");
+    (void)snprintf(knowledge_save, sizeof(knowledge_save),
+                   "%s/knowledge-readable.pal", PAL_TEST_TMP_ROOT);
+    CHECK(save_write_atomic(&knowledge_world, knowledge_save, &error) &&
+              save_load(&loaded_world, knowledge_save, PAL_TEST_ASSET_ROOT,
+                        &error) &&
+              world_concept_observation_count(&loaded_world,
+                                              CONCEPT_MASS) == 2 &&
+              world_concept_access(&loaded_world, CONCEPT_MASS) ==
+                  CONCEPT_ACCESS_READABLE &&
+              !world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
+          "save v3 preserves the qualitative Revelation boundary");
+    CHECK(world_observe_entity_concept(&knowledge_world, tree->id,
+                                       CONCEPT_MASS) ==
+                  OBSERVATION_NOTATION &&
+              world_concept_observation_count(&knowledge_world,
+                                              CONCEPT_MASS) == 3 &&
+              world_knows_exact_notation(&knowledge_world, CONCEPT_MASS) &&
+              world_concept_access(&knowledge_world, CONCEPT_MASS) ==
+                  CONCEPT_ACCESS_READABLE,
+          "a third kind grants exact notation without granting Patch access");
+    (void)snprintf(knowledge_save, sizeof(knowledge_save),
+                   "%s/knowledge-exact.pal", PAL_TEST_TMP_ROOT);
+    CHECK(save_write_atomic(&knowledge_world, knowledge_save, &error) &&
+              save_load(&loaded_world, knowledge_save, PAL_TEST_ASSET_ROOT,
+                        &error) &&
+              world_concept_observation_count(&loaded_world,
+                                              CONCEPT_MASS) == 3 &&
+              world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
+          "save v3 preserves exact notation independently of Concept Access");
+    FILE *exact_save = fopen(knowledge_save, "rb");
+    long exact_save_length = -1;
+    if (exact_save != NULL && fseek(exact_save, 0, SEEK_END) == 0) {
+        exact_save_length = ftell(exact_save);
+    }
+    if (exact_save != NULL) {
+        (void)fclose(exact_save);
+    }
+    const size_t observation_tail =
+        (size_t)CONCEPT_COUNT * sizeof(uint32_t);
+    CHECK(exact_save_length >= 0 &&
+              (size_t)exact_save_length >= 24u + observation_tail,
+          "save v3 exposes the bounded Observation tail");
+    if (exact_save_length >= 0 &&
+        (size_t)exact_save_length >= 24u + observation_tail) {
+        const size_t mass_mask_offset =
+            (size_t)exact_save_length - observation_tail +
+            (size_t)CONCEPT_MASS * sizeof(uint32_t);
+        const uint8_t invalid_prototype_mask[4] = {0u, 0u, 0u, 0x80u};
+        const uint64_t before_invalid_load =
+            world_state_fingerprint(&loaded_world);
+        CHECK(rewrite_save_bytes(knowledge_save, mass_mask_offset,
+                                 invalid_prototype_mask,
+                                 sizeof(invalid_prototype_mask)) &&
+                  !save_load(&loaded_world, knowledge_save,
+                             PAL_TEST_ASSET_ROOT, &error) &&
+                  world_state_fingerprint(&loaded_world) ==
+                      before_invalid_load,
+              "invalid Observation masks are rejected transactionally");
+    }
+    CHECK(world_observe_entity_concept(&knowledge_world, tree->id,
+                                       CONCEPT_MASS) ==
+                  OBSERVATION_REPEATED &&
+              world_concept_observation_count(&knowledge_world,
+                                              CONCEPT_MASS) == 3,
+          "Observation is monotonic and idempotent");
+
+    CHECK(memcmp(&knowledge_world.universe, &universe_snapshot,
+                 sizeof(universe_snapshot)) == 0 &&
+              memcmp(&knowledge_world.embodiment, &embodiment_snapshot,
+                     sizeof(embodiment_snapshot)) == 0 &&
+              strcmp(knowledge_world.message, message_snapshot) == 0,
+          "learning changes only Knowledge, never Universe or Embodiment");
+
+    world_grant_developer_knowledge(&knowledge_world);
+    CHECK(world_knows_exact_notation(&knowledge_world, CONCEPT_MASS) &&
+              world_knows_exact_notation(&knowledge_world, CONCEPT_COLOR),
+          "developer Knowledge includes every exact notation");
+
+    CHECK(world_init(&knowledge_world, UINT64_C(0x0b5e77ed5ca1e),
+                     PAL_TEST_ASSET_ROOT, &error),
+          error.message);
+    const int inquiry_apple =
+        first_entity(&knowledge_world, PROTOTYPE_APPLE);
+    const int inquiry_stone =
+        first_entity(&knowledge_world, PROTOTYPE_STONE);
+    CHECK(inquiry_apple >= 0 && inquiry_stone >= 0,
+          "Inquiry composition proof has an apple and stone");
+    if (inquiry_apple >= 0 && inquiry_stone >= 0) {
+        const uint64_t apple_id =
+            knowledge_world.universe.entities[inquiry_apple].id;
+        const uint64_t stone_id =
+            knowledge_world.universe.entities[inquiry_stone].id;
+        CHECK(world_apply_entity_value_patch(
+                  &knowledge_world, apple_id, CONCEPT_NUTRITION,
+                  pali_number(19.0), &error) &&
+                  world_use_entity(&knowledge_world, inquiry_apple, &error) &&
+                  world_observe_entity_concept(
+                      &knowledge_world, stone_id, CONCEPT_MASS) ==
+                      OBSERVATION_RECORDED,
+              "a completed first Scar composes with the next Observation");
+        (void)snprintf(knowledge_save, sizeof(knowledge_save),
+                       "%s/milestone-0.3-open.pal", PAL_TEST_TMP_ROOT);
+        CHECK(save_write_atomic(&knowledge_world, knowledge_save, &error),
+              "the composed Inquiry state is persistable");
+    }
+}
+
 static void test_patch_gameplay_and_save(void) {
     static const char *apple_patch =
         "prototype apple\n"
@@ -658,11 +919,17 @@ static void test_patch_gameplay_and_save(void) {
                         &error) &&
               world_state_fingerprint(&loaded_world) == before_hole_save,
           "save identity follows semantic Scars, not allocator slot numbers");
+
+    (void)snprintf(save_path, sizeof(save_path),
+                   "%s/milestone-0.3-complete.pal", PAL_TEST_TMP_ROOT);
+    CHECK(save_write_atomic(&world_a, save_path, &error),
+          "completed first Scar and Knowledge remain capturable together");
 }
 
 int main(void) {
     test_language();
     test_generation();
+    test_knowledge_revelation();
     test_patch_gameplay_and_save();
     if (failures != 0) {
         (void)fprintf(stderr, "%d test failure(s)\n", failures);

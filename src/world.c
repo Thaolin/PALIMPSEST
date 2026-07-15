@@ -289,7 +289,8 @@ bool world_init(World *world, uint64_t seed, const char *pali_asset_root,
         concept_bit(CONCEPT_TAG) | concept_bit(CONCEPT_NUTRITION) |
         concept_bit(CONCEPT_COLOR) | concept_bit(CONCEPT_RIPE);
     world->knowledge.patchable_concepts = concept_bit(CONCEPT_NUTRITION);
-    world->knowledge.known_notations = 0;
+    world->knowledge.known_notations =
+        UINT32_C(1) << CONCEPT_NUTRITION;
     world->knowledge.reach_mask = patch_reach_bit(PATCH_REACH_ENTITY);
     world->knowledge.access_depth = (uint8_t)ACCESS_DEPTH_STATE;
     world->embodiment.entity_id =
@@ -438,6 +439,75 @@ ConceptAccess world_concept_access(const World *world, ConceptId concept) {
     return CONCEPT_ACCESS_PATCHABLE;
 }
 
+bool world_knows_exact_notation(const World *world, ConceptId concept) {
+    if (world == NULL || lexicon_find_by_id(concept) == NULL) {
+        return false;
+    }
+    return (world->knowledge.known_notations &
+            (UINT32_C(1) << concept)) != 0;
+}
+
+uint8_t world_concept_observation_count(const World *world,
+                                        ConceptId concept) {
+    if (world == NULL || lexicon_find_by_id(concept) == NULL) {
+        return 0;
+    }
+    const uint32_t observed =
+        world->knowledge.observed_prototypes[concept];
+    uint8_t count = 0;
+    for (int prototype = 0; prototype < PROTOTYPE_COUNT; ++prototype) {
+        if ((observed & (UINT32_C(1) << prototype)) != 0) {
+            count++;
+        }
+    }
+    return count;
+}
+
+ObservationResult world_observe_entity_concept(World *world,
+                                               uint64_t entity_id,
+                                               ConceptId concept) {
+    const ConceptDefinition *const definition =
+        lexicon_find_by_id(concept);
+    if (world == NULL || definition == NULL ||
+        world_concept_access(world, concept) ==
+            CONCEPT_ACCESS_UNPERCEIVED) {
+        return OBSERVATION_REJECTED;
+    }
+
+    const Entity *entity = world_entity_by_id_const(world, entity_id);
+    PaliValue value;
+    if (entity == NULL || !entity->active ||
+        entity->prototype >= PROTOTYPE_COUNT ||
+        !world_get_entity_concept(world, entity, concept, &value) ||
+        !lexicon_value_is_valid(definition, value)) {
+        return OBSERVATION_REJECTED;
+    }
+
+    const uint32_t prototype_bit = UINT32_C(1) << entity->prototype;
+    uint32_t *const observed =
+        &world->knowledge.observed_prototypes[concept];
+    if ((*observed & prototype_bit) != 0) {
+        return OBSERVATION_REPEATED;
+    }
+    *observed |= prototype_bit;
+
+    const uint8_t observation_count =
+        world_concept_observation_count(world, concept);
+    const ConceptAccess access = world_concept_access(world, concept);
+    if (observation_count >= 2 && access == CONCEPT_ACCESS_VEILED) {
+        world->knowledge.readable_concepts |= concept_bit(concept);
+        return OBSERVATION_REVELATION;
+    }
+    if (observation_count >= 3 &&
+        (access == CONCEPT_ACCESS_READABLE ||
+         access == CONCEPT_ACCESS_PATCHABLE) &&
+        !world_knows_exact_notation(world, concept)) {
+        world->knowledge.known_notations |= UINT32_C(1) << concept;
+        return OBSERVATION_NOTATION;
+    }
+    return OBSERVATION_RECORDED;
+}
+
 bool world_has_reach(const World *world, PatchReach reach) {
     return world != NULL &&
            (world->knowledge.reach_mask & patch_reach_bit(reach)) != 0;
@@ -454,6 +524,7 @@ void world_grant_developer_knowledge(World *world) {
     world->knowledge.perceived_concepts = all_concepts;
     world->knowledge.readable_concepts = all_concepts;
     world->knowledge.patchable_concepts = all_concepts;
+    world->knowledge.known_notations = (uint32_t)all_concepts;
     world->knowledge.access_depth = (uint8_t)ACCESS_DEPTH_LAW;
     world->knowledge.reach_mask = 0;
     for (int reach = 0; reach < PATCH_REACH_COUNT; ++reach) {
@@ -1102,6 +1173,8 @@ uint64_t world_state_fingerprint(const World *world) {
                       sizeof(world->knowledge.patchable_concepts));
     hash = hash_bytes(hash, &world->knowledge.known_notations,
                       sizeof(world->knowledge.known_notations));
+    hash = hash_bytes(hash, world->knowledge.observed_prototypes,
+                      sizeof(world->knowledge.observed_prototypes));
     hash = hash_bytes(hash, &world->knowledge.reach_mask,
                       sizeof(world->knowledge.reach_mask));
     hash = hash_bytes(hash, &world->knowledge.access_depth,

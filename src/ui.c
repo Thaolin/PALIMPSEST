@@ -34,6 +34,24 @@ enum {
     EDITOR_FONT_SIZE = 15
 };
 
+typedef struct LensRow {
+    ConceptId concept;
+    const ConceptDefinition *definition;
+    ConceptAccess access;
+    PaliValue value;
+    Facet facet;
+    int section_y;
+    int y;
+    int height;
+    bool starts_facet;
+    Rectangle bounds;
+} LensRow;
+
+typedef struct LensLayout {
+    LensRow rows[CONCEPT_COUNT];
+    int row_count;
+} LensLayout;
+
 static Font active_font(void) {
     return interface_font_ready ? interface_font : GetFontDefault();
 }
@@ -96,12 +114,12 @@ static Rectangle lens_close_button(void) {
     return (Rectangle){626.0f, 8.0f, 77.0f, 25.0f};
 }
 
-static Rectangle nourishment_decrement_button(void) {
-    return (Rectangle){170.0f, 222.0f, 28.0f, 28.0f};
+static Rectangle nourishment_decrement_button(int y) {
+    return (Rectangle){170.0f, (float)y, 28.0f, 28.0f};
 }
 
-static Rectangle nourishment_increment_button(void) {
-    return (Rectangle){306.0f, 222.0f, 28.0f, 28.0f};
+static Rectangle nourishment_increment_button(int y) {
+    return (Rectangle){306.0f, (float)y, 28.0f, 28.0f};
 }
 
 static Rectangle discard_button(void) {
@@ -172,6 +190,7 @@ void ui_open_inspector(UiState *ui, const World *world, int entity_index) {
     const Entity *entity = &world->universe.entities[entity_index];
     ui->inspector_open = true;
     ui->inspected_entity_id = entity->id;
+    ui->hovered_concept = CONCEPT_NONE;
     ui->has_error = false;
     memset(&ui->error, 0, sizeof(ui->error));
     capture_nourishment_draft(ui, world, entity);
@@ -448,6 +467,87 @@ static bool nourishment_is_patchable(const UiState *ui, const World *world) {
                CONCEPT_ACCESS_PATCHABLE;
 }
 
+static int lens_row_height(ConceptId concept, ConceptAccess access) {
+    return concept == CONCEPT_NUTRITION &&
+                   access == CONCEPT_ACCESS_PATCHABLE
+               ? 47
+               : 27;
+}
+
+static void build_lens_layout(const World *world, const Entity *entity,
+                              LensLayout *layout) {
+    memset(layout, 0, sizeof(*layout));
+    int cursor = 89;
+    bool has_section = false;
+    for (int facet_index = (int)FACET_SENSORY;
+         facet_index <= (int)FACET_SPATIAL; ++facet_index) {
+        const Facet facet = (Facet)facet_index;
+        bool starts_facet = true;
+        int section_y = 0;
+        for (ConceptId concept = CONCEPT_TAG; concept < CONCEPT_COUNT;
+             ++concept) {
+            const ConceptDefinition *definition =
+                lexicon_find_by_id(concept);
+            if (definition == NULL || definition->facet != facet ||
+                (uint8_t)definition->depth > world->knowledge.access_depth) {
+                continue;
+            }
+            const ConceptAccess access =
+                world_concept_access(world, concept);
+            PaliValue value;
+            if (access == CONCEPT_ACCESS_UNPERCEIVED ||
+                !world_get_entity_concept(world, entity, concept, &value)) {
+                continue;
+            }
+            if (starts_facet) {
+                if (has_section) {
+                    cursor += 5;
+                }
+                section_y = cursor;
+                cursor += 18;
+            }
+            if (layout->row_count >= CONCEPT_COUNT) {
+                return;
+            }
+            LensRow *row = &layout->rows[layout->row_count++];
+            row->concept = concept;
+            row->definition = definition;
+            row->access = access;
+            row->value = value;
+            row->facet = facet;
+            row->section_y = section_y;
+            row->y = cursor;
+            row->height = lens_row_height(concept, access);
+            row->starts_facet = starts_facet;
+            row->bounds = (Rectangle){20.0f, (float)(cursor - 2), 328.0f,
+                                      (float)(row->height - 1)};
+            cursor += row->height;
+            starts_facet = false;
+            has_section = true;
+        }
+    }
+}
+
+static const LensRow *lens_find_row(const LensLayout *layout,
+                                    ConceptId concept) {
+    for (int index = 0; index < layout->row_count; ++index) {
+        if (layout->rows[index].concept == concept) {
+            return &layout->rows[index];
+        }
+    }
+    return NULL;
+}
+
+static bool lens_concept_attendable(const World *world,
+                                    const LensRow *row) {
+    if (row == NULL || row->concept != CONCEPT_MASS) {
+        return false;
+    }
+    return row->access == CONCEPT_ACCESS_VEILED ||
+           (row->access == CONCEPT_ACCESS_READABLE &&
+            !world_knows_exact_notation(world, row->concept));
+}
+
 static void adjust_nourishment_draft(UiState *ui, int direction) {
     const ConceptDefinition *definition =
         lexicon_find_by_id(CONCEPT_NUTRITION);
@@ -485,26 +585,64 @@ static void inscribe_nourishment(UiState *ui, World *world, Entity *entity) {
     }
 }
 
-static bool point_over_lens_control(Vector2 point, bool patchable) {
+static bool point_over_lens_control(Vector2 point, bool patchable,
+                                    int nourishment_y,
+                                    ConceptId hovered_concept) {
     if (CheckCollisionPointRec(point, lens_close_button())) {
+        return true;
+    }
+    if (hovered_concept != CONCEPT_NONE) {
         return true;
     }
     return patchable &&
            (CheckCollisionPointRec(point,
-                                   nourishment_decrement_button()) ||
+                                   nourishment_decrement_button(
+                                       nourishment_y)) ||
             CheckCollisionPointRec(point,
-                                   nourishment_increment_button()) ||
+                                   nourishment_increment_button(
+                                       nourishment_y)) ||
             CheckCollisionPointRec(point, discard_button()) ||
             CheckCollisionPointRec(point, inscribe_button()));
 }
 
+static void describe_observation(World *world, ObservationResult result) {
+    const char *message = "The Lens cannot hold that impression.";
+    if (result == OBSERVATION_REPEATED) {
+        message = "This kind has already pressed its shape into you.";
+    } else if (result == OBSERVATION_RECORDED) {
+        message = "Observation held. Find this veil in another kind.";
+    } else if (result == OBSERVATION_REVELATION) {
+        message = "Revelation: weight was hiding inside Material.";
+    } else if (result == OBSERVATION_NOTATION) {
+        message = "Notation learned: weight submits to number.";
+    }
+    (void)snprintf(world->message, sizeof(world->message), "%s", message);
+}
+
 static void update_lens(UiState *ui, World *world, Entity *entity,
                         Vector2 virtual_mouse) {
+    LensLayout layout;
+    build_lens_layout(world, entity, &layout);
+    ui->hovered_concept = CONCEPT_NONE;
+    for (int index = 0; index < layout.row_count; ++index) {
+        const LensRow *row = &layout.rows[index];
+        if (lens_concept_attendable(world, row) &&
+            CheckCollisionPointRec(virtual_mouse, row->bounds)) {
+            ui->hovered_concept = row->concept;
+            break;
+        }
+    }
+    const LensRow *nutrition_row =
+        lens_find_row(&layout, CONCEPT_NUTRITION);
+    const int nourishment_y =
+        nutrition_row != NULL ? nutrition_row->y : -100;
     const bool patchable = nourishment_is_patchable(ui, world);
     const bool control = IsKeyDown(KEY_LEFT_CONTROL) ||
                          IsKeyDown(KEY_RIGHT_CONTROL);
     const bool mouse_click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-    SetMouseCursor(point_over_lens_control(virtual_mouse, patchable)
+    SetMouseCursor(point_over_lens_control(
+                       virtual_mouse, patchable, nourishment_y,
+                       ui->hovered_concept)
                        ? MOUSE_CURSOR_POINTING_HAND
                        : MOUSE_CURSOR_DEFAULT);
 
@@ -512,7 +650,14 @@ static void update_lens(UiState *ui, World *world, Entity *entity,
         (mouse_click && CheckCollisionPointRec(virtual_mouse,
                                                lens_close_button()))) {
         ui->inspector_open = false;
+        ui->hovered_concept = CONCEPT_NONE;
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        return;
+    }
+    if (mouse_click && ui->hovered_concept != CONCEPT_NONE) {
+        const ObservationResult result = world_observe_entity_concept(
+            world, entity->id, ui->hovered_concept);
+        describe_observation(world, result);
         return;
     }
     if (!patchable) {
@@ -520,13 +665,15 @@ static void update_lens(UiState *ui, World *world, Entity *entity,
     }
     if (mouse_click &&
         CheckCollisionPointRec(virtual_mouse,
-                               nourishment_decrement_button())) {
+                               nourishment_decrement_button(
+                                   nourishment_y))) {
         adjust_nourishment_draft(ui, -1);
         return;
     }
     if (mouse_click &&
         CheckCollisionPointRec(virtual_mouse,
-                               nourishment_increment_button())) {
+                               nourishment_increment_button(
+                                   nourishment_y))) {
         adjust_nourishment_draft(ui, 1);
         return;
     }
@@ -982,35 +1129,70 @@ static void uppercase_copy(char *out, size_t capacity, const char *text) {
     out[index] = '\0';
 }
 
-static void draw_access_label(ConceptAccess access, int x, int y) {
-    const char *label = access == CONCEPT_ACCESS_PATCHABLE
-                            ? "PATCHABLE"
-                            : "READABLE";
+static void draw_access_label(ConceptAccess access, bool attendable,
+                              int x, int y) {
+    const char *label = attendable
+                            ? "ATTEND"
+                            : access == CONCEPT_ACCESS_PATCHABLE
+                                  ? "PATCHABLE"
+                                  : "READABLE";
     draw_text(label, x, y, TYPE_CAPTION,
-              access == CONCEPT_ACCESS_PATCHABLE ? OCHRE_INK : INK_SOFT);
+              access == CONCEPT_ACCESS_PATCHABLE || attendable
+                  ? OCHRE_INK
+                  : INK_SOFT);
 }
 
-static void draw_veiled_value(int y) {
+static void draw_veiled_value(int y, bool attendable) {
     draw_text("{ ? }", 170, y, 16, PARCHMENT_DARK);
-    draw_text("VEILED", 276, y + 2, TYPE_CAPTION, INK_SOFT);
+    draw_text(attendable ? "ATTEND" : "VEILED", 276, y + 2,
+              TYPE_CAPTION, attendable ? OCHRE_INK : INK_SOFT);
 }
 
-static void draw_static_concept(const ConceptDefinition *definition,
-                                ConceptAccess access, PaliValue value,
-                                int y, bool color_swatch) {
-    if (access == CONCEPT_ACCESS_VEILED) {
-        draw_veiled_value(y);
+static void exact_number_text(double number, char *out, size_t capacity) {
+    (void)snprintf(out, capacity, "%.12g", number);
+}
+
+static void draw_qualitative_number(const ConceptDefinition *definition,
+                                    PaliValue value, int y) {
+    double number = value.as.number;
+    if (number < definition->numeric_min) {
+        number = definition->numeric_min;
+    } else if (number > definition->numeric_max) {
+        number = definition->numeric_max;
+    }
+    const double span = definition->numeric_max - definition->numeric_min;
+    double fraction = span > 0.0
+                          ? log1p(number - definition->numeric_min) /
+                                log1p(span)
+                          : 0.0;
+    if (!isfinite(fraction) || fraction < 0.0) {
+        fraction = 0.0;
+    } else if (fraction > 1.0) {
+        fraction = 1.0;
+    }
+    DrawRectangle(170, y + 7, 96, 8, Fade(INK, 0.18f));
+    DrawRectangle(170, y + 7, (int)lround(96.0 * fraction), 8,
+                  PARCHMENT_DARK);
+}
+
+static void draw_static_concept(const World *world, const LensRow *row) {
+    const bool attendable = lens_concept_attendable(world, row);
+    const int y = row->y;
+    if (row->access == CONCEPT_ACCESS_VEILED) {
+        draw_veiled_value(y, attendable);
         return;
     }
+    const ConceptDefinition *definition = row->definition;
     if (definition == NULL) {
         return;
     }
     draw_text_fit(definition->name, 26, y + 2, 125, TYPE_BODY,
                   INK_SOFT);
-    if (color_swatch && value.type == PALI_VALUE_TEXT &&
-        strlen(value.as.text) == 6) {
+    const bool exact = world_knows_exact_notation(world, row->concept);
+    if (row->concept == CONCEPT_COLOR && row->value.type == PALI_VALUE_TEXT &&
+        strlen(row->value.as.text) == 6) {
         char *end = NULL;
-        const unsigned long rgb = strtoul(value.as.text, &end, 16);
+        const unsigned long rgb = strtoul(row->value.as.text, &end, 16);
         if (end != NULL && *end == '\0' && rgb <= UINT32_C(0xffffff)) {
             const Color swatch = {
                 (unsigned char)((rgb >> 16) & 0xffu),
@@ -1018,25 +1200,34 @@ static void draw_static_concept(const ConceptDefinition *definition,
                 (unsigned char)(rgb & 0xffu), 255};
             DrawRectangle(170, y, 20, 20, swatch);
             DrawRectangleLines(170, y, 20, 20, INK_SOFT);
-            char color_text[16];
-            (void)snprintf(color_text, sizeof(color_text), "#%s",
-                           value.as.text);
-            draw_text(color_text, 198, y + 2, TYPE_BODY, INK);
+            if (exact) {
+                char color_text[16];
+                (void)snprintf(color_text, sizeof(color_text), "#%s",
+                               row->value.as.text);
+                draw_text(color_text, 198, y + 2, TYPE_BODY, INK);
+            }
         } else {
             draw_text("{ unresolved }", 170, y + 2, TYPE_BODY,
                       ERROR_INK);
         }
-    } else if (value.type == PALI_VALUE_BOOL) {
+    } else if (row->value.type == PALI_VALUE_NUMBER && !exact) {
+        draw_qualitative_number(definition, row->value, y);
+    } else if (row->value.type == PALI_VALUE_BOOL) {
         char state[48];
         (void)snprintf(state, sizeof(state), "%s%s",
-                       value.as.boolean ? "" : "not ", definition->name);
+                       row->value.as.boolean ? "" : "not ",
+                       definition->name);
         draw_text_fit(state, 170, y + 2, 100, TYPE_BODY, INK);
+    } else if (row->value.type == PALI_VALUE_NUMBER) {
+        char text[48];
+        exact_number_text(row->value.as.number, text, sizeof(text));
+        draw_text_fit(text, 170, y + 2, 100, TYPE_BODY, INK);
     } else {
         char text[96];
-        value_text(value, text, sizeof(text));
+        value_text(row->value, text, sizeof(text));
         draw_text_fit(text, 170, y + 2, 100, TYPE_BODY, INK);
     }
-    draw_access_label(access, 276, y + 3);
+    draw_access_label(row->access, attendable, 276, y + 3);
 }
 
 static void draw_nourishment_concept(const UiState *ui,
@@ -1044,7 +1235,7 @@ static void draw_nourishment_concept(const UiState *ui,
                                      ConceptAccess access, PaliValue resolved,
                                      int y) {
     if (access == CONCEPT_ACCESS_VEILED) {
-        draw_veiled_value(y);
+        draw_veiled_value(y, false);
         return;
     }
     if (definition == NULL || resolved.type != PALI_VALUE_NUMBER) {
@@ -1055,23 +1246,23 @@ static void draw_nourishment_concept(const UiState *ui,
     if (access != CONCEPT_ACCESS_PATCHABLE ||
         !ui->has_nourishment_draft) {
         char value[32];
-        (void)snprintf(value, sizeof(value), "%.4g", resolved.as.number);
+        exact_number_text(resolved.as.number, value, sizeof(value));
         draw_text(value, 170, y + 7, TYPE_SECTION, INK);
-        draw_access_label(access, 276, y + 8);
+        draw_access_label(access, false, 276, y + 8);
         return;
     }
 
-    draw_button(nourishment_decrement_button(), "-", PAL_GOLD);
+    draw_button(nourishment_decrement_button(y), "-", PAL_GOLD);
     DrawRectangleRec((Rectangle){204.0f, (float)y, 96.0f, 28.0f},
                      Fade(INK, 0.10f));
     DrawRectangleLinesEx((Rectangle){204.0f, (float)y, 96.0f, 28.0f}, 1.0f,
                          PARCHMENT_DARK);
     char value[32];
-    (void)snprintf(value, sizeof(value), "%.4g",
-                   ui->nourishment_draft.as.number);
+    exact_number_text(ui->nourishment_draft.as.number, value,
+                      sizeof(value));
     const int value_x = 252 - text_width(value, TYPE_SECTION) / 2;
     draw_text(value, value_x, y + 6, TYPE_SECTION, INK);
-    draw_button(nourishment_increment_button(), "+", PAL_GOLD);
+    draw_button(nourishment_increment_button(y), "+", PAL_GOLD);
 
     const double extent = definition->numeric_max - definition->numeric_min;
     double fraction = extent > 0.0
@@ -1087,14 +1278,6 @@ static void draw_nourishment_concept(const UiState *ui,
     DrawRectangle(170, y + 33, 164, 7, Fade(INK, 0.18f));
     DrawRectangle(170, y + 33, (int)(164.0 * fraction), 7, PAL_GOLD);
     draw_text("PATCHABLE", 256, y - 16, TYPE_CAPTION, OCHRE_INK);
-}
-
-static bool visible_concept_value(const World *world, const Entity *entity,
-                                  ConceptId concept, ConceptAccess *access,
-                                  PaliValue *value) {
-    *access = world_concept_access(world, concept);
-    return *access != CONCEPT_ACCESS_UNPERCEIVED &&
-           world_get_entity_concept(world, entity, concept, value);
 }
 
 static void draw_text_wrapped_two_lines(const char *text, int x, int y,
@@ -1184,6 +1367,27 @@ static void draw_behavior_clauses(const World *world, const Entity *entity) {
     }
 }
 
+static const char *facet_name(Facet facet) {
+    switch (facet) {
+        case FACET_SENSORY:
+            return "SENSORY";
+        case FACET_MATERIAL:
+            return "MATERIAL";
+        case FACET_VITAL:
+            return "VITAL";
+        case FACET_RELATIONAL:
+            return "RELATIONAL";
+        case FACET_HISTORICAL:
+            return "HISTORICAL";
+        case FACET_METAPHYSICAL:
+            return "METAPHYSICAL";
+        case FACET_SPATIAL:
+            return "SPATIAL";
+        default:
+            return "UNRESOLVED";
+    }
+}
+
 static void draw_structured_lens(const UiState *ui, const World *world) {
     const Entity *entity =
         world_entity_by_id_const(world, ui->inspected_entity_id);
@@ -1224,47 +1428,31 @@ static void draw_structured_lens(const UiState *ui, const World *world) {
     DrawRectangleLinesEx((Rectangle){365.0f, 82.0f, 343.0f, 268.0f}, 1.0f,
                          PARCHMENT_DARK);
 
-    ConceptAccess color_access;
-    ConceptAccess mass_access;
-    ConceptAccess nutrition_access;
-    ConceptAccess ripe_access;
-    PaliValue color_value;
-    PaliValue mass_value;
-    PaliValue nutrition_value;
-    PaliValue ripe_value;
-    const bool has_color = visible_concept_value(
-        world, entity, CONCEPT_COLOR, &color_access, &color_value);
-    const bool has_mass = visible_concept_value(
-        world, entity, CONCEPT_MASS, &mass_access, &mass_value);
-    const bool has_nutrition = visible_concept_value(
-        world, entity, CONCEPT_NUTRITION, &nutrition_access,
-        &nutrition_value);
-    const bool has_ripe = visible_concept_value(
-        world, entity, CONCEPT_RIPE, &ripe_access, &ripe_value);
-
-    if (has_color) {
-        draw_text("SENSORY", 24, 89, TYPE_SECTION, INK_SOFT);
-        draw_static_concept(lexicon_find_by_id(CONCEPT_COLOR), color_access,
-                            color_value, 111, true);
-    }
-    DrawLine(22, 143, 346, 143, Fade(PARCHMENT_DARK, 0.65f));
-    if (has_mass) {
-        draw_text("MATERIAL", 24, 149, TYPE_SECTION, INK_SOFT);
-        draw_static_concept(lexicon_find_by_id(CONCEPT_MASS), mass_access,
-                            mass_value, 171, false);
-    }
-    DrawLine(22, 201, 346, 201, Fade(PARCHMENT_DARK, 0.65f));
-    if (has_nutrition || has_ripe) {
-        draw_text("VITAL", 24, 204, TYPE_SECTION, INK_SOFT);
-    }
-    if (has_nutrition) {
-        draw_nourishment_concept(
-            ui, lexicon_find_by_id(CONCEPT_NUTRITION), nutrition_access,
-            nutrition_value, 222);
-    }
-    if (has_ripe) {
-        draw_static_concept(lexicon_find_by_id(CONCEPT_RIPE), ripe_access,
-                            ripe_value, 278, false);
+    LensLayout layout;
+    build_lens_layout(world, entity, &layout);
+    for (int index = 0; index < layout.row_count; ++index) {
+        const LensRow *row = &layout.rows[index];
+        if (row->starts_facet) {
+            if (row->section_y > 89) {
+                DrawLine(22, row->section_y - 4, 346,
+                         row->section_y - 4,
+                         Fade(PARCHMENT_DARK, 0.65f));
+            }
+            draw_text(facet_name(row->facet), 24, row->section_y,
+                      TYPE_SECTION, INK_SOFT);
+        }
+        if (ui->hovered_concept == row->concept &&
+            lens_concept_attendable(world, row)) {
+            DrawRectangleRec(row->bounds, Fade(PAL_GOLD, 0.17f));
+            DrawRectangleLinesEx(row->bounds, 1.0f,
+                                 Fade(OCHRE_INK, 0.62f));
+        }
+        if (row->concept == CONCEPT_NUTRITION) {
+            draw_nourishment_concept(ui, row->definition, row->access,
+                                     row->value, row->y);
+        } else {
+            draw_static_concept(world, row);
+        }
     }
     draw_behavior_clauses(world, entity);
 
@@ -1274,6 +1462,9 @@ static void draw_structured_lens(const UiState *ui, const World *world) {
     if (ui->has_error) {
         draw_text_fit(ui->error.message, 15, 371, 452, TYPE_BODY,
                       (Color){255, 239, 215, 255});
+    } else if (ui->hovered_concept != CONCEPT_NONE) {
+        draw_text("Attend / retain this impression.", 15, 372,
+                  TYPE_BODY, PAL_GOLD);
     } else if (entity->local_override >= 0) {
         draw_text("This entity carries a local Entity Scar.", 15, 372,
                   TYPE_BODY, PARCHMENT);
@@ -1425,35 +1616,80 @@ static void draw_closed_panel(const World *world, const char *save_hint) {
     DrawRectangle(PAL_PANEL_X, PAL_HUD_HEIGHT, 4,
                   PAL_VIRTUAL_HEIGHT - PAL_HUD_HEIGHT,
                   PAL_GOLD);
-    draw_text("THE FIRST SCAR", 500, 53, TYPE_TITLE, INK);
-    draw_text("ordinary things open inward", 501, 79, TYPE_BODY,
-              INK_SOFT);
-    DrawLine(501, 101, 698, 101, PARCHMENT_DARK);
     const FirstScarInquiry inquiry = first_scar_inquiry(world);
+    const bool first_scar_complete = inquiry == FIRST_SCAR_COMPLETE;
+    if (first_scar_complete) {
+        draw_text("THE WEIGHT OF THINGS", 500, 55, TYPE_HEADING, INK);
+    } else {
+        draw_text("THE FIRST SCAR", 500, 53, TYPE_TITLE, INK);
+    }
+    draw_text(first_scar_complete ? "the veil is comparative"
+                                  : "ordinary things open inward",
+              501, 79, TYPE_BODY, INK_SOFT);
+    DrawLine(501, 101, 698, 101, PARCHMENT_DARK);
     draw_text("INQUIRY", 501, 115, TYPE_CAPTION, OCHRE_INK);
-    draw_text_fit("MAKE ONE APPLE DIFFERENT", 501, 134, 197, TYPE_BODY,
-                  INK);
-    draw_inquiry_step(160, "INSCRIBE A SCAR",
-                      inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
-                          ? "Alter its nourishment."
-                          : "Local Scar inscribed.",
-                      inquiry != FIRST_SCAR_NEEDS_INSCRIPTION,
-                      inquiry == FIRST_SCAR_NEEDS_INSCRIPTION);
-    draw_inquiry_step(207, "TEST THE DIFFERENCE",
-                      inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
-                          ? "Then invoke that apple."
-                          : inquiry == FIRST_SCAR_NEEDS_PROOF
-                                ? "Stand nearby; press F."
-                                : "Its use proved the Scar.",
-                      inquiry == FIRST_SCAR_COMPLETE,
-                      inquiry == FIRST_SCAR_NEEDS_PROOF);
-    draw_text_fit(inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
-                      ? "0 / 2  INQUIRY OPEN"
-                      : inquiry == FIRST_SCAR_NEEDS_PROOF
-                            ? "1 / 2  SCAR INSCRIBED"
-                            : "COMPLETE  DIFFERENCE PROVEN",
-                  501, 250, 197, TYPE_CAPTION,
-                  inquiry == FIRST_SCAR_COMPLETE ? OCHRE_INK : INK_SOFT);
+    if (!first_scar_complete) {
+        draw_text_fit("MAKE ONE APPLE DIFFERENT", 501, 134, 197,
+                      TYPE_BODY, INK);
+        draw_inquiry_step(160, "INSCRIBE A SCAR",
+                          inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
+                              ? "Alter its nourishment."
+                              : "Local Scar inscribed.",
+                          inquiry != FIRST_SCAR_NEEDS_INSCRIPTION,
+                          inquiry == FIRST_SCAR_NEEDS_INSCRIPTION);
+        draw_inquiry_step(207, "TEST THE DIFFERENCE",
+                          inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
+                              ? "Then invoke that apple."
+                              : "Stand nearby; press F.",
+                          false, inquiry == FIRST_SCAR_NEEDS_PROOF);
+        draw_text_fit(inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
+                          ? "0 / 2  INQUIRY OPEN"
+                          : "1 / 2  SCAR INSCRIBED",
+                      501, 250, 197, TYPE_CAPTION, INK_SOFT);
+    } else {
+        const uint8_t observations =
+            world_concept_observation_count(world, CONCEPT_MASS);
+        const bool exact =
+            world_knows_exact_notation(world, CONCEPT_MASS);
+        draw_text_fit(exact ? "THE NUMBER REMAINS"
+                            : observations >= 2
+                                  ? "MAKE THE VAGUE EXACT"
+                                  : "WEIGH WHAT HAS NO NAME",
+                      501, 134, 197, TYPE_BODY, INK);
+        if (exact) {
+            draw_inquiry_step(160, "MEANING REVEALED",
+                              "Mass is now readable.", true, false);
+            draw_inquiry_step(207, "EXACT NOTATION",
+                              "Exact mass can be read.", true, false);
+        } else if (observations < 2) {
+            draw_inquiry_step(160, "TOUCH THE VEIL",
+                              observations == 0
+                                  ? "Open a Lens; click { ? }."
+                                  : "One kind remembered.",
+                              observations >= 1, observations == 0);
+            draw_inquiry_step(207, "FIND IT ELSEWHERE",
+                              observations == 0
+                                  ? "Seek another kind."
+                                  : "Attend on another kind.",
+                              false, observations == 1);
+        } else {
+            draw_inquiry_step(160, "MEANING REVEALED",
+                              "Mass is now readable.", true, false);
+            draw_inquiry_step(207, "SEEK A THIRD KIND",
+                              "Attend to readable mass.", false, true);
+        }
+        char progress[64];
+        if (exact) {
+            (void)snprintf(progress, sizeof(progress),
+                           "COMPLETE  NOTATION HELD");
+        } else {
+            (void)snprintf(progress, sizeof(progress),
+                           "%u / 3  IMPRESSIONS HELD",
+                           (unsigned int)observations);
+        }
+        draw_text_fit(progress, 501, 250, 197, TYPE_CAPTION,
+                      exact ? OCHRE_INK : INK_SOFT);
+    }
     DrawLine(501, 266, 698, 266, PARCHMENT_DARK);
     draw_text("WASD / arrows  walk", 501, 280, TYPE_BODY, INK);
     draw_text("CLICK / E  open entity", 501, 298, TYPE_BODY, INK);

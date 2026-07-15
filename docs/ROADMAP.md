@@ -25,11 +25,18 @@ Raw source moves behind explicit developer mode. See
 
 ### 0.3 — Knowledge changes what can be seen
 
-Replace the fixed Lens projection with a small discoverable lexicon. Prove all
-four Concept Access states: one attribute is Unperceived, one is Veiled, one is
-Readable, and one is Patchable. The player learns a concept that changes the
-Lens without changing the Universe or Embodiment; a qualitative value gains an
-exact notation through a separate Revelation.
+**Implemented vertical slice.**
+
+The Lens now derives its Facets and rows from the selected Entity and bounded
+Lexicon. Heat is Unperceived, mass begins Veiled, color is Readable, and
+nutrition is Patchable. Attending to mass on distinct Prototype kinds records
+persistent Observations: the second kind reveals qualitative weight, while the
+third grants exact numeric Notation without making mass Patchable.
+
+Observation mutates Knowledge only. Universe and Embodiment remain unchanged,
+the Inquiry tracker is derived from the Observation ledger, and save v3 retains
+partial progress while deliberately migrating v2 saves with no invented
+Observations.
 
 ### 0.4 — Behavior has grammar
 
@@ -91,6 +98,45 @@ why the current apple differs from Genesis and reverting one historical Patch.
 Create one explicit alternate ascended state from recorded history. The proof
 is switching between two compact branches with shared Genesis and independently
 preserved Scars. No offline historical simulation is included.
+
+## Horizon IV — Construction becomes language
+
+### 0.12 — Build it, name it
+
+Add bounded material placement and let an Arrangement serve as an Exemplar.
+The proof is grouping stones around a fire, teaching the Universe that the
+pattern qualifies as a **Hearth**, and seeing the recognized result become a
+Semantic Construction under a new Archetype without creating a new Prototype.
+
+### 0.13 — Architecture is syntax
+
+Let one Semantic Construction carry known Behavior through a destructible
+Patch Anchor. The proof is giving one Hearth an `on use(actor)` Clause that
+transfers warmth to its invoker, persisting only its sparse placement,
+Archetype, and Patch, and making the Behavior disappear coherently when its
+Patch Anchor is broken. No broad or regional Reach is implied.
+
+### 0.14 — One sentence is wrong here
+
+Introduce one deterministic Scarred Zone hosted by a Site Blueprint. Before
+implementation, define bounded spatial binding and conflict precedence without
+overloading Universe Reach. The proof is entering one consistently altered
+rule, surviving its symptoms, revealing its Patch Anchor and Provenance, and
+extracting or repairing one compatible piece of its grammar.
+
+### 0.15 — A boss is an argument
+
+Add one adversary whose protection is expressed through existing typed meaning
+rather than an isolated immunity flag. The proof permits a physical solution
+and a semantic solution through construction, Archetype membership, or a
+protected dependency, with both paths obeying the same simulation.
+
+### 0.16 — A haunted commit
+
+Define a safe versioned Scar Package after Patch history is content-addressed.
+The proof imports one compatible foreign history as a deterministic Scarred
+Zone by semantic identity, never by blindly replaying seed-derived Entity IDs
+or loading native code.
 
 Larger terrain through deterministic Site Blueprints, broader ecology, more
 Laws, and a general-purpose language wait until these proofs show that

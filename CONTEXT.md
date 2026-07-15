@@ -3,6 +3,14 @@
 PALIMPSEST distinguishes what exists, what a player knows, and which body they
 currently inhabit so editing reality does not collapse those concerns together.
 
+## Public voice
+
+The README and other outward-facing copy should invite rather than explain.
+Write as though the reader found a repository they were not meant to see:
+ambiguous, sly, feverish, dryly funny, and a little unhinged. Reveal enough to
+build and play, but never flatten PALIMPSEST into a feature pitch or exhaustive
+tutorial. The practical documentation may be sober. The doorway should not be.
+
 ## Language
 
 **Universe**:
@@ -66,10 +74,31 @@ Knowledge's relationship to one attribute, operator, or Clause: Unperceived,
 Veiled, Readable, or Patchable.
 _Avoid_: Unlock state, permission flag
 
+**Observation**:
+Knowledge's retained encounter with a perceivable concept as it manifests in
+one kind of Entity. Contrasting Observations may lead to understanding, but an
+Observation is not itself a Revelation.
+_Avoid_: Scan, progress point, collected sample
+
+**Exemplar**:
+An Entity, Arrangement, or Semantic Construction deliberately offered as
+evidence of what should qualify under an Archetype.
+_Avoid_: Sample, training datum, recipe ingredient
+
+**Counterexample**:
+An Entity, Arrangement, or Semantic Construction deliberately offered as
+evidence of what must not qualify under an Archetype.
+_Avoid_: Negative sample, exclusion flag
+
 **Revelation**:
 A change in Knowledge that makes a previously hidden or veiled concept
 readable. Revelation does not necessarily make the concept patchable.
 _Avoid_: Unlock, skill reward
+
+**Notation**:
+A learned representation that gives already-readable meaning additional
+precision, such as an exact number instead of a qualitative weight.
+_Avoid_: Display mode, formatting option
 
 **Reach**:
 The broadest population to which Knowledge permits a Patch to bind: one
@@ -91,6 +120,16 @@ A typed unit of Behavior or Law presented as a readable phrase and compiled
 into PALI.
 _Avoid_: Code block, command
 
+**Arrangement**:
+A deliberately bounded grouping of material Entities and their relations before
+the Universe recognizes the grouping as meaningful.
+_Avoid_: Semantic Construction, selection, structure
+
+**Semantic Construction**:
+A physical Arrangement recognized under an Archetype as meaningful in its own
+right, so it may carry Behavior or participate in a Patch.
+_Avoid_: Crafting output, build, program
+
 **Provenance**:
 The trace showing why a value or Behavior applies, including the Entity Scar,
 Lineage, Prototype, Archetype, or Law from which it resolves.
@@ -100,6 +139,11 @@ _Avoid_: Source label, origin metadata
 A validated typed change bound to semantic nodes at a permitted Reach that has
 become part of the Universe. Drafts and rejected candidates are not Patches.
 _Avoid_: Edit, script, copied definition
+
+**Patch Anchor**:
+A material Entity or Semantic Construction whose continued presence sustains
+and bounds a Patch.
+_Avoid_: Totem, emitter, bare anchor
 
 **Genesis**:
 The deterministic recipe that reconstructs the unmodified Universe from its
@@ -111,9 +155,19 @@ A deterministic spatial recipe for a bounded place such as a cave, village,
 lake, or ruin, including its constraints and connection anchors.
 _Avoid_: Prefab, map stamp, Prototype
 
+**Scarred Zone**:
+A bounded place where one or more Patches make meaning resolve differently from
+the surrounding Universe, with traceable Provenance.
+_Avoid_: Glitch biome, anomaly zone, dungeon
+
 **Scar**:
 A sparse persisted difference from Genesis, including changed state or a Patch.
 _Avoid_: Delta, mutation
+
+**Scar Package**:
+A portable ordered history of compatible Scars, Patches, and their Provenance
+that may be introduced into or forked with another Universe.
+_Avoid_: Mod pack, copied save
 
 **Anomaly**:
 A safe in-world manifestation of source that cannot compile or execute under

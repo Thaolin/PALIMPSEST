@@ -1,16 +1,26 @@
 # PALIMPSEST: The First Patch
 
-PALIMPSEST is a small survival RPG whose ordinary objects expose editable
-meaning through a Knowledge-gated Lens. This milestone proves one complete
-loop: click an apple, change its nourishment through a typed control, Inscribe
-the change onto that one Entity, then eat it and see the simulation obey the
-Scar while every other apple remains untouched.
+![PALIMPSEST — The First Scar](assets/branding/palimpest-dos-title.png)
 
-The game is C17 with raylib 6.0 as its platform layer. It renders a 720x405
-presentation canvas at exact 2x scale in the default 1440x810 window. The world
-keeps deliberately coarse simulation coordinates while HUD and source text draw
-at the higher presentation resolution. Artwork remains primitive and generated;
-there are no runtime downloads or online services.
+You just stumbled into a fever dream.
+
+Welcome.
+
+There is a clearing. There are apples. Ordinary things open inward if you know
+where to press. Learn their names. Leave a Scar. Break the Universe. Or don't.
+Whatever. It was already doing something before you arrived.
+
+PALIMPSEST is a tiny deterministic survival RPG written in C17. It remembers
+what you changed and what you learned. Right now, one apple can become unlike
+every other apple, and an unnamed weight can follow you home.
+
+That is currently the least alarming thing it can do.
+
+Somewhere beyond the clearing, places remember edits you did not make.
+
+Under the bad idea is raylib 6.0, a 720x405 presentation canvas at exact 2x
+scale, deliberately coarse simulation coordinates, and primitive generated
+artwork. There are no runtime downloads or online services.
 
 ## Build and test
 
@@ -35,7 +45,7 @@ A Visual Studio generator may place it below `build/bin/Release/`.
 Create a self-contained release directory with:
 
 ```powershell
-cmake --install build --prefix dist/PALIMPSEST-0.2.0 --config Release --component Palimpest
+cmake --install build --prefix dist/PALIMPSEST-0.3.0 --config Release --component Palimpest
 ```
 
 ## Run
@@ -65,6 +75,7 @@ alternative.
 - Left click: open a visible object and pause the simulation
 - `E`: open the nearest object
 - `F`: run the nearest object's `on use(actor)` handler
+- Lens **ATTEND** row: retain an impression of a veiled or imprecise meaning
 - Lens **−** / **+**: change the nourishment Draft for this Entity
 - **INSCRIBE** or `Ctrl+Enter`: validate and commit the Draft
 - **DISCARD** or `Ctrl+R`: restore the currently inherited value
@@ -75,8 +86,10 @@ alternative.
 
 Start by clicking an apple, lower its nourishment, Inscribe, close the Lens,
 walk close to it, and press `F`. Open another apple to see that its inherited
-nourishment has not changed. In `--developer` mode, the original text editor
-retains its mouse/keyboard editing, **APPLY**, and **REVERT** controls.
+nourishment has not changed. Afterward, attend to the veiled mark inside three
+different kinds of thing. The second kind gives it meaning; the third makes it
+submit to number. In `--developer` mode, the original text editor retains its
+mouse/keyboard editing, **APPLY**, and **REVERT** controls.
 
 ## Current slice
 
@@ -90,12 +103,14 @@ retains its mouse/keyboard editing, **APPLY**, and **REVERT** controls.
   compiler/VM, runtime values, and host whitelist
 - Stable Lexicon concepts projected through persistent Knowledge as
   Unperceived, Veiled, Readable, or Patchable
-- Mouse-first structured Lens with Facets, typed nourishment controls, and
-  readable non-patchable Behavior Clauses
-- State-derived First Scar Inquiry tracker whose progress follows the actual
-  apple Entity Scar and its invocation, including across save and reload
-- Checksummed versioned saves containing seed, player state, tick, sparse entity
-  changes, valid prototype patches, Knowledge, and concept-addressed Scars
+- Mouse-first, entity-derived Lens with Facets, veiled observations, qualitative
+  and exact notations, typed nourishment controls, and readable non-patchable
+  Behavior Clauses
+- State-derived Inquiry tracker that advances from the First Scar into The
+  Weight of Things without storing parallel quest flags
+- Checksummed v3 saves containing seed, player state, tick, sparse entity
+  changes, valid prototype patches, Knowledge observations, and
+  concept-addressed Scars; v2 saves migrate on load
 - Candidate compilation: bad source reports line/column errors while the last
   valid program remains live
 - Explicit developer-only raw source inspection with a bundled readable
@@ -108,3 +123,5 @@ embodiment transfer, infinite terrain, and branching history. See
 The interaction model and its deliberate limits are specified in
 [`docs/INTERACTION.md`](docs/INTERACTION.md). Prototype Reach ("every apple")
 exists underneath for developer tests, but remains a late-game Revelation.
+The larger promise—build it, name the pattern, teach reality what it does—lives
+in [`docs/VISION.md`](docs/VISION.md).

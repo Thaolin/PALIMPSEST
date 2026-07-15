@@ -8,6 +8,7 @@
 
 #define SAVE_BUFFER_CAPACITY (128u * 1024u)
 #define SAVE_HEADER_SIZE 24u
+#define SAVE_LEGACY_VERSION 2u
 
 static const uint8_t SAVE_MAGIC[8] = {'P', 'A', 'L', 'S', 'A', 'V', 'E', '2'};
 
@@ -23,6 +24,11 @@ typedef struct SaveBuffer {
 static uint8_t write_storage[SAVE_BUFFER_CAPACITY];
 static uint8_t read_storage[SAVE_BUFFER_CAPACITY];
 static World load_candidate;
+
+_Static_assert(CONCEPT_COUNT <= 32,
+               "known notation masks require at most 32 concepts");
+_Static_assert(PROTOTYPE_COUNT <= 32,
+               "observation masks require at most 32 prototypes");
 
 static bool save_error(PaliError *error, const char *message) {
     if (error != NULL) {
@@ -138,6 +144,39 @@ static uint64_t checksum(const uint8_t *data, size_t length) {
     return hash;
 }
 
+static bool knowledge_is_valid(const KnowledgeState *knowledge) {
+    if (knowledge->observed_prototypes[CONCEPT_NONE] != 0) {
+        return false;
+    }
+    uint64_t valid_concepts = 0;
+    uint32_t valid_notations = 0;
+    for (ConceptId id = CONCEPT_TAG; id < CONCEPT_COUNT; ++id) {
+        valid_concepts |= concept_bit(id);
+        valid_notations |= UINT32_C(1) << (unsigned int)id;
+    }
+    uint32_t valid_reach = 0;
+    for (int reach = 0; reach < PATCH_REACH_COUNT; ++reach) {
+        valid_reach |= patch_reach_bit((PatchReach)reach);
+    }
+    uint32_t valid_prototypes = 0;
+    for (int prototype = 0; prototype < PROTOTYPE_COUNT; ++prototype) {
+        valid_prototypes |= UINT32_C(1) << (unsigned int)prototype;
+    }
+    for (ConceptId id = CONCEPT_TAG; id < CONCEPT_COUNT; ++id) {
+        if ((knowledge->observed_prototypes[id] & ~valid_prototypes) != 0) {
+            return false;
+        }
+    }
+    return (knowledge->perceived_concepts & ~valid_concepts) == 0 &&
+           (knowledge->readable_concepts &
+            ~knowledge->perceived_concepts) == 0 &&
+           (knowledge->patchable_concepts &
+            ~knowledge->readable_concepts) == 0 &&
+           (knowledge->known_notations & ~valid_notations) == 0 &&
+           (knowledge->reach_mask & ~valid_reach) == 0 &&
+           knowledge->access_depth <= (uint8_t)ACCESS_DEPTH_LAW;
+}
+
 static void patch_u32(uint8_t *data, size_t offset, uint32_t value) {
     for (int index = 0; index < 4; ++index) {
         data[offset + (size_t)index] = (uint8_t)(value >> (index * 8));
@@ -151,6 +190,10 @@ static void patch_u64(uint8_t *data, size_t offset, uint64_t value) {
 }
 
 static void serialize_world(SaveBuffer *buffer, const World *world) {
+    if (!knowledge_is_valid(&world->knowledge)) {
+        buffer_fail(buffer, "save contains invalid Knowledge state");
+        return;
+    }
     if (world->universe.entity_count > WORLD_MAX_ENTITIES) {
         buffer_fail(buffer, "World entity count exceeds fixed storage");
         return;
@@ -253,6 +296,9 @@ static void serialize_world(SaveBuffer *buffer, const World *world) {
         }
     }
     put_string(buffer, world->message, sizeof(world->message));
+    for (ConceptId id = CONCEPT_NONE; id < CONCEPT_COUNT; ++id) {
+        put_u32(buffer, world->knowledge.observed_prototypes[id]);
+    }
 
     if (buffer->ok) {
         const size_t payload_size = buffer->length - SAVE_HEADER_SIZE;
@@ -309,7 +355,8 @@ static bool validate_bytes(const uint8_t *data, size_t length,
         memcmp(data, SAVE_MAGIC, sizeof(SAVE_MAGIC)) != 0) {
         return save_error(error, "save header is not PALIMPSEST format");
     }
-    if (raw_u32(data + 8) != PAL_SAVE_VERSION) {
+    const uint32_t version = raw_u32(data + 8);
+    if (version != SAVE_LEGACY_VERSION && version != PAL_SAVE_VERSION) {
         return save_error(error, "save format version is unsupported");
     }
     const uint32_t payload_size = raw_u32(data + 12);
@@ -478,24 +525,6 @@ static bool loaded_motion_is_valid(float x, float y) {
            fabsf(y) <= limit;
 }
 
-static bool loaded_knowledge_is_valid(const KnowledgeState *knowledge) {
-    uint64_t valid_concepts = 0;
-    for (ConceptId id = CONCEPT_TAG; id < CONCEPT_COUNT; ++id) {
-        valid_concepts |= concept_bit(id);
-    }
-    uint32_t valid_reach = 0;
-    for (int reach = 0; reach < PATCH_REACH_COUNT; ++reach) {
-        valid_reach |= patch_reach_bit((PatchReach)reach);
-    }
-    return (knowledge->perceived_concepts & ~valid_concepts) == 0 &&
-           (knowledge->readable_concepts &
-            ~knowledge->perceived_concepts) == 0 &&
-           (knowledge->patchable_concepts &
-            ~knowledge->readable_concepts) == 0 &&
-           (knowledge->reach_mask & ~valid_reach) == 0 &&
-           knowledge->access_depth <= (uint8_t)ACCESS_DEPTH_LAW;
-}
-
 bool save_load(World *world, const char *path, const char *pali_asset_root,
                PaliError *error) {
     if (world == NULL || path == NULL || path[0] == '\0' ||
@@ -507,6 +536,7 @@ bool save_load(World *world, const char *path, const char *pali_asset_root,
         !validate_bytes(read_storage, length, error)) {
         return false;
     }
+    const uint32_t version = raw_u32(read_storage + 8);
     SaveBuffer buffer = {read_storage, length, SAVE_HEADER_SIZE, true, error};
     const uint64_t seed = take_u64(&buffer);
     if (!buffer.ok || !world_init(&load_candidate, seed, pali_asset_root, error)) {
@@ -519,6 +549,12 @@ bool save_load(World *world, const char *path, const char *pali_asset_root,
     load_candidate.knowledge.readable_concepts = take_u64(&buffer);
     load_candidate.knowledge.patchable_concepts = take_u64(&buffer);
     load_candidate.knowledge.known_notations = take_u32(&buffer);
+    memset(load_candidate.knowledge.observed_prototypes, 0,
+           sizeof(load_candidate.knowledge.observed_prototypes));
+    if (version == SAVE_LEGACY_VERSION) {
+        load_candidate.knowledge.known_notations |=
+            (uint32_t)concept_bit(CONCEPT_NUTRITION);
+    }
     load_candidate.knowledge.reach_mask = take_u32(&buffer);
     load_candidate.knowledge.access_depth = take_u8(&buffer);
     load_candidate.embodiment.entity_id = take_u64(&buffer);
@@ -527,7 +563,7 @@ bool save_load(World *world, const char *path, const char *pali_asset_root,
     load_candidate.embodiment.hunger = take_float(&buffer);
     load_candidate.embodiment.warmth = take_float(&buffer);
     if (buffer.ok &&
-        (!loaded_knowledge_is_valid(&load_candidate.knowledge) ||
+        (!knowledge_is_valid(&load_candidate.knowledge) ||
          load_candidate.embodiment.entity_id != genesis_embodiment_id ||
          !loaded_position_is_valid(load_candidate.embodiment.x,
                                    load_candidate.embodiment.y) ||
@@ -644,6 +680,15 @@ bool save_load(World *world, const char *path, const char *pali_asset_root,
         !take_string(&buffer, load_candidate.message,
                      sizeof(load_candidate.message))) {
         return false;
+    }
+    if (version == PAL_SAVE_VERSION) {
+        for (ConceptId id = CONCEPT_NONE; id < CONCEPT_COUNT; ++id) {
+            load_candidate.knowledge.observed_prototypes[id] =
+                take_u32(&buffer);
+        }
+    }
+    if (buffer.ok && !knowledge_is_valid(&load_candidate.knowledge)) {
+        buffer_fail(&buffer, "save contains invalid Knowledge state");
     }
     if (!buffer.ok || buffer.position != buffer.length) {
         if (buffer.ok) {
