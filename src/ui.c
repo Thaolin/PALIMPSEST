@@ -21,11 +21,11 @@ static Font interface_font;
 static bool interface_font_ready = false;
 
 enum {
-    TYPE_CAPTION = 12,
-    TYPE_BODY = 13,
-    TYPE_SECTION = 15,
-    TYPE_HEADING = 17,
-    TYPE_TITLE = 21,
+    TYPE_CAPTION = 13,
+    TYPE_BODY = 14,
+    TYPE_SECTION = 16,
+    TYPE_HEADING = 18,
+    TYPE_TITLE = 22,
     EDITOR_CODE_X = 237,
     EDITOR_CONTENT_Y = 102,
     EDITOR_CODE_WIDTH = 469,
@@ -114,6 +114,34 @@ static Rectangle lens_close_button(void) {
     return (Rectangle){626.0f, 8.0f, 77.0f, 25.0f};
 }
 
+static Rectangle inquiry_toggle_button(void) {
+    return (Rectangle){650.0f, 76.0f, 56.0f, 23.0f};
+}
+
+static Rectangle knowledge_notice_rectangle(void) {
+    return (Rectangle){491.0f, 44.0f, 217.0f, 91.0f};
+}
+
+static Rectangle behavior_hunger_button(void) {
+    return (Rectangle){438.0f, 151.0f, 252.0f, 35.0f};
+}
+
+static Rectangle behavior_voice_button(void) {
+    return (Rectangle){438.0f, 196.0f, 252.0f, 35.0f};
+}
+
+static Rectangle behavior_fate_button(void) {
+    return (Rectangle){438.0f, 241.0f, 252.0f, 35.0f};
+}
+
+static Rectangle behavior_revert_button(void) {
+    return (Rectangle){466.0f, 310.0f, 91.0f, 28.0f};
+}
+
+static Rectangle behavior_inscribe_button(void) {
+    return (Rectangle){567.0f, 310.0f, 123.0f, 28.0f};
+}
+
 static Rectangle nourishment_decrement_button(int y) {
     return (Rectangle){170.0f, (float)y, 28.0f, 28.0f};
 }
@@ -144,10 +172,11 @@ static void editor_set(SourceEditor *editor, const char *source) {
 
 void ui_init(UiState *ui, const char *font_path) {
     memset(ui, 0, sizeof(*ui));
+    ui->inquiry_panel_expanded = true;
     memset(&interface_font, 0, sizeof(interface_font));
     interface_font_ready = false;
     if (font_path != NULL) {
-        interface_font = LoadFontEx(font_path, 32, NULL, 0);
+        interface_font = LoadFontEx(font_path, 20, NULL, 0);
         interface_font_ready = IsFontValid(interface_font);
         if (interface_font_ready) {
             SetTextureFilter(interface_font.texture, TEXTURE_FILTER_BILINEAR);
@@ -169,6 +198,47 @@ void ui_set_developer_mode(UiState *ui, bool enabled) {
     }
 }
 
+void ui_present_knowledge_grant(UiState *ui, KnowledgeGrant grant) {
+    if (ui == NULL || grant == KNOWLEDGE_GRANT_NONE) {
+        return;
+    }
+    if (grant == KNOWLEDGE_GRANT_BEHAVIOR_DEPTH) {
+        ui->knowledge_notice = UI_KNOWLEDGE_NOTICE_BEHAVIOR;
+        ui->knowledge_notice_frames = 300;
+    }
+}
+
+bool ui_update_world_panel(UiState *ui, Vector2 virtual_mouse) {
+    if (ui == NULL || ui->inspector_open) {
+        return false;
+    }
+    const bool over_notice = ui->knowledge_notice_frames > 0 &&
+                             CheckCollisionPointRec(
+                                 virtual_mouse,
+                                 knowledge_notice_rectangle());
+    if (ui->knowledge_notice_frames > 0) {
+        ui->knowledge_notice_frames--;
+        if (over_notice && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            ui->knowledge_notice_frames = 0;
+            ui->knowledge_notice = UI_KNOWLEDGE_NOTICE_NONE;
+            return true;
+        }
+        if (ui->knowledge_notice_frames == 0) {
+            ui->knowledge_notice = UI_KNOWLEDGE_NOTICE_NONE;
+        }
+    }
+    const bool over_toggle = ui->knowledge_notice_frames == 0 &&
+                             CheckCollisionPointRec(
+                                 virtual_mouse, inquiry_toggle_button());
+    SetMouseCursor(over_toggle || over_notice ? MOUSE_CURSOR_POINTING_HAND :
+                                               MOUSE_CURSOR_DEFAULT);
+    if (over_toggle && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        ui->inquiry_panel_expanded = !ui->inquiry_panel_expanded;
+        return true;
+    }
+    return false;
+}
+
 static void capture_nourishment_draft(UiState *ui, const World *world,
                                       const Entity *entity) {
     PaliValue value;
@@ -179,6 +249,16 @@ static void capture_nourishment_draft(UiState *ui, const World *world,
         ui->nourishment_draft = value;
     } else {
         memset(&ui->nourishment_draft, 0, sizeof(ui->nourishment_draft));
+    }
+}
+
+static void capture_behavior_draft(UiState *ui, const World *world,
+                                   const Entity *entity) {
+    ui->has_behavior_draft =
+        world_get_entity_use_behavior_draft(world, entity,
+                                            &ui->behavior_draft);
+    if (!ui->has_behavior_draft) {
+        memset(&ui->behavior_draft, 0, sizeof(ui->behavior_draft));
     }
 }
 
@@ -194,6 +274,7 @@ void ui_open_inspector(UiState *ui, const World *world, int entity_index) {
     ui->has_error = false;
     memset(&ui->error, 0, sizeof(ui->error));
     capture_nourishment_draft(ui, world, entity);
+    capture_behavior_draft(ui, world, entity);
     editor_set(&ui->editor,
                world_prototype_source(world,
                                       (PrototypeId)entity->prototype));
@@ -585,22 +666,70 @@ static void inscribe_nourishment(UiState *ui, World *world, Entity *entity) {
     }
 }
 
+static bool behavior_is_patchable(const UiState *ui, const World *world,
+                                  const Entity *entity) {
+    return ui->has_behavior_draft &&
+           world_behavior_is_patchable(world, entity);
+}
+
+static void cycle_behavior_hunger(UiState *ui) {
+    ui->behavior_draft.hunger = (BehaviorHungerClause)(
+        ((int)ui->behavior_draft.hunger + 1) % BEHAVIOR_HUNGER_COUNT);
+    ui->has_error = false;
+}
+
+static void cycle_behavior_voice(UiState *ui) {
+    ui->behavior_draft.voice = (BehaviorVoiceClause)(
+        ((int)ui->behavior_draft.voice + 1) % BEHAVIOR_VOICE_COUNT);
+    ui->has_error = false;
+}
+
+static void cycle_behavior_fate(UiState *ui) {
+    ui->behavior_draft.fate = (BehaviorFateClause)(
+        ((int)ui->behavior_draft.fate + 1) % BEHAVIOR_FATE_COUNT);
+    ui->has_error = false;
+}
+
+static void inscribe_behavior(UiState *ui, World *world, Entity *entity) {
+    PaliDocument handler;
+    PaliError error;
+    memset(&error, 0, sizeof(error));
+    if (world_build_use_behavior_document(world, entity, ui->behavior_draft,
+                                          &handler, &error) &&
+        world_apply_entity_behavior_patch(world, entity->id, &handler,
+                                          &error)) {
+        ui->has_error = false;
+        memset(&ui->error, 0, sizeof(ui->error));
+        capture_behavior_draft(ui, world, entity);
+    } else {
+        ui->has_error = true;
+        ui->error = error;
+    }
+}
+
 static bool point_over_lens_control(Vector2 point, bool patchable,
                                     int nourishment_y,
-                                    ConceptId hovered_concept) {
+                                    ConceptId hovered_concept,
+                                    bool behavior_patchable) {
     if (CheckCollisionPointRec(point, lens_close_button())) {
         return true;
     }
     if (hovered_concept != CONCEPT_NONE) {
         return true;
     }
+    if (behavior_patchable &&
+        (CheckCollisionPointRec(point, behavior_hunger_button()) ||
+         CheckCollisionPointRec(point, behavior_voice_button()) ||
+         CheckCollisionPointRec(point, behavior_fate_button()) ||
+         CheckCollisionPointRec(point, behavior_revert_button()) ||
+         CheckCollisionPointRec(point, behavior_inscribe_button()))) {
+        return true;
+    }
     return patchable &&
-           (CheckCollisionPointRec(point,
-                                   nourishment_decrement_button(
-                                       nourishment_y)) ||
-            CheckCollisionPointRec(point,
-                                   nourishment_increment_button(
-                                       nourishment_y)) ||
+           (CheckCollisionPointRec(
+                point, nourishment_decrement_button(nourishment_y)) ||
+            CheckCollisionPointRec(
+                point, nourishment_increment_button(nourishment_y)) ||
             CheckCollisionPointRec(point, discard_button()) ||
             CheckCollisionPointRec(point, inscribe_button()));
 }
@@ -637,12 +766,14 @@ static void update_lens(UiState *ui, World *world, Entity *entity,
     const int nourishment_y =
         nutrition_row != NULL ? nutrition_row->y : -100;
     const bool patchable = nourishment_is_patchable(ui, world);
+    const bool patchable_behavior =
+        behavior_is_patchable(ui, world, entity);
     const bool control = IsKeyDown(KEY_LEFT_CONTROL) ||
                          IsKeyDown(KEY_RIGHT_CONTROL);
     const bool mouse_click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     SetMouseCursor(point_over_lens_control(
-                       virtual_mouse, patchable, nourishment_y,
-                       ui->hovered_concept)
+                        virtual_mouse, patchable, nourishment_y,
+                        ui->hovered_concept, patchable_behavior)
                        ? MOUSE_CURSOR_POINTING_HAND
                        : MOUSE_CURSOR_DEFAULT);
 
@@ -658,6 +789,37 @@ static void update_lens(UiState *ui, World *world, Entity *entity,
         const ObservationResult result = world_observe_entity_concept(
             world, entity->id, ui->hovered_concept);
         describe_observation(world, result);
+        if (result == OBSERVATION_NOTATION) {
+            ui->knowledge_notice = UI_KNOWLEDGE_NOTICE_GRAMMAR;
+            ui->knowledge_notice_frames = 300;
+        }
+        return;
+    }
+    if (patchable_behavior && mouse_click &&
+        CheckCollisionPointRec(virtual_mouse, behavior_hunger_button())) {
+        cycle_behavior_hunger(ui);
+        return;
+    }
+    if (patchable_behavior && mouse_click &&
+        CheckCollisionPointRec(virtual_mouse, behavior_voice_button())) {
+        cycle_behavior_voice(ui);
+        return;
+    }
+    if (patchable_behavior && mouse_click &&
+        CheckCollisionPointRec(virtual_mouse, behavior_fate_button())) {
+        cycle_behavior_fate(ui);
+        return;
+    }
+    if (patchable_behavior && mouse_click &&
+        CheckCollisionPointRec(virtual_mouse, behavior_revert_button())) {
+        capture_behavior_draft(ui, world, entity);
+        ui->has_error = false;
+        memset(&ui->error, 0, sizeof(ui->error));
+        return;
+    }
+    if (patchable_behavior && mouse_click &&
+        CheckCollisionPointRec(virtual_mouse, behavior_inscribe_button())) {
+        inscribe_behavior(ui, world, entity);
         return;
     }
     if (!patchable) {
@@ -1337,11 +1499,143 @@ static void draw_clause_row(int y, const char *lead, const char *text) {
     draw_text_wrapped_two_lines(text, 412, y + 3, 280, TYPE_CAPTION, INK);
 }
 
-static void draw_behavior_clauses(const World *world, const Entity *entity) {
+static bool clause_expression_is_readable(const World *world,
+                                          const PaliDocument *document,
+                                          uint8_t index) {
+    if (document == NULL || index >= document->expression_count) {
+        return false;
+    }
+    const PaliExpression *expression = &document->expressions[index];
+    if (expression->kind == PALI_EXPRESSION_LITERAL) {
+        return expression->operand < document->constant_count;
+    }
+    if (expression->kind == PALI_EXPRESSION_GET_SELF ||
+        expression->kind == PALI_EXPRESSION_GET_ACTOR) {
+        if (expression->operand >= document->name_count) {
+            return false;
+        }
+        const ConceptDefinition *concept =
+            lexicon_find_by_name(document->names[expression->operand]);
+        const ConceptAccess access =
+            concept != NULL ? world_concept_access(world, concept->id)
+                            : CONCEPT_ACCESS_UNPERCEIVED;
+        return access == CONCEPT_ACCESS_READABLE ||
+               access == CONCEPT_ACCESS_PATCHABLE;
+    }
+    if (expression->kind == PALI_EXPRESSION_NEGATE) {
+        return clause_expression_is_readable(world, document,
+                                             expression->left);
+    }
+    return clause_expression_is_readable(world, document, expression->left) &&
+           clause_expression_is_readable(world, document, expression->right);
+}
+
+static bool clause_statement_is_readable(const World *world,
+                                         const PaliDocument *document,
+                                         const PaliStatement *statement) {
+    if (statement->kind == PALI_STATEMENT_DESTROY_SELF) {
+        return true;
+    }
+    if (statement->kind == PALI_STATEMENT_MESSAGE) {
+        return clause_expression_is_readable(world, document,
+                                             statement->expression);
+    }
+    if ((statement->kind == PALI_STATEMENT_SET_SELF ||
+         statement->kind == PALI_STATEMENT_SET_ACTOR) &&
+        statement->name < document->name_count) {
+        const ConceptDefinition *concept =
+            lexicon_find_by_name(document->names[statement->name]);
+        const ConceptAccess access =
+            concept != NULL ? world_concept_access(world, concept->id)
+                            : CONCEPT_ACCESS_UNPERCEIVED;
+        return (access == CONCEPT_ACCESS_READABLE ||
+                access == CONCEPT_ACCESS_PATCHABLE) &&
+               clause_expression_is_readable(world, document,
+                                             statement->expression);
+    }
+    return false;
+}
+
+static const char *behavior_hunger_label(BehaviorHungerClause clause) {
+    if (clause == BEHAVIOR_HUNGER_SHARPEN) {
+        return "SHARPEN HUNGER";
+    }
+    if (clause == BEHAVIOR_HUNGER_LEAVE) {
+        return "LEAVE HUNGER";
+    }
+    return "SOOTHE HUNGER";
+}
+
+static const char *behavior_voice_label(BehaviorVoiceClause clause) {
+    if (clause == BEHAVIOR_VOICE_REMEMBER) {
+        return "REMEMBER BEING EATEN";
+    }
+    if (clause == BEHAVIOR_VOICE_SILENT) {
+        return "SAY NOTHING";
+    }
+    return "BECOME LESS REAL";
+}
+
+static const char *behavior_fate_label(BehaviorFateClause clause) {
+    return clause == BEHAVIOR_FATE_REMAIN ? "REMAIN" : "CEASE";
+}
+
+static void draw_behavior_choice(Rectangle bounds, const char *lead,
+                                 const char *value) {
+    DrawRectangleRec(bounds, Fade(PAL_GOLD, 0.16f));
+    DrawRectangleLinesEx(bounds, 1.0f, OCHRE_INK);
+    draw_text(lead, 378, (int)bounds.y + 10, TYPE_CAPTION, OCHRE_INK);
+    draw_text_fit(value, (int)bounds.x + 10, (int)bounds.y + 9,
+                  (int)bounds.width - 30, TYPE_BODY, INK);
+    draw_text(">", (int)(bounds.x + bounds.width) - 19,
+              (int)bounds.y + 9, TYPE_BODY, OCHRE_INK);
+}
+
+static void draw_patchable_behavior(const UiState *ui, const World *world,
+                                    const Entity *entity) {
     draw_text("BEHAVIOR", 374, 87, TYPE_SECTION, INK_SOFT);
-    draw_text("CLAUSES / READ ONLY", 552, 89, TYPE_CAPTION, INK_SOFT);
-    const PaliDocument *document = world_prototype_document(
-        world, (PrototypeId)entity->prototype);
+    draw_text("CLAUSES / PATCHABLE", 541, 89, TYPE_CAPTION, OCHRE_INK);
+    draw_clause_row(108, "WHEN", "this entity is used by an actor / fixed");
+    draw_behavior_choice(behavior_hunger_button(), "DO",
+                         behavior_hunger_label(ui->behavior_draft.hunger));
+    draw_behavior_choice(behavior_voice_button(), "SAY",
+                         behavior_voice_label(ui->behavior_draft.voice));
+    draw_behavior_choice(behavior_fate_button(), "THEN",
+                         behavior_fate_label(ui->behavior_draft.fate));
+
+    PaliDocument draft;
+    PaliProgram program;
+    PaliError error;
+    int cost = 0;
+    if (world_build_use_behavior_document(world, entity, ui->behavior_draft,
+                                          &draft, &error) &&
+        pali_compile_document(&draft, &program, &error)) {
+        cost = (int)program.code_count;
+    }
+    char budget[48];
+    (void)snprintf(budget, sizeof(budget), "CLAUSE COST %d / %d", cost,
+                   WORLD_BEHAVIOR_PATCH_BUDGET);
+    draw_text(budget, 378, 286, TYPE_CAPTION, INK_SOFT);
+    if (world_entity_has_behavior_patch(world, entity)) {
+        draw_text("LOCAL SCAR", 590, 286, TYPE_CAPTION, OCHRE_INK);
+    }
+    draw_button(behavior_revert_button(), "REVERT", PARCHMENT_DARK);
+    draw_button(behavior_inscribe_button(), "INSCRIBE", PAL_GOLD);
+}
+
+static void draw_behavior_clauses(const UiState *ui, const World *world,
+                                  const Entity *entity) {
+    if (world->knowledge.access_depth < (uint8_t)ACCESS_DEPTH_BEHAVIOR) {
+        return;
+    }
+    if (behavior_is_patchable(ui, world, entity)) {
+        draw_patchable_behavior(ui, world, entity);
+        return;
+    }
+    draw_text("BEHAVIOR", 374, 87, TYPE_SECTION, INK_SOFT);
+    draw_text("CLAUSES / READ ONLY", 541, 89, TYPE_CAPTION, INK_SOFT);
+    const PaliDocument *document =
+        world_entity_behavior_document(world, entity);
     if (document == NULL || !document->has_use) {
         draw_clause_row(108, "WHEN", "no readable response is inscribed");
         return;
@@ -1352,8 +1646,14 @@ static void draw_behavior_clauses(const World *world, const Entity *entity) {
         document->statement_count < 4u ? document->statement_count : 4u;
     for (uint16_t index = 0; index < visible_statements; ++index) {
         char clause[256];
-        clause_statement_text(document, &document->statements[index], clause,
-                              sizeof(clause));
+        if (clause_statement_is_readable(world, document,
+                                         &document->statements[index])) {
+            clause_statement_text(document, &document->statements[index],
+                                  clause, sizeof(clause));
+        } else {
+            (void)snprintf(clause, sizeof(clause),
+                           "{ a Clause whose nouns are still veiled }");
+        }
         draw_clause_row(152 + (int)index * 44, index == 0 ? "DO" : "THEN",
                         clause);
     }
@@ -1454,7 +1754,7 @@ static void draw_structured_lens(const UiState *ui, const World *world) {
             draw_static_concept(world, row);
         }
     }
-    draw_behavior_clauses(world, entity);
+    draw_behavior_clauses(ui, world, entity);
 
     DrawRectangle(6, 356, 708, 44,
                   ui->has_error ? Fade(ERROR_RED, 0.96f)
@@ -1473,8 +1773,8 @@ static void draw_structured_lens(const UiState *ui, const World *world) {
                   PARCHMENT);
     }
     if (nourishment_is_patchable(ui, world)) {
-        draw_button(discard_button(), "DISCARD", PARCHMENT_DARK);
-        draw_button(inscribe_button(), "INSCRIBE", PAL_GOLD);
+        draw_button(discard_button(), "RESET STATE", PARCHMENT_DARK);
+        draw_button(inscribe_button(), "INSCRIBE STATE", PAL_GOLD);
     }
 }
 
@@ -1561,44 +1861,6 @@ static void draw_developer_inspector(const UiState *ui, const World *world) {
               ui->has_error ? (Color){255, 239, 215, 255} : PAL_GOLD);
 }
 
-typedef enum FirstScarInquiry {
-    FIRST_SCAR_NEEDS_INSCRIPTION = 0,
-    FIRST_SCAR_NEEDS_PROOF,
-    FIRST_SCAR_COMPLETE
-} FirstScarInquiry;
-
-static FirstScarInquiry first_scar_inquiry(const World *world) {
-    bool active_scar = false;
-    for (int slot = 0; slot < WORLD_MAX_LOCAL_OVERRIDES; ++slot) {
-        const LocalOverride *override =
-            &world->universe.local_overrides[slot];
-        if (!override->active) {
-            continue;
-        }
-        bool changes_nutrition = false;
-        for (uint8_t value = 0; value < override->value_count; ++value) {
-            if (override->values[value].concept == CONCEPT_NUTRITION) {
-                changes_nutrition = true;
-                break;
-            }
-        }
-        if (!changes_nutrition) {
-            continue;
-        }
-        const Entity *entity =
-            world_entity_by_id_const(world, override->entity_id);
-        if (entity == NULL || entity->prototype != PROTOTYPE_APPLE) {
-            continue;
-        }
-        if (!entity->active) {
-            return FIRST_SCAR_COMPLETE;
-        }
-        active_scar = true;
-    }
-    return active_scar ? FIRST_SCAR_NEEDS_PROOF
-                       : FIRST_SCAR_NEEDS_INSCRIPTION;
-}
-
 static void draw_inquiry_step(int y, const char *title, const char *detail,
                               bool complete, bool active) {
     const Color emphasis = active ? INK : INK_SOFT;
@@ -1608,69 +1870,62 @@ static void draw_inquiry_step(int y, const char *title, const char *detail,
     draw_text_fit(detail, 529, y + 18, 169, TYPE_CAPTION, INK_SOFT);
 }
 
-static void draw_closed_panel(const World *world, const char *save_hint) {
-    DrawRectangle(PAL_PANEL_X, PAL_HUD_HEIGHT,
-                  PAL_VIRTUAL_WIDTH - PAL_PANEL_X,
-                  PAL_VIRTUAL_HEIGHT - PAL_HUD_HEIGHT,
-                  PARCHMENT);
-    DrawRectangle(PAL_PANEL_X, PAL_HUD_HEIGHT, 4,
-                  PAL_VIRTUAL_HEIGHT - PAL_HUD_HEIGHT,
-                  PAL_GOLD);
-    const FirstScarInquiry inquiry = first_scar_inquiry(world);
-    const bool first_scar_complete = inquiry == FIRST_SCAR_COMPLETE;
-    if (first_scar_complete) {
-        draw_text("THE WEIGHT OF THINGS", 500, 55, TYPE_HEADING, INK);
-    } else {
-        draw_text("THE FIRST SCAR", 500, 53, TYPE_TITLE, INK);
+static const char *inquiry_title(InquiryId inquiry) {
+    if (inquiry == INQUIRY_FIRST_SCAR) {
+        return "THE FIRST SCAR";
     }
-    draw_text(first_scar_complete ? "the veil is comparative"
-                                  : "ordinary things open inward",
-              501, 79, TYPE_BODY, INK_SOFT);
-    DrawLine(501, 101, 698, 101, PARCHMENT_DARK);
+    if (inquiry == INQUIRY_WEIGHT_OF_THINGS) {
+        return "THE WEIGHT OF THINGS";
+    }
+    if (inquiry == INQUIRY_SENTENCE_INSIDE) {
+        return "THE SENTENCE INSIDE";
+    }
+    return "NO CURRENT INQUIRY";
+}
+
+static void draw_inquiry_controls(const char *save_hint) {
+    DrawLine(501, 268, 698, 268, PARCHMENT_DARK);
+    draw_text("WASD / arrows  walk", 501, 280, TYPE_BODY, INK);
+    draw_text("CLICK / E  open entity", 501, 301, TYPE_BODY, INK);
+    draw_text("RIGHT CLICK / F  invoke", 501, 322, TYPE_BODY, INK);
+    draw_text("F5 save  |  F9 reload", 501, 343, TYPE_BODY, INK);
+    draw_text_fit(save_hint, 501, 365, 198, TYPE_CAPTION, INK_SOFT);
+    draw_text("Reality is provisionally closed.", 501, 386,
+              TYPE_CAPTION, INK_SOFT);
+}
+
+static void draw_inquiry_detail(const World *world, InquiryId inquiry) {
+    const InquiryProgress progress = world_inquiry_progress(world, inquiry);
     draw_text("INQUIRY", 501, 115, TYPE_CAPTION, OCHRE_INK);
-    if (!first_scar_complete) {
-        draw_text_fit("MAKE ONE APPLE DIFFERENT", 501, 134, 197,
+    if (inquiry == INQUIRY_FIRST_SCAR) {
+        draw_text_fit("MAKE ONE APPLE DIFFERENT", 501, 136, 197,
                       TYPE_BODY, INK);
         draw_inquiry_step(160, "INSCRIBE A SCAR",
-                          inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
+                          progress.completed_steps == 0
                               ? "Alter its nourishment."
                               : "Local Scar inscribed.",
-                          inquiry != FIRST_SCAR_NEEDS_INSCRIPTION,
-                          inquiry == FIRST_SCAR_NEEDS_INSCRIPTION);
+                          progress.completed_steps >= 1,
+                          progress.completed_steps == 0);
         draw_inquiry_step(207, "TEST THE DIFFERENCE",
-                          inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
+                          progress.completed_steps == 0
                               ? "Then invoke that apple."
-                              : "Stand nearby; press F.",
-                          false, inquiry == FIRST_SCAR_NEEDS_PROOF);
-        draw_text_fit(inquiry == FIRST_SCAR_NEEDS_INSCRIPTION
-                          ? "0 / 2  INQUIRY OPEN"
-                          : "1 / 2  SCAR INSCRIBED",
-                      501, 250, 197, TYPE_CAPTION, INK_SOFT);
-    } else {
+                              : "Stand nearby; press F or right-click.",
+                          false, progress.completed_steps == 1);
+    } else if (inquiry == INQUIRY_WEIGHT_OF_THINGS) {
         const uint8_t observations =
             world_concept_observation_count(world, CONCEPT_MASS);
-        const bool exact =
-            world_knows_exact_notation(world, CONCEPT_MASS);
-        draw_text_fit(exact ? "THE NUMBER REMAINS"
-                            : observations >= 2
-                                  ? "MAKE THE VAGUE EXACT"
-                                  : "WEIGH WHAT HAS NO NAME",
-                      501, 134, 197, TYPE_BODY, INK);
-        if (exact) {
-            draw_inquiry_step(160, "MEANING REVEALED",
-                              "Mass is now readable.", true, false);
-            draw_inquiry_step(207, "EXACT NOTATION",
-                              "Exact mass can be read.", true, false);
-        } else if (observations < 2) {
+        draw_text_fit(observations >= 2 ? "MAKE THE VAGUE EXACT"
+                                        : "WEIGH WHAT HAS NO NAME",
+                      501, 136, 197, TYPE_BODY, INK);
+        if (observations < 2) {
             draw_inquiry_step(160, "TOUCH THE VEIL",
                               observations == 0
                                   ? "Open a Lens; click { ? }."
                                   : "One kind remembered.",
                               observations >= 1, observations == 0);
             draw_inquiry_step(207, "FIND IT ELSEWHERE",
-                              observations == 0
-                                  ? "Seek another kind."
-                                  : "Attend on another kind.",
+                              observations == 0 ? "Seek another kind."
+                                                : "Attend on another kind.",
                               false, observations == 1);
         } else {
             draw_inquiry_step(160, "MEANING REVEALED",
@@ -1678,26 +1933,102 @@ static void draw_closed_panel(const World *world, const char *save_hint) {
             draw_inquiry_step(207, "SEEK A THIRD KIND",
                               "Attend to readable mass.", false, true);
         }
-        char progress[64];
-        if (exact) {
-            (void)snprintf(progress, sizeof(progress),
-                           "COMPLETE  NOTATION HELD");
-        } else {
-            (void)snprintf(progress, sizeof(progress),
-                           "%u / 3  IMPRESSIONS HELD",
-                           (unsigned int)observations);
-        }
-        draw_text_fit(progress, 501, 250, 197, TYPE_CAPTION,
-                      exact ? OCHRE_INK : INK_SOFT);
+    } else if (inquiry == INQUIRY_SENTENCE_INSIDE) {
+        draw_text_fit("ONE APPLE, A NEW ANSWER", 501, 136, 197,
+                      TYPE_BODY, INK);
+        draw_inquiry_step(160, "REWRITE AN APPLE",
+                          "Change its Behavior.", false, true);
+        draw_text_fit("Hunger. Voice. Fate.", 501, 214, 197,
+                      TYPE_CAPTION, INK_SOFT);
+    } else {
+        draw_text_fit("THE PAGE HAS RUN OUT BEFORE REALITY", 501, 136, 197,
+                      TYPE_BODY, INK);
+        draw_inquiry_step(167, "ALL KNOWN INQUIRIES HELD",
+                          "More grammar is coming.", true, false);
     }
-    DrawLine(501, 266, 698, 266, PARCHMENT_DARK);
-    draw_text("WASD / arrows  walk", 501, 280, TYPE_BODY, INK);
-    draw_text("CLICK / E  open entity", 501, 298, TYPE_BODY, INK);
-    draw_text("F  invoke its behavior", 501, 316, TYPE_BODY, INK);
-    draw_text("F5 save  |  F9 reload", 501, 334, TYPE_BODY, INK);
-    draw_text_fit(save_hint, 501, 354, 198, TYPE_CAPTION, INK_SOFT);
-    draw_text("Reality is only", 501, 373, TYPE_BODY, INK_SOFT);
-    draw_text("provisionally closed.", 501, 389, TYPE_BODY, INK_SOFT);
+    char count[64];
+    (void)snprintf(count, sizeof(count), "%u / %u  IMPRESSIONS HELD",
+                   (unsigned int)progress.completed_steps,
+                   (unsigned int)progress.step_count);
+    draw_text_fit(count, 501, 251, 197, TYPE_CAPTION, INK_SOFT);
+}
+
+static void draw_inquiry_index(const World *world, InquiryId active) {
+    draw_text("KNOWN INQUIRIES", 501, 116, TYPE_CAPTION, OCHRE_INK);
+    int y = 142;
+    for (InquiryId inquiry = INQUIRY_FIRST_SCAR;
+         inquiry < INQUIRY_COUNT; inquiry = (InquiryId)(inquiry + 1)) {
+        const InquiryProgress progress =
+            world_inquiry_progress(world, inquiry);
+        const bool complete = progress.step_count > 0 &&
+                              progress.completed_steps == progress.step_count;
+        if (!complete && inquiry != active) {
+            break;
+        }
+        draw_text(complete ? "[x]" : "[+]", 501, y, TYPE_BODY,
+                  complete ? INK_SOFT : OCHRE_INK);
+        draw_text_fit(inquiry_title(inquiry), 532, y, 166, TYPE_BODY,
+                      complete ? INK_SOFT : INK);
+        char progress_text[32];
+        (void)snprintf(progress_text, sizeof(progress_text), "%u / %u",
+                       (unsigned int)progress.completed_steps,
+                       (unsigned int)progress.step_count);
+        draw_text(progress_text, 532, y + 19, TYPE_CAPTION, INK_SOFT);
+        y += 48;
+    }
+    draw_text("The list ends where Knowledge does.", 501, 247,
+              TYPE_CAPTION, INK_SOFT);
+}
+
+static void draw_knowledge_notice(const UiState *ui) {
+    if (ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_NONE ||
+        ui->knowledge_notice_frames == 0) {
+        return;
+    }
+    const Rectangle notice = knowledge_notice_rectangle();
+    DrawRectangleRec(notice, Fade(INK, 0.97f));
+    DrawRectangleLinesEx(notice, 2.0f, PAL_GOLD);
+    draw_text(ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_BEHAVIOR
+                  ? "KNOWLEDGE DEEPENS"
+                  : "NOTATION BECOMES GRAMMAR",
+              501, 55, TYPE_CAPTION, PAL_GOLD);
+    draw_text(ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_BEHAVIOR
+                  ? "BEHAVIOR"
+                  : "CLAUSES",
+              501, 75, TYPE_HEADING, PARCHMENT);
+    draw_text_fit(ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_BEHAVIOR
+                      ? "Things have sentences inside."
+                      : "Apple Behavior can now be Patched.",
+                  501, 102, 196, TYPE_BODY, PARCHMENT);
+}
+
+static void draw_closed_panel(const UiState *ui, const World *world,
+                              const char *save_hint) {
+    DrawRectangle(PAL_PANEL_X, PAL_HUD_HEIGHT,
+                  PAL_VIRTUAL_WIDTH - PAL_PANEL_X,
+                  PAL_VIRTUAL_HEIGHT - PAL_HUD_HEIGHT,
+                  PARCHMENT);
+    DrawRectangle(PAL_PANEL_X, PAL_HUD_HEIGHT, 4,
+                   PAL_VIRTUAL_HEIGHT - PAL_HUD_HEIGHT,
+                   PAL_GOLD);
+    const InquiryId active = world_active_inquiry(world);
+    draw_text_fit(ui->inquiry_panel_expanded ? inquiry_title(active)
+                                             : "INQUIRY INDEX",
+                  500, 51, 205, TYPE_HEADING, INK);
+    draw_text_fit(ui->inquiry_panel_expanded ? "things open inward"
+                                             : "completed pages remain",
+                  501, 80, 143, TYPE_BODY, INK_SOFT);
+    draw_button(inquiry_toggle_button(),
+                ui->inquiry_panel_expanded ? "CLOSE" : "OPEN",
+                PARCHMENT_DARK);
+    DrawLine(501, 105, 698, 105, PARCHMENT_DARK);
+    if (ui->inquiry_panel_expanded) {
+        draw_inquiry_detail(world, active);
+    } else {
+        draw_inquiry_index(world, active);
+    }
+    draw_inquiry_controls(save_hint);
+    draw_knowledge_notice(ui);
 }
 
 void ui_draw(const UiState *ui, const World *world, int nearby_entity,
@@ -1739,7 +2070,12 @@ void ui_draw(const UiState *ui, const World *world, int nearby_entity,
                       "HUNGER") + 12;
     (void)draw_bar(hud_x, 9, 48, world->embodiment.warmth, COLD_BLUE,
                    "WARMTH");
-    const char *mode = ui->developer_mode ? "PALI/DEV" : "LENS/STATE";
+    const char *mode =
+        ui->developer_mode
+            ? "PALI/DEV"
+            : world->knowledge.access_depth >= (uint8_t)ACCESS_DEPTH_BEHAVIOR
+                  ? "LENS/BEHAVIOR"
+                  : "LENS/STATE";
     draw_text(mode,
               PAL_VIRTUAL_WIDTH - text_width(mode, TYPE_BODY) - 9, 9,
               TYPE_BODY, PAL_GOLD);
@@ -1753,6 +2089,6 @@ void ui_draw(const UiState *ui, const World *world, int nearby_entity,
             draw_structured_lens(ui, world);
         }
     } else {
-        draw_closed_panel(world, save_hint);
+        draw_closed_panel(ui, world, save_hint);
     }
 }

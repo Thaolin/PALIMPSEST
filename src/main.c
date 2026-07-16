@@ -130,6 +130,31 @@ static void set_world_message(const char *prefix, const PaliError *error) {
                    error != NULL ? error->message : "unknown error");
 }
 
+static void invoke_entity(int entity_index, bool explicitly_targeted) {
+    PaliError error;
+    if (entity_index < 0) {
+        (void)snprintf(game_world.message, sizeof(game_world.message),
+                       explicitly_targeted ? "Right-click a nearby entity to invoke it."
+                                           : "Nothing nearby answers use.");
+        return;
+    }
+    if (explicitly_targeted) {
+        const Entity *target = &game_world.universe.entities[entity_index];
+        const float dx = target->x - game_world.embodiment.x;
+        const float dy = target->y - game_world.embodiment.y;
+        if (dx * dx + dy * dy > 18.0f * 18.0f) {
+            (void)snprintf(game_world.message, sizeof(game_world.message),
+                           "That sentence cannot reach you from here.");
+            return;
+        }
+    }
+    if (world_use_entity(&game_world, entity_index, &error)) {
+        const KnowledgeGrant grant =
+            world_reconcile_inquiry_knowledge(&game_world);
+        ui_present_knowledge_grant(&game_ui, grant);
+    }
+}
+
 int main(int argc, char **argv) {
     Options options;
     if (!parse_options(argc, argv, &options)) {
@@ -202,11 +227,14 @@ int main(int argc, char **argv) {
         world_grant_developer_knowledge(&game_world);
         ui_set_developer_mode(&game_ui, true);
     }
+    ui_present_knowledge_grant(
+        &game_ui, world_reconcile_inquiry_knowledge(&game_world));
     if (options.capture_inspector) {
         for (uint16_t index = 0; index < game_world.universe.entity_count;
              ++index) {
-            if (game_world.universe.entities[index].prototype ==
-                PROTOTYPE_APPLE) {
+            const Entity *candidate = &game_world.universe.entities[index];
+            if (candidate->prototype == PROTOTYPE_APPLE &&
+                candidate->active) {
                 ui_open_inspector(&game_ui, &game_world, (int)index);
                 break;
             }
@@ -239,12 +267,21 @@ int main(int argc, char **argv) {
             ui_update(&game_ui, &game_world, virtual_mouse);
             accumulator = 0.0;
         } else {
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            const bool panel_consumed =
+                ui_update_world_panel(&game_ui, virtual_mouse);
+            if (!panel_consumed &&
+                IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 const int clicked =
                     entity_at_virtual_mouse(&game_world, virtual_mouse);
                 if (clicked >= 0) {
                     ui_open_inspector(&game_ui, &game_world, clicked);
                 }
+            }
+            if (!panel_consumed &&
+                virtual_mouse.x < (float)PAL_PANEL_X &&
+                IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+                invoke_entity(
+                    entity_at_virtual_mouse(&game_world, virtual_mouse), true);
             }
             if (IsKeyPressed(KEY_E)) {
                 const int nearby = world_nearest_entity(&game_world, 18.0f);
@@ -257,14 +294,7 @@ int main(int argc, char **argv) {
                 }
             }
             if (IsKeyPressed(KEY_F)) {
-                const int nearby = world_nearest_entity(&game_world, 18.0f);
-                if (nearby < 0) {
-                    (void)snprintf(game_world.message,
-                                   sizeof(game_world.message),
-                                   "Nothing nearby answers use.");
-                } else {
-                    (void)world_use_entity(&game_world, nearby, &error);
-                }
+                invoke_entity(world_nearest_entity(&game_world, 18.0f), false);
             }
 
             float frame_time = GetFrameTime();
@@ -301,10 +331,18 @@ int main(int argc, char **argv) {
         }
         if (IsKeyPressed(KEY_F9)) {
             if (save_load(&game_world, options.save_path, asset_root, &error)) {
+                if (options.developer) {
+                    world_grant_developer_knowledge(&game_world);
+                }
                 game_ui.inspector_open = false;
-                (void)snprintf(game_world.message,
-                               sizeof(game_world.message),
-                               "Complete save restored.");
+                const KnowledgeGrant grant =
+                    world_reconcile_inquiry_knowledge(&game_world);
+                if (grant == KNOWLEDGE_GRANT_NONE) {
+                    (void)snprintf(game_world.message,
+                                   sizeof(game_world.message),
+                                   "Complete save restored.");
+                }
+                ui_present_knowledge_grant(&game_ui, grant);
             } else {
                 set_world_message("Reload failed", &error);
             }

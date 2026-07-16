@@ -302,7 +302,7 @@ bool world_init(World *world, uint64_t seed, const char *pali_asset_root,
     world->embodiment.hunger = 36.0f;
     world->embodiment.warmth = 72.0f;
     (void)snprintf(world->message, sizeof(world->message),
-                   "Click an entity or press E to open its Lens. F invokes use.");
+                   "Click or E opens. Right-click or F invokes nearby Behavior.");
     return true;
 }
 
@@ -371,6 +371,34 @@ static const LocalOverride *entity_override_const(const World *world,
         return NULL;
     }
     return override;
+}
+
+bool world_entity_has_behavior_patch(const World *world,
+                                     const Entity *entity) {
+    const LocalOverride *override = entity_override_const(world, entity);
+    return override != NULL && override->behavior.active;
+}
+
+const PaliProgram *world_entity_use_program(const World *world,
+                                            const Entity *entity) {
+    const LocalOverride *override = entity_override_const(world, entity);
+    if (override != NULL && override->behavior.active) {
+        return &override->behavior.program;
+    }
+    return world_entity_program(world, entity);
+}
+
+const PaliDocument *world_entity_behavior_document(const World *world,
+                                                   const Entity *entity) {
+    const LocalOverride *override = entity_override_const(world, entity);
+    if (override != NULL && override->behavior.active) {
+        return &override->behavior.document;
+    }
+    if (world == NULL || entity == NULL ||
+        entity->prototype >= PROTOTYPE_COUNT) {
+        return NULL;
+    }
+    return &world->universe.prototypes[entity->prototype].document;
 }
 
 static const LocalPatchValue *override_value(const LocalOverride *override,
@@ -530,6 +558,123 @@ void world_grant_developer_knowledge(World *world) {
     for (int reach = 0; reach < PATCH_REACH_COUNT; ++reach) {
         world->knowledge.reach_mask |= patch_reach_bit((PatchReach)reach);
     }
+}
+
+InquiryProgress world_inquiry_progress(const World *world,
+                                       InquiryId inquiry) {
+    InquiryProgress progress = {inquiry, 0, 0};
+    if (world == NULL) {
+        return progress;
+    }
+    if (inquiry == INQUIRY_FIRST_SCAR) {
+        progress.step_count = 2;
+        const ConceptAccess hunger_access =
+            world_concept_access(world, CONCEPT_HUNGER);
+        if (world->knowledge.access_depth >=
+                (uint8_t)ACCESS_DEPTH_BEHAVIOR &&
+            (hunger_access == CONCEPT_ACCESS_READABLE ||
+             hunger_access == CONCEPT_ACCESS_PATCHABLE)) {
+            progress.completed_steps = 2;
+            return progress;
+        }
+        for (int slot = 0; slot < WORLD_MAX_LOCAL_OVERRIDES; ++slot) {
+            const LocalOverride *override =
+                &world->universe.local_overrides[slot];
+            if (!override->active) {
+                continue;
+            }
+            bool changes_nutrition = false;
+            for (uint8_t value = 0; value < override->value_count; ++value) {
+                if (override->values[value].concept == CONCEPT_NUTRITION) {
+                    changes_nutrition = true;
+                    break;
+                }
+            }
+            const Entity *entity = changes_nutrition
+                                       ? world_entity_by_id_const(
+                                             world, override->entity_id)
+                                       : NULL;
+            if (entity == NULL || entity->prototype != PROTOTYPE_APPLE) {
+                continue;
+            }
+            if (!entity->active) {
+                progress.completed_steps = 2;
+                return progress;
+            }
+            progress.completed_steps = 1;
+        }
+        return progress;
+    }
+    if (inquiry == INQUIRY_WEIGHT_OF_THINGS) {
+        progress.step_count = 3;
+        progress.completed_steps =
+            world_concept_observation_count(world, CONCEPT_MASS);
+        if (progress.completed_steps > 2) {
+            progress.completed_steps = 2;
+        }
+        if (world_knows_exact_notation(world, CONCEPT_MASS)) {
+            progress.completed_steps = 3;
+        }
+        return progress;
+    }
+    if (inquiry == INQUIRY_SENTENCE_INSIDE) {
+        progress.step_count = 1;
+        for (int slot = 0; slot < WORLD_MAX_LOCAL_OVERRIDES; ++slot) {
+            const LocalOverride *override =
+                &world->universe.local_overrides[slot];
+            const Entity *entity =
+                override->active && override->behavior.active
+                    ? world_entity_by_id_const(world, override->entity_id)
+                    : NULL;
+            if (entity != NULL && entity->prototype == PROTOTYPE_APPLE) {
+                progress.completed_steps = 1;
+                break;
+            }
+        }
+    }
+    return progress;
+}
+
+InquiryId world_active_inquiry(const World *world) {
+    const InquiryProgress first =
+        world_inquiry_progress(world, INQUIRY_FIRST_SCAR);
+    if (first.completed_steps < first.step_count || world == NULL ||
+        world->knowledge.access_depth < (uint8_t)ACCESS_DEPTH_BEHAVIOR) {
+        return INQUIRY_FIRST_SCAR;
+    }
+    const InquiryProgress weight =
+        world_inquiry_progress(world, INQUIRY_WEIGHT_OF_THINGS);
+    if (weight.completed_steps < weight.step_count) {
+        return INQUIRY_WEIGHT_OF_THINGS;
+    }
+    const InquiryProgress sentence =
+        world_inquiry_progress(world, INQUIRY_SENTENCE_INSIDE);
+    if (sentence.completed_steps < sentence.step_count) {
+        return INQUIRY_SENTENCE_INSIDE;
+    }
+    return INQUIRY_NONE;
+}
+
+KnowledgeGrant world_reconcile_inquiry_knowledge(World *world) {
+    if (world == NULL) {
+        return KNOWLEDGE_GRANT_NONE;
+    }
+    const InquiryProgress first =
+        world_inquiry_progress(world, INQUIRY_FIRST_SCAR);
+    const uint64_t hunger = concept_bit(CONCEPT_HUNGER);
+    if (first.completed_steps == first.step_count &&
+        (world->knowledge.access_depth < (uint8_t)ACCESS_DEPTH_BEHAVIOR ||
+         (world->knowledge.readable_concepts & hunger) == 0)) {
+        if (world->knowledge.access_depth < (uint8_t)ACCESS_DEPTH_BEHAVIOR) {
+            world->knowledge.access_depth = (uint8_t)ACCESS_DEPTH_BEHAVIOR;
+        }
+        world->knowledge.perceived_concepts |= hunger;
+        world->knowledge.readable_concepts |= hunger;
+        (void)snprintf(world->message, sizeof(world->message),
+                       "Revelation: Behavior opens. Things have sentences inside.");
+        return KNOWLEDGE_GRANT_BEHAVIOR_DEPTH;
+    }
+    return KNOWLEDGE_GRANT_NONE;
 }
 
 static double entity_numeric_property(const World *world, const Entity *entity,
@@ -775,6 +920,326 @@ static bool host_call(void *user, PaliHostCall call,
     return host_error(error, "host call is not whitelisted");
 }
 
+static void behavior_fragment_from_document(const PaliDocument *source,
+                                            PaliDocument *out) {
+    memset(out, 0, sizeof(*out));
+    if (source == NULL) {
+        return;
+    }
+    (void)snprintf(out->prototype_name, sizeof(out->prototype_name), "%s",
+                   source->prototype_name);
+    memcpy(out->constants, source->constants, sizeof(out->constants));
+    memcpy(out->names, source->names, sizeof(out->names));
+    memcpy(out->expressions, source->expressions, sizeof(out->expressions));
+    memcpy(out->statements, source->statements, sizeof(out->statements));
+    out->constant_count = source->constant_count;
+    out->name_count = source->name_count;
+    out->expression_count = source->expression_count;
+    out->statement_count = source->statement_count;
+    out->has_use = source->has_use;
+}
+
+static bool merge_behavior_document(const PaliDocument *prototype,
+                                    const PaliDocument *handler,
+                                    PaliDocument *out, PaliError *error) {
+    if (prototype == NULL || handler == NULL || out == NULL ||
+        handler->property_count != 0 ||
+        strcmp(prototype->prototype_name, handler->prototype_name) != 0) {
+        set_error(error, 1, 1,
+                  "Behavior Patch must contain only this prototype's use handler");
+        return false;
+    }
+    *out = *prototype;
+    memset(out->constants, 0, sizeof(out->constants));
+    memset(out->names, 0, sizeof(out->names));
+    memset(out->expressions, 0, sizeof(out->expressions));
+    memset(out->statements, 0, sizeof(out->statements));
+    memcpy(out->constants, handler->constants, sizeof(out->constants));
+    memcpy(out->names, handler->names, sizeof(out->names));
+    memcpy(out->expressions, handler->expressions, sizeof(out->expressions));
+    memcpy(out->statements, handler->statements, sizeof(out->statements));
+    out->constant_count = handler->constant_count;
+    out->name_count = handler->name_count;
+    out->expression_count = handler->expression_count;
+    out->statement_count = handler->statement_count;
+    out->has_use = handler->has_use;
+    return true;
+}
+
+static bool behavior_concept_is_readable(const World *world,
+                                         ConceptId concept) {
+    const ConceptAccess access = world_concept_access(world, concept);
+    return access == CONCEPT_ACCESS_READABLE ||
+           access == CONCEPT_ACCESS_PATCHABLE;
+}
+
+static bool behavior_document_is_known(const World *world,
+                                       const PaliDocument *prototype,
+                                       const PaliDocument *handler,
+                                       PaliError *error) {
+    PaliValueType expression_types[PALI_MAX_EXPRESSIONS];
+    memset(expression_types, 0, sizeof(expression_types));
+    for (uint16_t index = 0; index < handler->expression_count; ++index) {
+        const PaliExpression *expression = &handler->expressions[index];
+        PaliValueType type = PALI_VALUE_NIL;
+        switch ((PaliExpressionKind)expression->kind) {
+            case PALI_EXPRESSION_LITERAL:
+                type = handler->constants[expression->operand].type;
+                break;
+            case PALI_EXPRESSION_GET_SELF: {
+                const char *name = handler->names[expression->operand];
+                const ConceptDefinition *concept = lexicon_find_by_name(name);
+                const PaliValue *property =
+                    pali_document_property(prototype, name);
+                if (concept == NULL || property == NULL ||
+                    property->type != concept->value_type ||
+                    !behavior_concept_is_readable(world, concept->id)) {
+                    set_error(error, (int)expression->line, 1,
+                              "Behavior refers to an unreadable self concept");
+                    return false;
+                }
+                type = concept->value_type;
+                break;
+            }
+            case PALI_EXPRESSION_GET_ACTOR: {
+                const char *name = handler->names[expression->operand];
+                const ConceptDefinition *concept = lexicon_find_by_name(name);
+                if (concept == NULL ||
+                    (concept->id != CONCEPT_HUNGER &&
+                     concept->id != CONCEPT_WARMTH && concept->id != CONCEPT_X &&
+                     concept->id != CONCEPT_Y) ||
+                    !behavior_concept_is_readable(world, concept->id)) {
+                    set_error(error, (int)expression->line, 1,
+                              "Behavior refers to an unreadable actor concept");
+                    return false;
+                }
+                type = concept->value_type;
+                break;
+            }
+            case PALI_EXPRESSION_ADD:
+            case PALI_EXPRESSION_SUBTRACT:
+            case PALI_EXPRESSION_MIN:
+            case PALI_EXPRESSION_MAX:
+                if (expression_types[expression->left] != PALI_VALUE_NUMBER ||
+                    expression_types[expression->right] != PALI_VALUE_NUMBER) {
+                    set_error(error, (int)expression->line, 1,
+                              "Behavior operator sockets require numbers");
+                    return false;
+                }
+                type = PALI_VALUE_NUMBER;
+                break;
+            case PALI_EXPRESSION_MULTIPLY:
+            case PALI_EXPRESSION_DIVIDE:
+            case PALI_EXPRESSION_NEGATE:
+            default:
+                set_error(error, (int)expression->line, 1,
+                          "Knowledge does not contain that Behavior operator");
+                return false;
+        }
+        expression_types[index] = type;
+    }
+
+    for (uint16_t index = 0; index < handler->statement_count; ++index) {
+        const PaliStatement *statement = &handler->statements[index];
+        switch ((PaliStatementKind)statement->kind) {
+            case PALI_STATEMENT_SET_ACTOR: {
+                const ConceptDefinition *concept =
+                    lexicon_find_by_name(handler->names[statement->name]);
+                if (concept == NULL ||
+                    (concept->id != CONCEPT_HUNGER &&
+                     concept->id != CONCEPT_WARMTH) ||
+                    !behavior_concept_is_readable(world, concept->id) ||
+                    expression_types[statement->expression] !=
+                        concept->value_type) {
+                    set_error(error, (int)statement->line, 1,
+                              "Behavior effect does not fit its actor socket");
+                    return false;
+                }
+                break;
+            }
+            case PALI_STATEMENT_SET_SELF: {
+                const char *name = handler->names[statement->name];
+                const ConceptDefinition *concept = lexicon_find_by_name(name);
+                const PaliValue *property =
+                    pali_document_property(prototype, name);
+                if (concept == NULL || property == NULL ||
+                    world_concept_access(world, concept->id) !=
+                        CONCEPT_ACCESS_PATCHABLE ||
+                    expression_types[statement->expression] !=
+                        property->type) {
+                    set_error(error, (int)statement->line, 1,
+                              "Behavior effect does not fit its self socket");
+                    return false;
+                }
+                break;
+            }
+            case PALI_STATEMENT_MESSAGE:
+                if (expression_types[statement->expression] !=
+                    PALI_VALUE_TEXT) {
+                    set_error(error, (int)statement->line, 1,
+                              "reveal Clause requires text");
+                    return false;
+                }
+                break;
+            case PALI_STATEMENT_DESTROY_SELF:
+                break;
+            default:
+                set_error(error, (int)statement->line, 1,
+                          "Knowledge does not contain that Behavior effect");
+                return false;
+        }
+    }
+    return true;
+}
+
+static bool resolve_behavior_program(const World *world,
+                                     const PaliDocument *prototype,
+                                     const PaliDocument *handler,
+                                     PaliProgram *out, PaliError *error) {
+    PaliProgram handler_validation;
+    if (world == NULL || prototype == NULL || handler == NULL || out == NULL ||
+        !handler->has_use ||
+        !pali_compile_document(handler, &handler_validation, error)) {
+        if (error != NULL && error->message[0] == '\0') {
+            set_error(error, 1, 1,
+                      "Behavior Patch requires a valid on use(actor) trigger");
+        }
+        return false;
+    }
+    PaliDocument resolved;
+    if (!merge_behavior_document(prototype, handler, &resolved, error) ||
+        !behavior_document_is_known(world, prototype, handler, error) ||
+        !pali_compile_document(&resolved, out, error)) {
+        return false;
+    }
+    if (out->code_count > WORLD_BEHAVIOR_PATCH_BUDGET) {
+        set_error(error, 1, 1,
+                  "Behavior candidate exceeds the known Clause budget");
+        return false;
+    }
+    return true;
+}
+
+bool world_behavior_is_patchable(const World *world, const Entity *entity) {
+    return world != NULL && entity != NULL && entity->active &&
+           entity->prototype == PROTOTYPE_APPLE &&
+           world->knowledge.access_depth >= (uint8_t)ACCESS_DEPTH_BEHAVIOR &&
+           world_knows_exact_notation(world, CONCEPT_MASS) &&
+           world_has_reach(world, PATCH_REACH_ENTITY);
+}
+
+bool world_build_use_behavior_document(const World *world,
+                                       const Entity *entity,
+                                       UseBehaviorDraft draft,
+                                       PaliDocument *out,
+                                       PaliError *error) {
+    if (world == NULL || entity == NULL || out == NULL ||
+        entity->prototype != PROTOTYPE_APPLE ||
+        draft.hunger < 0 || draft.hunger >= BEHAVIOR_HUNGER_COUNT ||
+        draft.voice < 0 || draft.voice >= BEHAVIOR_VOICE_COUNT ||
+        draft.fate < 0 || draft.fate >= BEHAVIOR_FATE_COUNT) {
+        set_error(error, 0, 0, "Behavior Draft is not a known apple grammar");
+        return false;
+    }
+    const char *hunger = "";
+    if (draft.hunger == BEHAVIOR_HUNGER_SOOTHE) {
+        hunger = "        actor.hunger = max(0, actor.hunger - self.nutrition)\n";
+    } else if (draft.hunger == BEHAVIOR_HUNGER_SHARPEN) {
+        hunger = "        actor.hunger = min(100, actor.hunger + self.nutrition)\n";
+    }
+    const char *voice = "";
+    if (draft.voice == BEHAVIOR_VOICE_FADE) {
+        voice = "        message(\"The apple becomes less real.\")\n";
+    } else if (draft.voice == BEHAVIOR_VOICE_REMEMBER) {
+        voice = "        message(\"The apple remembers being eaten.\")\n";
+    }
+    const char *fate = draft.fate == BEHAVIOR_FATE_CEASE
+                           ? "        destroy(self)\n"
+                           : "";
+    char source[PALI_SOURCE_CAP];
+    const int written = snprintf(
+        source, sizeof(source),
+        "prototype %s\n    on use(actor)\n%s%s%s    end\nend\n",
+        world_prototype_name((PrototypeId)entity->prototype), hunger, voice,
+        fate);
+    if (written < 0 || (size_t)written >= sizeof(source)) {
+        set_error(error, 0, 0, "Behavior Draft exceeds its source bound");
+        return false;
+    }
+    return pali_parse_document(source, out, error);
+}
+
+static bool behavior_document_is_generated_apple_draft(
+    const World *world, const Entity *entity, const char *source,
+    PaliError *error) {
+    for (int hunger = 0; hunger < BEHAVIOR_HUNGER_COUNT; ++hunger) {
+        for (int voice = 0; voice < BEHAVIOR_VOICE_COUNT; ++voice) {
+            for (int fate = 0; fate < BEHAVIOR_FATE_COUNT; ++fate) {
+                const UseBehaviorDraft draft = {
+                    (BehaviorHungerClause)hunger,
+                    (BehaviorVoiceClause)voice,
+                    (BehaviorFateClause)fate};
+                PaliDocument candidate;
+                char candidate_source[PALI_SOURCE_CAP];
+                if (!world_build_use_behavior_document(world, entity, draft,
+                                                       &candidate, error) ||
+                    !pali_format_document(&candidate, candidate_source,
+                                          sizeof(candidate_source), error)) {
+                    return false;
+                }
+                if (strcmp(source, candidate_source) == 0) {
+                    return true;
+                }
+            }
+        }
+    }
+    set_error(error, 1, 1, "Behavior Patch is not a known apple grammar");
+    return false;
+}
+
+bool world_get_entity_use_behavior_draft(const World *world,
+                                         const Entity *entity,
+                                         UseBehaviorDraft *out) {
+    if (world == NULL || entity == NULL || out == NULL ||
+        entity->prototype != PROTOTYPE_APPLE) {
+        return false;
+    }
+    const PaliDocument *effective =
+        world_entity_behavior_document(world, entity);
+    if (effective == NULL) {
+        return false;
+    }
+    PaliDocument fragment;
+    behavior_fragment_from_document(effective, &fragment);
+    char effective_source[PALI_SOURCE_CAP];
+    PaliError error;
+    if (!pali_format_document(&fragment, effective_source,
+                              sizeof(effective_source), &error)) {
+        return false;
+    }
+    for (int hunger = 0; hunger < BEHAVIOR_HUNGER_COUNT; ++hunger) {
+        for (int voice = 0; voice < BEHAVIOR_VOICE_COUNT; ++voice) {
+            for (int fate = 0; fate < BEHAVIOR_FATE_COUNT; ++fate) {
+                const UseBehaviorDraft draft = {
+                    (BehaviorHungerClause)hunger,
+                    (BehaviorVoiceClause)voice,
+                    (BehaviorFateClause)fate};
+                PaliDocument candidate;
+                char candidate_source[PALI_SOURCE_CAP];
+                if (world_build_use_behavior_document(
+                        world, entity, draft, &candidate, &error) &&
+                    pali_format_document(&candidate, candidate_source,
+                                         sizeof(candidate_source), &error) &&
+                    strcmp(candidate_source, effective_source) == 0) {
+                    *out = draft;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool world_use_entity(World *world, int entity_index, PaliError *error) {
     if (world == NULL || entity_index < 0 ||
         entity_index >= (int)world->universe.entity_count) {
@@ -789,13 +1254,16 @@ bool world_use_entity(World *world, int entity_index, PaliError *error) {
     HostContext context;
     context.world = world;
     context.self = entity;
-    context.program = world_entity_program(world, entity);
+    context.program = world_entity_use_program(world, entity);
     PaliHost host;
     host.user = &context;
     host.get_property = host_get;
     host.set_property = host_set;
     host.call = host_call;
-    if (!pali_run_use(context.program, &host, PALI_DEFAULT_BUDGET, error)) {
+    const int budget = world_entity_has_behavior_patch(world, entity)
+                           ? WORLD_BEHAVIOR_PATCH_BUDGET
+                           : PALI_DEFAULT_BUDGET;
+    if (!pali_run_use(context.program, &host, budget, error)) {
         char detail[WORLD_MESSAGE_CAP];
         (void)snprintf(detail, sizeof(detail), "Anomaly L%d: %.120s",
                        error != NULL ? error->line : 0,
@@ -840,6 +1308,8 @@ bool world_apply_prototype_source(World *world, PrototypeId prototype,
             return false;
         }
     }
+    PaliProgram resolved_behaviors[WORLD_MAX_LOCAL_OVERRIDES];
+    bool updates_behavior[WORLD_MAX_LOCAL_OVERRIDES] = {false};
     for (int slot = 0; slot < WORLD_MAX_LOCAL_OVERRIDES; ++slot) {
         const LocalOverride *override =
             &world->universe.local_overrides[slot];
@@ -865,6 +1335,14 @@ bool world_apply_prototype_source(World *world, PrototypeId prototype,
                 return false;
             }
         }
+        if (override->behavior.active) {
+            if (!resolve_behavior_program(world, &candidate_document,
+                                          &override->behavior.document,
+                                          &resolved_behaviors[slot], error)) {
+                return false;
+            }
+            updates_behavior[slot] = true;
+        }
     }
     definition->document = candidate_document;
     definition->program = candidate;
@@ -872,6 +1350,12 @@ bool world_apply_prototype_source(World *world, PrototypeId prototype,
                    sizeof(definition->current_source), "%s", normalized);
     definition->patched =
         strcmp(definition->current_source, definition->default_source) != 0;
+    for (int slot = 0; slot < WORLD_MAX_LOCAL_OVERRIDES; ++slot) {
+        if (updates_behavior[slot]) {
+            world->universe.local_overrides[slot].behavior.program =
+                resolved_behaviors[slot];
+        }
+    }
     (void)snprintf(world->message, sizeof(world->message),
                    "Shared prototype '%s' compiled.", definition->name);
     return true;
@@ -884,6 +1368,11 @@ static int available_override_slot(const World *world) {
         }
     }
     return -1;
+}
+
+static bool local_override_is_empty(const LocalOverride *override) {
+    return override == NULL ||
+           (override->value_count == 0 && !override->behavior.active);
 }
 
 static int local_value_index(const LocalOverride *override,
@@ -925,6 +1414,127 @@ static bool patch_permission(const World *world, ConceptId concept,
     return true;
 }
 
+bool world_clear_entity_behavior_patch(World *world, uint64_t entity_id,
+                                       PaliError *error) {
+    Entity *entity = world_entity_by_id(world, entity_id);
+    if (entity == NULL || !entity->active) {
+        set_error(error, 0, 0, "Behavior Patch target does not exist");
+        return false;
+    }
+    if (!world_behavior_is_patchable(world, entity)) {
+        set_error(error, 0, 0,
+                  "Knowledge cannot Patch this Entity's Behavior");
+        return false;
+    }
+    if (entity->local_override < 0 ||
+        entity->local_override >= WORLD_MAX_LOCAL_OVERRIDES) {
+        return true;
+    }
+    LocalOverride *override =
+        &world->universe.local_overrides[entity->local_override];
+    if (!override->active || override->entity_id != entity_id) {
+        set_error(error, 0, 0, "Entity Patch provenance is inconsistent");
+        return false;
+    }
+    if (!override->behavior.active) {
+        return true;
+    }
+    memset(&override->behavior, 0, sizeof(override->behavior));
+    if (local_override_is_empty(override)) {
+        memset(override, 0, sizeof(*override));
+        entity->local_override = -1;
+    }
+    entity->dirty = true;
+    (void)snprintf(world->message, sizeof(world->message),
+                   "Entity Behavior Patch removed.");
+    return true;
+}
+
+bool world_apply_entity_behavior_patch(World *world, uint64_t entity_id,
+                                       const PaliDocument *handler,
+                                       PaliError *error) {
+    Entity *entity = world_entity_by_id(world, entity_id);
+    if (entity == NULL || !entity->active) {
+        set_error(error, 0, 0, "Behavior Patch target does not exist");
+        return false;
+    }
+    if (!world_behavior_is_patchable(world, entity)) {
+        set_error(error, 0, 0,
+                  "Knowledge cannot Patch this Entity's Behavior");
+        return false;
+    }
+    if (handler == NULL) {
+        set_error(error, 0, 0, "Behavior Patch has no typed document");
+        return false;
+    }
+
+    char normalized_source[PALI_SOURCE_CAP];
+    PaliDocument normalized_document;
+    if (!pali_format_document(handler, normalized_source,
+                              sizeof(normalized_source), error) ||
+        !pali_parse_document(normalized_source, &normalized_document, error)) {
+        return false;
+    }
+    PrototypeDefinition *prototype =
+        &world->universe.prototypes[entity->prototype];
+    PaliProgram resolved_program;
+    if (!resolve_behavior_program(world, &prototype->document,
+                                  &normalized_document, &resolved_program,
+                                  error)) {
+        return false;
+    }
+    if (!behavior_document_is_generated_apple_draft(
+            world, entity, normalized_source, error)) {
+        return false;
+    }
+
+    PaliDocument inherited;
+    char inherited_source[PALI_SOURCE_CAP];
+    behavior_fragment_from_document(&prototype->document, &inherited);
+    if (!pali_format_document(&inherited, inherited_source,
+                              sizeof(inherited_source), error)) {
+        return false;
+    }
+    if (strcmp(normalized_source, inherited_source) == 0) {
+        return world_clear_entity_behavior_patch(world, entity_id, error);
+    }
+
+    int slot = entity->local_override;
+    if (slot < 0) {
+        slot = available_override_slot(world);
+    }
+    if (slot < 0 || slot >= WORLD_MAX_LOCAL_OVERRIDES) {
+        set_error(error, 0, 0, "Entity Patch capacity reached");
+        return false;
+    }
+    LocalOverride candidate;
+    if (entity->local_override >= 0) {
+        candidate = world->universe.local_overrides[slot];
+        if (!candidate.active || candidate.entity_id != entity_id) {
+            set_error(error, 0, 0, "Entity Patch provenance is inconsistent");
+            return false;
+        }
+    } else {
+        memset(&candidate, 0, sizeof(candidate));
+        candidate.active = true;
+        candidate.entity_id = entity_id;
+    }
+    memset(&candidate.behavior, 0, sizeof(candidate.behavior));
+    candidate.behavior.active = true;
+    candidate.behavior.document = normalized_document;
+    candidate.behavior.program = resolved_program;
+    (void)snprintf(candidate.behavior.source,
+                   sizeof(candidate.behavior.source), "%s",
+                   normalized_source);
+    world->universe.local_overrides[slot] = candidate;
+    entity->local_override = (int8_t)slot;
+    entity->dirty = true;
+    (void)snprintf(world->message, sizeof(world->message),
+                   "This %s now carries a local Behavior Scar.",
+                   world_prototype_name((PrototypeId)entity->prototype));
+    return true;
+}
+
 bool world_clear_entity_value_patch(World *world, uint64_t entity_id,
                                     ConceptId concept, PaliError *error) {
     Entity *entity = world_entity_by_id(world, entity_id);
@@ -956,7 +1566,7 @@ bool world_clear_entity_value_patch(World *world, uint64_t entity_id,
     override->value_count--;
     memset(&override->values[override->value_count], 0,
            sizeof(override->values[override->value_count]));
-    if (override->value_count == 0) {
+    if (local_override_is_empty(override)) {
         memset(override, 0, sizeof(*override));
         entity->local_override = -1;
     }
@@ -1218,6 +1828,13 @@ uint64_t world_state_fingerprint(const World *world) {
                 hash = hash_bytes(hash, &override->values[value].concept,
                                   sizeof(override->values[value].concept));
                 hash = hash_value(hash, override->values[value].value);
+            }
+            const uint8_t has_behavior =
+                override->behavior.active ? 1u : 0u;
+            hash = hash_bytes(hash, &has_behavior, sizeof(has_behavior));
+            if (override->behavior.active) {
+                hash = hash_bytes(hash, override->behavior.source,
+                                  strlen(override->behavior.source));
             }
         }
     }

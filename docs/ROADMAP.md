@@ -16,7 +16,8 @@ inspector with the mouse-first structured Lens. A normal Knowledge profile has
 Entity Reach only: nourishment is changed through a typed State control and
 becomes a sparse Local Override, leaving another apple unchanged without
 freezing unrelated inherited meaning. Existing Behavior is rendered as
-readable, non-patchable Clauses.
+readable, non-patchable Clauses. That 0.2 presentation was later placed behind
+the First Scar's Behavior Access Depth grant in 0.4.
 
 Prototype Reach is retained, validated, saved, and tested through a developer
 Knowledge profile, but normal play neither grants nor advertises “every apple.”
@@ -40,10 +41,20 @@ Observations.
 
 ### 0.4 — Behavior has grammar
 
-Make the existing `on use(actor)` Behavior patchable through typed Clauses.
-Only known, type-compatible triggers, operands, and effects may be selected.
-The proof is changing one apple's use Behavior entirely with the mouse, safely
-rejecting an over-budget candidate, and preserving its Patch through save/load.
+**Implemented vertical slice.**
+
+Completing The First Scar now grants Behavior Access Depth and readable hunger;
+learning exact mass Notation then makes an apple's existing `on use(actor)`
+Behavior patchable through typed Clauses. The fixed trigger leads into bounded
+choices for soothing, sharpening, or leaving hunger; fading, remembering, or
+silencing its voice; and ceasing or remaining.
+
+The resulting local Behavior Scar has sparse Entity Provenance independent of
+local value Scars. Candidates are type-checked and rejected transactionally
+above a 24-instruction Clause budget. Save v4 persists normalized local handler
+source and restores it compositionally; v2 and v3 remain accepted. Inquiries
+derive their current and completed pages from world and Knowledge state, and
+their panel now opens into a compact index rather than storing completion flags.
 
 ## Horizon II — Reach changes meaning
 

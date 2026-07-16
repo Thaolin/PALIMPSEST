@@ -9,6 +9,7 @@
 #define SAVE_BUFFER_CAPACITY (128u * 1024u)
 #define SAVE_HEADER_SIZE 24u
 #define SAVE_LEGACY_VERSION 2u
+#define SAVE_OBSERVATION_VERSION 3u
 
 static const uint8_t SAVE_MAGIC[8] = {'P', 'A', 'L', 'S', 'A', 'V', 'E', '2'};
 
@@ -190,6 +191,7 @@ static void patch_u64(uint8_t *data, size_t offset, uint64_t value) {
 }
 
 static void serialize_world(SaveBuffer *buffer, const World *world) {
+    World behavior_candidate;
     if (!knowledge_is_valid(&world->knowledge)) {
         buffer_fail(buffer, "save contains invalid Knowledge state");
         return;
@@ -199,10 +201,64 @@ static void serialize_world(SaveBuffer *buffer, const World *world) {
         return;
     }
     for (int index = 0; index < WORLD_MAX_LOCAL_OVERRIDES; ++index) {
-        if (world->universe.local_overrides[index].value_count >
+        const LocalOverride *override =
+            &world->universe.local_overrides[index];
+        if (override->value_count >
             WORLD_LOCAL_PATCH_VALUES) {
             buffer_fail(buffer, "Entity Patch exceeds fixed storage");
             return;
+        }
+        const Entity *entity = override->active
+                                   ? world_entity_by_id_const(
+                                         world, override->entity_id)
+                                   : NULL;
+        if ((!override->active &&
+             (override->value_count != 0 || override->behavior.active)) ||
+            (override->active &&
+             (entity == NULL || entity->local_override != index ||
+              (override->value_count == 0 && !override->behavior.active)))) {
+            buffer_fail(buffer, "Entity Patch provenance is inconsistent");
+            return;
+        }
+        const LocalBehaviorPatch *behavior =
+            &override->behavior;
+        if (behavior->active) {
+            PaliDocument parsed;
+            PaliError behavior_error = {0};
+            if (memchr(behavior->source, '\0', sizeof(behavior->source)) ==
+                    NULL ||
+                !pali_parse_document(behavior->source, &parsed,
+                                     &behavior_error)) {
+                buffer_fail(buffer,
+                            "Entity Behavior Patch is not valid PALI");
+                return;
+            }
+            behavior_candidate = *world;
+            Entity *candidate_entity =
+                world_entity_by_id(&behavior_candidate, entity->id);
+            if (candidate_entity != NULL) {
+                candidate_entity->active = true;
+            }
+            if (!world_apply_entity_behavior_patch(
+                    &behavior_candidate, entity->id, &parsed,
+                    &behavior_error)) {
+                buffer_fail(buffer,
+                            "Entity Behavior Patch violates its semantic contract");
+                return;
+            }
+            const Entity *validated_entity =
+                world_entity_by_id_const(&behavior_candidate, entity->id);
+            const LocalOverride *validated_override =
+                &behavior_candidate.universe.local_overrides[index];
+            if (validated_entity == NULL ||
+                validated_entity->local_override != index ||
+                !validated_override->active ||
+                validated_override->entity_id != entity->id ||
+                !validated_override->behavior.active) {
+                buffer_fail(buffer,
+                            "Entity Behavior Patch violates its semantic contract");
+                return;
+            }
         }
     }
     for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
@@ -264,6 +320,11 @@ static void serialize_world(SaveBuffer *buffer, const World *world) {
             for (uint8_t value = 0; value < override->value_count; ++value) {
                 put_u16(buffer, override->values[value].concept);
                 put_value(buffer, override->values[value].value);
+            }
+            put_u8(buffer, override->behavior.active ? 1u : 0u);
+            if (override->behavior.active) {
+                put_string(buffer, override->behavior.source,
+                           sizeof(override->behavior.source));
             }
         }
     }
@@ -356,7 +417,9 @@ static bool validate_bytes(const uint8_t *data, size_t length,
         return save_error(error, "save header is not PALIMPSEST format");
     }
     const uint32_t version = raw_u32(data + 8);
-    if (version != SAVE_LEGACY_VERSION && version != PAL_SAVE_VERSION) {
+    if (version != SAVE_LEGACY_VERSION &&
+        version != SAVE_OBSERVATION_VERSION &&
+        version != PAL_SAVE_VERSION) {
         return save_error(error, "save format version is unsupported");
     }
     const uint32_t payload_size = raw_u32(data + 12);
@@ -602,6 +665,8 @@ bool save_load(World *world, const char *path, const char *pali_asset_root,
     if (local_count > WORLD_MAX_LOCAL_OVERRIDES) {
         buffer_fail(&buffer, "save has too many local overrides");
     }
+    uint64_t local_entity_ids[WORLD_MAX_LOCAL_OVERRIDES] = {0};
+    uint8_t local_record_count = 0;
     for (uint8_t index = 0; index < local_count && buffer.ok; ++index) {
         const uint64_t entity_id = take_u64(&buffer);
         const uint8_t value_count = take_u8(&buffer);
@@ -609,18 +674,99 @@ bool save_load(World *world, const char *path, const char *pali_asset_root,
             buffer_fail(&buffer, "Entity Patch exceeds value capacity");
             break;
         }
+        Entity *entity = world_entity_by_id(&load_candidate, entity_id);
+        bool duplicate_entity = false;
+        for (uint8_t seen = 0; seen < local_record_count; ++seen) {
+            if (local_entity_ids[seen] == entity_id) {
+                duplicate_entity = true;
+                break;
+            }
+        }
+        if (entity == NULL || !entity->active) {
+            buffer_fail(&buffer, "save references an entity outside genesis");
+            break;
+        }
+        if (duplicate_entity || entity->local_override != -1) {
+            buffer_fail(&buffer, "Entity Patch provenance is inconsistent");
+            break;
+        }
+
+        LocalPatchValue values[WORLD_LOCAL_PATCH_VALUES] = {{0}};
         for (uint8_t value = 0; value < value_count && buffer.ok; ++value) {
-            const ConceptId concept = take_u16(&buffer);
-            const PaliValue patched_value = take_value(&buffer);
+            values[value].concept = take_u16(&buffer);
+            values[value].value = take_value(&buffer);
+        }
+        uint8_t has_behavior = 0;
+        PaliDocument handler;
+        if (version >= PAL_SAVE_VERSION && buffer.ok) {
+            has_behavior = take_u8(&buffer);
+            if (has_behavior > 1u) {
+                buffer_fail(&buffer,
+                            "Entity Patch has an invalid Behavior marker");
+                break;
+            }
+            if (has_behavior != 0u) {
+                if (!take_string(&buffer, source, sizeof(source))) {
+                    break;
+                }
+                if (!pali_parse_document(source, &handler, error)) {
+                    buffer.ok = false;
+                }
+            }
+        }
+        if (!buffer.ok) {
+            break;
+        }
+        if (version >= PAL_SAVE_VERSION && value_count == 0 &&
+            has_behavior == 0u) {
+            buffer_fail(&buffer, "Entity Patch record is empty");
+            break;
+        }
+        for (uint8_t value = 0; value < value_count; ++value) {
+            if (lexicon_find_by_id(values[value].concept) == NULL) {
+                buffer_fail(&buffer,
+                            "save references an unknown Entity Patch concept");
+                break;
+            }
+            for (uint8_t earlier = 0; earlier < value; ++earlier) {
+                if (values[earlier].concept == values[value].concept) {
+                    buffer_fail(&buffer,
+                                "Entity Patch record repeats a concept");
+                    break;
+                }
+            }
             if (!buffer.ok) {
                 break;
             }
-            if (lexicon_find_by_id(concept) == NULL ||
-                !world_apply_entity_value_patch(&load_candidate, entity_id,
-                                                concept, patched_value,
-                                                error)) {
+        }
+        if (!buffer.ok) {
+            break;
+        }
+        local_entity_ids[local_record_count++] = entity_id;
+        for (uint8_t value = 0; value < value_count; ++value) {
+            if (!world_apply_entity_value_patch(
+                    &load_candidate, entity_id, values[value].concept,
+                    values[value].value, error)) {
                 buffer.ok = false;
+                break;
             }
+        }
+        if (has_behavior != 0u && buffer.ok &&
+            !world_apply_entity_behavior_patch(&load_candidate, entity_id,
+                                               &handler, error)) {
+            buffer.ok = false;
+        }
+        const int slot = entity->local_override;
+        const LocalOverride *loaded_override =
+            slot >= 0 && slot < WORLD_MAX_LOCAL_OVERRIDES
+                ? &load_candidate.universe.local_overrides[slot]
+                : NULL;
+        if (buffer.ok &&
+            (loaded_override == NULL || !loaded_override->active ||
+             loaded_override->entity_id != entity_id ||
+             loaded_override->value_count != value_count ||
+             loaded_override->behavior.active != (has_behavior != 0u))) {
+            buffer_fail(&buffer, "Entity Patch provenance is inconsistent");
         }
     }
 
@@ -681,7 +827,7 @@ bool save_load(World *world, const char *path, const char *pali_asset_root,
                      sizeof(load_candidate.message))) {
         return false;
     }
-    if (version == PAL_SAVE_VERSION) {
+    if (version >= SAVE_OBSERVATION_VERSION) {
         for (ConceptId id = CONCEPT_NONE; id < CONCEPT_COUNT; ++id) {
             load_candidate.knowledge.observed_prototypes[id] =
                 take_u32(&buffer);
@@ -702,6 +848,7 @@ bool save_load(World *world, const char *path, const char *pali_asset_root,
 
 _Static_assert(SAVE_BUFFER_CAPACITY >=
                    PROTOTYPE_COUNT * PALI_SOURCE_CAP +
+                       WORLD_MAX_LOCAL_OVERRIDES * PALI_SOURCE_CAP +
                        WORLD_MAX_LOCAL_OVERRIDES * WORLD_LOCAL_PATCH_VALUES *
                            sizeof(LocalPatchValue),
                "save buffer cannot hold maximum source patches");

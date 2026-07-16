@@ -3,7 +3,7 @@
 
 #include "world.h"
 
-#define PAL_SAVE_VERSION 3
+#define PAL_SAVE_VERSION 4
 
 bool save_write_atomic(const World *world, const char *path, PaliError *error);
 bool save_load(World *world, const char *path, const char *pali_asset_root,

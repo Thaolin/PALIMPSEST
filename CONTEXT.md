@@ -80,6 +80,11 @@ one kind of Entity. Contrasting Observations may lead to understanding, but an
 Observation is not itself a Revelation.
 _Avoid_: Scan, progress point, collected sample
 
+**Inquiry**:
+A state-derived, Knowledge-guided question. Its current and completed forms are
+inferred rather than stored as completion state.
+_Avoid_: Quest, tutorial objective
+
 **Exemplar**:
 An Entity, Arrangement, or Semantic Construction deliberately offered as
 evidence of what should qualify under an Archetype.

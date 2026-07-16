@@ -12,8 +12,9 @@
 #define WORLD_TILE_SIZE 8
 #define WORLD_MAX_ENTITIES 64
 #define WORLD_INSTANCE_PROPERTIES 4
-#define WORLD_MAX_LOCAL_OVERRIDES 4
+#define WORLD_MAX_LOCAL_OVERRIDES 8
 #define WORLD_LOCAL_PATCH_VALUES 4
+#define WORLD_BEHAVIOR_PATCH_BUDGET 24
 #define WORLD_MESSAGE_CAP 160
 
 typedef enum TileKind {
@@ -46,6 +47,51 @@ typedef enum ObservationResult {
     OBSERVATION_NOTATION
 } ObservationResult;
 
+typedef enum InquiryId {
+    INQUIRY_NONE = 0,
+    INQUIRY_FIRST_SCAR,
+    INQUIRY_WEIGHT_OF_THINGS,
+    INQUIRY_SENTENCE_INSIDE,
+    INQUIRY_COUNT
+} InquiryId;
+
+typedef enum KnowledgeGrant {
+    KNOWLEDGE_GRANT_NONE = 0,
+    KNOWLEDGE_GRANT_BEHAVIOR_DEPTH
+} KnowledgeGrant;
+
+typedef struct InquiryProgress {
+    InquiryId id;
+    uint8_t completed_steps;
+    uint8_t step_count;
+} InquiryProgress;
+
+typedef enum BehaviorHungerClause {
+    BEHAVIOR_HUNGER_SOOTHE = 0,
+    BEHAVIOR_HUNGER_SHARPEN,
+    BEHAVIOR_HUNGER_LEAVE,
+    BEHAVIOR_HUNGER_COUNT
+} BehaviorHungerClause;
+
+typedef enum BehaviorVoiceClause {
+    BEHAVIOR_VOICE_FADE = 0,
+    BEHAVIOR_VOICE_REMEMBER,
+    BEHAVIOR_VOICE_SILENT,
+    BEHAVIOR_VOICE_COUNT
+} BehaviorVoiceClause;
+
+typedef enum BehaviorFateClause {
+    BEHAVIOR_FATE_CEASE = 0,
+    BEHAVIOR_FATE_REMAIN,
+    BEHAVIOR_FATE_COUNT
+} BehaviorFateClause;
+
+typedef struct UseBehaviorDraft {
+    BehaviorHungerClause hunger;
+    BehaviorVoiceClause voice;
+    BehaviorFateClause fate;
+} UseBehaviorDraft;
+
 typedef struct PrototypeDefinition {
     char name[PALI_NAME_CAP];
     char default_source[PALI_SOURCE_CAP];
@@ -76,9 +122,17 @@ typedef struct LocalPatchValue {
     PaliValue value;
 } LocalPatchValue;
 
+typedef struct LocalBehaviorPatch {
+    char source[PALI_SOURCE_CAP];
+    PaliDocument document;
+    PaliProgram program;
+    bool active;
+} LocalBehaviorPatch;
+
 typedef struct LocalOverride {
     uint64_t entity_id;
     LocalPatchValue values[WORLD_LOCAL_PATCH_VALUES];
+    LocalBehaviorPatch behavior;
     uint8_t value_count;
     bool active;
 } LocalOverride;
@@ -132,6 +186,10 @@ Entity *world_entity_by_id(World *world, uint64_t id);
 const Entity *world_entity_by_id_const(const World *world, uint64_t id);
 const PaliProgram *world_entity_program(const World *world,
                                         const Entity *entity);
+const PaliProgram *world_entity_use_program(const World *world,
+                                            const Entity *entity);
+const PaliDocument *world_entity_behavior_document(const World *world,
+                                                   const Entity *entity);
 bool world_use_entity(World *world, int entity_index, PaliError *error);
 
 bool world_apply_prototype_source(World *world, PrototypeId prototype,
@@ -144,6 +202,22 @@ bool world_clear_entity_value_patch(World *world, uint64_t entity_id,
 bool world_apply_prototype_value_patch(World *world, PrototypeId prototype,
                                        ConceptId concept, PaliValue value,
                                        PaliError *error);
+bool world_behavior_is_patchable(const World *world, const Entity *entity);
+bool world_build_use_behavior_document(const World *world,
+                                       const Entity *entity,
+                                       UseBehaviorDraft draft,
+                                       PaliDocument *out,
+                                       PaliError *error);
+bool world_get_entity_use_behavior_draft(const World *world,
+                                         const Entity *entity,
+                                         UseBehaviorDraft *out);
+bool world_apply_entity_behavior_patch(World *world, uint64_t entity_id,
+                                       const PaliDocument *handler,
+                                       PaliError *error);
+bool world_clear_entity_behavior_patch(World *world, uint64_t entity_id,
+                                       PaliError *error);
+bool world_entity_has_behavior_patch(const World *world,
+                                     const Entity *entity);
 const char *world_prototype_source(const World *world, PrototypeId prototype);
 const char *world_prototype_name(PrototypeId prototype);
 const PaliDocument *world_prototype_document(const World *world,
@@ -164,6 +238,10 @@ uint8_t world_concept_observation_count(const World *world,
 bool world_knows_exact_notation(const World *world, ConceptId concept);
 bool world_has_reach(const World *world, PatchReach reach);
 void world_grant_developer_knowledge(World *world);
+
+InquiryProgress world_inquiry_progress(const World *world, InquiryId inquiry);
+InquiryId world_active_inquiry(const World *world);
+KnowledgeGrant world_reconcile_inquiry_knowledge(World *world);
 
 uint64_t world_genesis_fingerprint(const World *world);
 uint64_t world_state_fingerprint(const World *world);

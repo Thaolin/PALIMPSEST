@@ -4,19 +4,22 @@
 
 - `src/main.c`: raylib window/input/timing, executable-relative asset path,
   default save path selection, and the fixed-step accumulator.
-- `src/ui.c`: integer-scaled world rendering, the structured Lens, and the
-  developer-only fixed-capacity source editor.
+- `src/ui.c`: integer-scaled world rendering, the structured Lens, typed
+  Behavior Clause controls, the Inquiry panel, and the developer-only
+  fixed-capacity source editor.
 - `src/lexicon.c`: stable concept identities, Facets, semantic types, bounds,
   operations, and Reach vocabulary.
 - `src/world.c`: deterministic generation, collision, survival simulation,
-  entity/prototype resolution, per-creature RNG, and PALI host bindings.
+  Entity/Prototype value and Behavior resolution, state-derived Inquiries,
+  per-creature RNG, and PALI host bindings.
 - `src/pali_lexer.c`: source characters to tokens with line/column locations.
 - `src/pali_compiler.c`: recursive-descent parser, bounded typed document,
   deterministic formatter, semantic validation, and bytecode compiler.
 - `src/pali_vm.c`: typed runtime values, stack VM, arithmetic, budget, and host
   callback boundary.
-- `src/save.c`: portable little-endian save encoding, checksum validation,
-  sparse materialization, and reconstruction from genesis.
+- `src/save.c`: portable little-endian v4 save encoding, checksum validation,
+  sparse value and local-handler materialization, and reconstruction from
+  Genesis with v2/v3 migration.
 - `src/platform.c`: isolated atomic replacement, durable file flush, directory,
   and default user-save behavior.
 
@@ -29,7 +32,7 @@ At startup, the platform supplies explicit asset and save paths. A new world
 loads and compiles base `.pali` definitions, then terrain and entity genesis use
 separate RNG streams derived from the displayed root seed. A load performs the
 same genesis and applies stored prototype patches, semantic Entity Scars, entity
-changes, and player state.
+changes, local Behavior handlers, and player state.
 
 During play, raylib input becomes a `WorldInput`. The accumulator advances the
 world only in 1/60-second steps. Inspecting pauses simulation. The normal Lens
@@ -38,9 +41,23 @@ them through Knowledge. Attending records a distinct Prototype kind against a
 stable concept ID; it can change only Knowledge. Patch controls record a Draft
 against a stable concept ID. Inscribing compiles a resolved candidate and
 commits only after validation. Developer source follows the same
-parse-document-compile pipeline. Using an entity executes its Prototype
-bytecode while host property resolution composes any narrower Entity value
-through a callback-only whitelist.
+parse-document-compile pipeline. Right-clicking a nearby visible Entity or
+pressing `F` for the nearest one executes its effective `on use(actor)`
+Behavior. Host property resolution composes any narrower Entity value through
+a callback-only whitelist even when the handler itself has local Provenance.
+
+Inquiries are projections, not another persistence store. Their progress and
+active ordering derive from existing Entity Scars, Entity activity,
+Observations, Notation, and Knowledge. Completing The First Scar reconciles one
+monotonic Knowledge grant: Behavior Access Depth plus readable hunger. The UI
+shows that transition explicitly, while its current/completed Inquiry index is
+reconstructed from the same state after load.
+
+The application reconciles derived Knowledge at the startup and successful
+reload boundaries, after Genesis or transactional save reconstruction has made
+the complete state available. `save_load` reconstructs and validates its
+candidate; it does not itself own that boundary reconciliation or its UI
+feedback.
 
 The presentation canvas is 720x405 and reaches the default 1440x810 window at
 an exact 2x scale. World geometry remains in its original 320x224 coarse
@@ -48,15 +65,27 @@ coordinate space and is transformed by 3/2 into a 480x336 viewport. HUD and
 editor text draw natively in presentation coordinates. Raising UI resolution
 therefore cannot alter generation, collision, fixed-step movement, or saves.
 
-Property resolution is:
+State property resolution is:
 
 1. sparse instance state;
 2. sparse Entity Patch value for that stable entity ID and concept;
 3. shared prototype program.
 
-The four-slot Entity Patch pool stores only concept-addressed typed values. It
-never copies a complete Prototype program. Consequently a locally nourished
-apple still inherits later unrelated Prototype color and Behavior changes.
+Behavior handler resolution is independent:
+
+1. normalized local handler source for that stable Entity ID, when present;
+2. the shared Prototype handler otherwise.
+
+The eight-slot Entity Patch pool stores concept-addressed typed values and an
+optional normalized local Behavior handler under one stable Entity binding.
+This bounded layout remains within the 256 KiB compile-time `World` cap.
+Value nodes and the handler retain separate Provenance: either may exist or be
+reverted without removing the other. A local handler is resolved and compiled
+with the current Prototype document, while its `self.property` reads still use
+the State chain above. Consequently a locally nourished apple still inherits
+later unrelated Prototype color and Behavior changes until its Behavior is
+separately Patched; an apple with a local handler still sees later Prototype
+property changes unless that property has its own narrower value Scar.
 Prototype source mutation exists only in the explicit developer profile; the
 normal Lens exposes Entity Reach and does not reveal the broader target.
 
@@ -108,12 +137,13 @@ Hard capacities are checked rather than overrun:
 
 - `World`: compile-time maximum 256 KiB
 - entities: 64
-- Entity Patch bindings: 4; values per binding: 4
+- Entity Patch bindings: 8; values per binding: 4
 - PALI source: 4095 bytes plus terminator
 - properties/document: 16; statements: 16; expression nodes: 64; instance
   state properties/entity: 4
 - constants: 32; instructions: 128; VM stack values: 48
 - default execution budget: 256 instructions
+- local Behavior candidate and execution budget: 24 instructions
 - in-memory save image: 128 KiB
 
 Overflow, bad types, missing properties, divide-by-zero, malformed bytecode, and
@@ -149,10 +179,15 @@ Saving writes `PATH.tmp`, flushes it to durable storage, rereads and validates
 the complete file, then atomically replaces the previous save where the OS
 supports it. A failed compile or failed load does not mutate the live world.
 
-The v3 payload stores the root recipe plus player/tick/Knowledge state, changed
+The v4 payload stores the root recipe plus player/tick/Knowledge state, changed
 normalized Prototype source, stable concept IDs and typed Entity Patch values,
-only dirty generated Entities, and concept-indexed Observation masks appended
-after the former v2 payload. Terrain and unchanged definitions are regenerated
-rather than duplicated. The loader accepts v2 transactionally, begins its
-Observation ledger empty, and grants exact nutrition Notation to preserve the
-precision that the v2 Lens already displayed.
+an optional normalized local handler source for each Entity binding, only dirty
+generated Entities, and concept-indexed Observation masks. Terrain, unchanged
+definitions, effective Inquiry state, typed handler documents, and bytecode are
+reconstructed rather than duplicated.
+
+The loader accepts v2 and v3 transactionally. A v3 save retains its Observation
+ledger and begins with no local Behavior handlers. A v2 save begins with an
+empty Observation ledger and receives exact nutrition Notation to preserve the
+precision its Lens already displayed. Neither legacy path invents Inquiry
+completion state; current and completed Inquiries derive after reconstruction.

@@ -12,7 +12,8 @@ Whatever. It was already doing something before you arrived.
 
 PALIMPSEST is a tiny deterministic survival RPG written in C17. It remembers
 what you changed and what you learned. Right now, one apple can become unlike
-every other apple, and an unnamed weight can follow you home.
+every other apple. With enough attention, it may answer differently, too. An
+unnamed weight is involved. It would rather you worked out why.
 
 That is currently the least alarming thing it can do.
 
@@ -45,7 +46,7 @@ A Visual Studio generator may place it below `build/bin/Release/`.
 Create a self-contained release directory with:
 
 ```powershell
-cmake --install build --prefix dist/PALIMPSEST-0.3.0 --config Release --component Palimpest
+cmake --install build --prefix dist/PALIMPSEST-0.4.0 --config Release --component Palimpest
 ```
 
 ## Run
@@ -74,22 +75,28 @@ alternative.
 - `WASD` or arrow keys: move
 - Left click: open a visible object and pause the simulation
 - `E`: open the nearest object
-- `F`: run the nearest object's `on use(actor)` handler
+- Right click: invoke the nearby object under the pointer
+- `F`: invoke the nearest object's `on use(actor)` Behavior
+- Inquiry **INDEX** / **OPEN**: collapse the current page or restore it
 - Lens **ATTEND** row: retain an impression of a veiled or imprecise meaning
 - Lens **−** / **+**: change the nourishment Draft for this Entity
-- **INSCRIBE** or `Ctrl+Enter`: validate and commit the Draft
-- **DISCARD** or `Ctrl+R`: restore the currently inherited value
+- Behavior Clause rows: cycle known hunger, voice, and fate choices
+- **INSCRIBE STATE** or `Ctrl+Enter`: validate and commit the State Draft
+- **RESET STATE** or `Ctrl+R`: restore the current State value in the Draft
+- Behavior **INSCRIBE** / **REVERT**: commit or restore the local Clause Draft
 - `Esc`: close the inspector
 - `F5`: validate and atomically save
 - `F9`: reload the complete save
 - `Ctrl+Q` or window close: save and quit
 
-Start by clicking an apple, lower its nourishment, Inscribe, close the Lens,
-walk close to it, and press `F`. Open another apple to see that its inherited
-nourishment has not changed. Afterward, attend to the veiled mark inside three
-different kinds of thing. The second kind gives it meaning; the third makes it
-submit to number. In `--developer` mode, the original text editor retains its
-mouse/keyboard editing, **APPLY**, and **REVERT** controls.
+Start by clicking an apple, lower its nourishment, **INSCRIBE STATE**, close
+the Lens, walk close to it, and invoke it. Open another apple to see what
+failed to spread. Afterward, attend to the veiled mark inside three different
+kinds of thing. The second kind gives it meaning; the third makes it submit to
+number. Open an apple once the sentence inside becomes pliable, choose a
+different hunger, voice, or fate, and **INSCRIBE**. In `--developer` mode, the
+original text editor retains its mouse/keyboard editing, **APPLY**, and
+**REVERT** controls.
 
 ## Current slice
 
@@ -104,13 +111,15 @@ mouse/keyboard editing, **APPLY**, and **REVERT** controls.
 - Stable Lexicon concepts projected through persistent Knowledge as
   Unperceived, Veiled, Readable, or Patchable
 - Mouse-first, entity-derived Lens with Facets, veiled observations, qualitative
-  and exact notations, typed nourishment controls, and readable non-patchable
-  Behavior Clauses
-- State-derived Inquiry tracker that advances from the First Scar into The
-  Weight of Things without storing parallel quest flags
-- Checksummed v3 saves containing seed, player state, tick, sparse entity
-  changes, valid prototype patches, Knowledge observations, and
-  concept-addressed Scars; v2 saves migrate on load
+  and exact notations, typed nourishment controls, and typed apple Behavior
+  Clauses that become mouse-patchable through Knowledge
+- State-derived Inquiries whose current and completed pages form a collapsible
+  index without storing parallel completion flags
+- Sparse Entity Provenance for values and Behavior independently, so one local
+  sentence need not freeze or copy unrelated meaning
+- Checksummed v4 saves containing seed, player state, tick, sparse entity
+  changes, valid Prototype and Entity Behavior Patches, Knowledge observations,
+  and concept-addressed Scars; v2 and v3 saves migrate on load
 - Candidate compilation: bad source reports line/column errors while the last
   valid program remains live
 - Explicit developer-only raw source inspection with a bundled readable

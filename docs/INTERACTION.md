@@ -2,12 +2,13 @@
 
 ## Status
 
-Implemented through the 0.3 vertical slice. The normal inspector is the
+Implemented through the 0.4 vertical slice. The normal inspector is the
 structured, Entity-derived Lens; the raw-source inspector is available only in
 explicit developer mode. The player can now turn one Veiled concept into
-qualitative and then exact meaning through persistent Observation. Behavior is
-readable but not yet Patchable, and Prototype Reach remains hidden from
-ordinary Knowledge.
+qualitative and then exact meaning through persistent Observation. The First
+Scar opens Behavior and readable hunger; exact mass Notation then makes one
+apple's Behavior mouse-patchable through typed Clauses. Prototype Reach remains
+hidden from ordinary Knowledge.
 
 ## Intent
 
@@ -45,6 +46,9 @@ state or accept arbitrary source text.
 8. **A Patch is transactional.** The live Universe changes only after the
    complete typed document passes Knowledge, Reach, structural, compilation,
    and execution-budget validation.
+9. **Inquiries ask; state answers.** Current and completed Inquiries are derived
+   from Universe and Knowledge state. They do not carry parallel completion
+   flags or become a tutorial-objective subsystem.
 
 ## What can be opened
 
@@ -72,7 +76,8 @@ Knowledge can at least sense that layer.
 | Archetype | semantic membership conditions | what presently qualifies as an apple |
 | Law | typed relations spanning meanings | nourishment, gravity, naming, death |
 
-The first apple Lens is approximately:
+After The First Scar, an apple Lens first shows readable Behavior. Once exact
+mass Notation is known, that section becomes approximately:
 
 ```text
 APPLE                                      THIS APPLE
@@ -88,12 +93,19 @@ VITAL
   ripeness       [ripe]                          readable
 
 BEHAVIOR
-  WHEN [used by a living entity]                 readable
-  DO   [reduce their hunger by nourishment]
-  THEN [this entity is consumed]
+  WHEN [this entity is used by an actor]         fixed
+  DO   [SOOTHE HUNGER]                           patchable
+  SAY  [BECOME LESS REAL]                        patchable
+  THEN [CEASE]                                   patchable
+       CLAUSE COST [current / 24]
 
-                         [DISCARD]  [INSCRIBE]
+                    [REVERT]  [INSCRIBE]
 ```
+
+At Genesis the Lens stops at State depth. Completing The First Scar grants
+Behavior Access Depth and makes hunger Readable, with an explicit Knowledge
+notice. Behavior remains readable until exact mass Notation turns the known
+apple grammar into the Clause controls above.
 
 There is no “every apple” selector in this Lens. The target summary changes
 only after Prototype Reach itself has been revealed.
@@ -153,8 +165,26 @@ means `PrototypeId` in this slice; Archetype membership is not introduced until
   was learned, while new Observations still require an active Entity that
   currently resolves the concept.
 
-The tracker called **The Weight of Things** derives its phase from this ledger
-and Notation bit. It has no independent quest-completion flags.
+## Inquiries
+
+An Inquiry is a state-derived, Knowledge-guided question, not a stored quest or
+tutorial objective. Its progress is recomputed from facts already belonging to
+the Universe or Knowledge:
+
+- **The First Scar** reads whether one apple carries a local nourishment Scar
+  and whether invoking that apple has caused it to cease. Completion grants
+  Behavior Access Depth and readable hunger exactly once, presents visible
+  feedback, and yields to The Weight of Things.
+- **The Weight of Things** reads the mass Observation ledger and exact Notation
+  bit. Its phases therefore survive save/load without a completion flag.
+- **The Sentence Inside** becomes current after exact mass Notation and reads
+  whether one apple carries a local Behavior Scar.
+
+The first incomplete derived Inquiry is current. The side panel can switch
+between its detail and a compact index containing completed pages plus the
+current one; later unknown Inquiries are not advertised. Saving persists only
+the underlying Scars, Entity state, Observation ledger, Notation, and
+Knowledge, so the same index is reconstructed on load.
 
 ## Lexicon
 
@@ -224,16 +254,23 @@ later history milestone.
 1. Hovering a perceivable Entity gives it a restrained outline or glyph.
 2. Left-clicking selects and opens that Entity. `E` remains a keyboard
    accelerator for the nearest Entity.
-3. The Universe remains visible behind or beside the Lens so the target retains
+3. Right-clicking a nearby Entity invokes that explicit target's effective
+   Behavior. `F` invokes the nearest Entity; an out-of-reach right-click is
+   rejected rather than silently targeting something else.
+4. The Inquiry panel's **INDEX** control collapses current detail into the
+   completed/current index; **OPEN** restores the detail page.
+5. The Universe remains visible behind or beside the Lens so the target retains
    physical context. Simulation pauses while a Patch Draft is open.
-4. Clicking an attendable Veiled or imprecise value records one Observation.
-5. Clicking a readable value explains it and, when known, shows Provenance.
-6. Clicking a patchable value changes a draft through its typed control.
-7. The Lens continuously summarizes the target and Reach without mutating the
+6. Clicking an attendable Veiled or imprecise value records one Observation.
+7. Clicking a readable value explains it and, when known, shows Provenance.
+8. Clicking a patchable value or Clause changes a draft through its typed
+   control.
+9. The Lens continuously summarizes the target and Reach without mutating the
    Universe.
-8. **INSCRIBE** validates and commits the Patch. **UNDO** changes the draft;
-   **CLOSE** discards it. Keyboard shortcuts remain accelerators, not required
-   knowledge.
+10. **INSCRIBE** validates and commits the relevant State or Behavior Patch.
+    **RESET STATE** and Behavior **REVERT** restore their respective drafts;
+    **CLOSE** discards uncommitted changes. Keyboard shortcuts remain
+    accelerators, not required knowledge.
 
 The first implementation does not require drag-and-drop. Clause rows, choice
 menus, add buttons, and target pickers provide complete mouse operation without
@@ -261,27 +298,52 @@ allowing malformed data.
 
 ## Behavior Clauses
 
-Behavior is presented as a sentence-like structured document:
+Behavior is presented as a sentence-like structured document. For the 0.4
+apple grammar, the trigger remains protected while three choice rows cycle
+through known, type-compatible alternatives:
 
 ```text
-WHEN  [used by] [a living entity]
-DO    [reduce] [their hunger]
-BY    [this nourishment]
-THEN  [this entity is consumed]
+WHEN  [this entity is used by an actor]                 fixed
+DO    [SOOTHE HUNGER | SHARPEN HUNGER | LEAVE HUNGER]
+SAY   [BECOME LESS REAL | REMEMBER BEING EATEN | SAY NOTHING]
+THEN  [CEASE | REMAIN]
 ```
 
+Soothe subtracts this apple's nourishment from actor hunger, sharpen adds it,
+and leave omits the hunger effect. Fade and remember emit their known messages;
+silent omits the voice effect. Cease destroys the fictional Entity; remain
+omits that effect. The fixed trigger and selected effects compile to ordinary
+PALI rather than a second execution system.
+
 Each Clause declares its input and output types, required concepts, allowed
-operators, structural role, and execution cost. A player can choose only known
-and type-compatible replacements.
+operators, structural role, and execution cost. The Lens shows current Clause
+cost against a preinstall budget of 24 instructions. A candidate is normalized,
+validated against Access Depth, Entity Reach, known sockets, types, protected
+structure, and that budget, then compiled without touching the live Universe.
+The same 24-instruction bound applies when a local handler executes. An
+over-budget or wrong-type candidate leaves the prior Behavior unchanged.
 
-A protected trigger cannot be accidentally deleted. An optional effect may be
-removed only if the remaining document is structurally meaningful. “This
-Entity is consumed” compiles to a safe fictional host operation; it never
-deallocates arbitrary C storage.
+A protected trigger cannot be accidentally deleted. Optional effects may be
+omitted only through the known choices above. “Cease” compiles to a safe
+fictional host operation; it never deallocates arbitrary C storage.
 
-The first structured Lens may render Behavior as readable but not patchable.
-Clause composition becomes its own complete milestone after State interaction
-and Knowledge projection are proven.
+Behavior Patchability is itself derived from Knowledge. The First Scar grants
+Behavior Access Depth and readable hunger. Exact mass Notation then makes this
+bounded apple grammar Patchable at Entity Reach and visibly announces that
+Clauses have opened.
+
+The committed document is a normalized handler-only source fragment attached
+to the stable Entity. Behavior Provenance and value Provenance resolve
+independently even though both fit in one sparse Local Override binding:
+
+1. A local handler, when present, replaces only that Entity's `on use(actor)`
+   Behavior; otherwise the Prototype handler applies.
+2. A `self` property read inside either handler still resolves instance state,
+   the matching local value Scar, then the current Prototype value.
+3. Reverting a local handler preserves local nourishment or other value nodes;
+   changing a value does not copy or freeze Behavior.
+4. Save v4 persists the normalized handler source and reconstructs its typed
+   document and bytecode on load rather than serializing executable code.
 
 ## Future Semantic Construction interaction
 
@@ -356,8 +418,9 @@ The first Lens milestone is complete when:
 2. Normal play shows the structured Lens instead of the raw text editor.
 3. The apple exposes only a small configured set of State Facets through typed
    controls. At least nourishment is Patchable.
-4. The existing `on use` Behavior is rendered as readable Clauses but remains
-   non-patchable in the normal Knowledge profile.
+4. At the 0.2 slice, the existing `on use` Behavior is rendered as readable
+   Clauses but remains non-patchable in the normal Knowledge profile. The 0.4
+   progression now withholds that depth until The First Scar is complete.
 5. Applying a nourishment change creates a sparse Entity-bound Local Override.
    A second apple remains unchanged, while later unrelated Prototype changes
    still reach the locally patched apple.
@@ -393,10 +456,33 @@ The first Knowledge-progression milestone is complete when:
 8. Save v3 restores partial and complete Observation progress, rejects invalid
    masks, and migrates a genuine v2 payload without inventing history.
 
+## 0.4 acceptance slice
+
+The first Behavior-grammar milestone is complete when:
+
+1. The First Scar is derived from a local nourishment Scar plus invoking the
+   changed apple; it stores no completion flag.
+2. Completing it grants Behavior Access Depth and readable hunger exactly once,
+   presents visible feedback, and makes The Weight of Things current.
+3. Current and completed Inquiries appear in a collapsible index, while unknown
+   later questions remain absent.
+4. Right-click invokes a nearby pointed Entity and `F` invokes the nearest
+   Entity's effective Behavior.
+5. Exact mass Notation makes the apple's fixed trigger and hunger, voice, and
+   fate Clause choices mouse-patchable at Entity Reach.
+6. Known choices can soothe, sharpen, or leave hunger; fade, remember, or
+   silence the apple's voice; and make it cease or remain.
+7. Wrong-type and over-24-instruction candidates reject transactionally before
+   installation, preserving the prior live handler.
+8. One apple can carry a local Behavior Scar without changing another apple.
+   Its handler Provenance resolves independently from any local value nodes.
+9. Save v4 retains normalized local handler source, reconstructs its typed
+   document and bytecode, and accepts genuine v2 and v3 payloads.
+
 ## Deferred
 
 - Discovery rules for concepts beyond the first mass Revelation.
-- Patchable Behavior Clauses.
+- Behavior grammar beyond the bounded apple choices.
 - Lineage, Archetype, and Universe Reach.
 - Causal cost, resistance, gods protecting definitions, and broad-impact
   preview simulation.

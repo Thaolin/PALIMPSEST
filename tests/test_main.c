@@ -13,6 +13,7 @@ static World world_b;
 static World world_c;
 static World loaded_world;
 static World knowledge_world;
+static World behavior_world;
 static UniverseState universe_snapshot;
 static uint8_t save_mutation[16384];
 
@@ -63,10 +64,89 @@ static bool rewrite_save_bytes(const char *path, size_t offset,
     return written && closed;
 }
 
+static bool find_save_bytes(const char *path, const char *needle,
+                            size_t *out_offset) {
+    FILE *file = fopen(path, "rb");
+    if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
+        if (file != NULL) {
+            (void)fclose(file);
+        }
+        return false;
+    }
+    const long measured = ftell(file);
+    if (measured < 0 || (unsigned long)measured > sizeof(save_mutation) ||
+        fseek(file, 0, SEEK_SET) != 0) {
+        (void)fclose(file);
+        return false;
+    }
+    const size_t length = (size_t)measured;
+    const size_t needle_length = strlen(needle);
+    const bool read_complete =
+        fread(save_mutation, 1, length, file) == length;
+    const bool read_ok = fclose(file) == 0 && read_complete;
+    if (!read_ok || needle_length == 0 || needle_length > length) {
+        return false;
+    }
+    for (size_t offset = 0; offset <= length - needle_length; ++offset) {
+        if (memcmp(save_mutation + offset, needle, needle_length) == 0) {
+            *out_offset = offset;
+            return true;
+        }
+    }
+    return false;
+}
+
 static void write_u32_le(uint8_t *bytes, uint32_t value) {
     for (int index = 0; index < 4; ++index) {
         bytes[index] = (uint8_t)(value >> (index * 8));
     }
+}
+
+static bool remove_save_bytes(const char *path, size_t offset, size_t count) {
+    FILE *file = fopen(path, "rb");
+    if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
+        if (file != NULL) {
+            (void)fclose(file);
+        }
+        return false;
+    }
+    const long measured = ftell(file);
+    if (measured < 24 || (unsigned long)measured > sizeof(save_mutation) ||
+        fseek(file, 0, SEEK_SET) != 0) {
+        (void)fclose(file);
+        return false;
+    }
+    const size_t length = (size_t)measured;
+    if (offset < 24u || offset > length || count > length - offset) {
+        (void)fclose(file);
+        return false;
+    }
+    const bool read_complete = fread(save_mutation, 1, length, file) == length;
+    const bool closed = fclose(file) == 0;
+    if (!read_complete || !closed) {
+        return false;
+    }
+    const size_t rewritten_length = length - count;
+    memmove(save_mutation + offset, save_mutation + offset + count,
+            rewritten_length - offset);
+    write_u32_le(save_mutation + 12u,
+                 (uint32_t)(rewritten_length - 24u));
+    uint64_t hash = UINT64_C(1469598103934665603);
+    for (size_t index = 24; index < rewritten_length; ++index) {
+        hash ^= save_mutation[index];
+        hash *= UINT64_C(1099511628211);
+    }
+    for (int index = 0; index < 8; ++index) {
+        save_mutation[16u + (size_t)index] =
+            (uint8_t)(hash >> (index * 8));
+    }
+    file = fopen(path, "wb");
+    if (file == NULL) {
+        return false;
+    }
+    const bool written = fwrite(save_mutation, 1, rewritten_length, file) ==
+                         rewritten_length;
+    return fclose(file) == 0 && written;
 }
 
 static bool downgrade_save_to_v2(const char *path) {
@@ -547,7 +627,16 @@ static void test_knowledge_revelation(void) {
               world_concept_observation_count(&loaded_world,
                                               CONCEPT_MASS) == 1 &&
               !world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
-          "save v3 restores partial Observation progress exactly");
+          "save v4 restores partial Observation progress exactly");
+    const uint8_t save_v3[4] = {3u, 0u, 0u, 0u};
+    CHECK(rewrite_save_bytes(knowledge_save, 8u, save_v3,
+                             sizeof(save_v3)) &&
+              save_validate_file(knowledge_save, &error) &&
+              save_load(&loaded_world, knowledge_save, PAL_TEST_ASSET_ROOT,
+                        &error) &&
+              world_concept_observation_count(&loaded_world,
+                                              CONCEPT_MASS) == 1,
+          "save v3 migrates with its Observation ledger and no Behavior Scar");
     const uint8_t no_old_notations[4] = {0u, 0u, 0u, 0u};
     CHECK(rewrite_save_bytes(knowledge_save, 64u, no_old_notations,
                              sizeof(no_old_notations)) &&
@@ -592,7 +681,7 @@ static void test_knowledge_revelation(void) {
               world_concept_access(&loaded_world, CONCEPT_MASS) ==
                   CONCEPT_ACCESS_READABLE &&
               !world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
-          "save v3 preserves the qualitative Revelation boundary");
+          "save v4 preserves the qualitative Revelation boundary");
     CHECK(world_observe_entity_concept(&knowledge_world, tree->id,
                                        CONCEPT_MASS) ==
                   OBSERVATION_NOTATION &&
@@ -610,7 +699,7 @@ static void test_knowledge_revelation(void) {
               world_concept_observation_count(&loaded_world,
                                               CONCEPT_MASS) == 3 &&
               world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
-          "save v3 preserves exact notation independently of Concept Access");
+          "save v4 preserves exact notation independently of Concept Access");
     FILE *exact_save = fopen(knowledge_save, "rb");
     long exact_save_length = -1;
     if (exact_save != NULL && fseek(exact_save, 0, SEEK_END) == 0) {
@@ -623,7 +712,7 @@ static void test_knowledge_revelation(void) {
         (size_t)CONCEPT_COUNT * sizeof(uint32_t);
     CHECK(exact_save_length >= 0 &&
               (size_t)exact_save_length >= 24u + observation_tail,
-          "save v3 exposes the bounded Observation tail");
+          "save v4 retains the bounded Observation tail");
     if (exact_save_length >= 0 &&
         (size_t)exact_save_length >= 24u + observation_tail) {
         const size_t mass_mask_offset =
@@ -926,11 +1015,296 @@ static void test_patch_gameplay_and_save(void) {
           "completed first Scar and Knowledge remain capturable together");
 }
 
+static void test_inquiry_and_behavior_grammar(void) {
+    static const char *over_budget_handler =
+        "prototype apple\n"
+        "    on use(actor)\n"
+        "        message(\"one\")\n"
+        "        message(\"two\")\n"
+        "        message(\"three\")\n"
+        "        message(\"four\")\n"
+        "        message(\"five\")\n"
+        "        message(\"six\")\n"
+        "        message(\"seven\")\n"
+        "        message(\"eight\")\n"
+        "        message(\"nine\")\n"
+        "        message(\"ten\")\n"
+        "        message(\"eleven\")\n"
+        "        message(\"twelve\")\n"
+        "        message(\"thirteen\")\n"
+        "    end\n"
+        "end\n";
+    static const char *wrong_type_handler =
+        "prototype apple\n"
+        "    on use(actor)\n"
+        "        message(1)\n"
+        "    end\n"
+        "end\n";
+    static const char *foreign_handler =
+        "prototype apple\n"
+        "    on use(actor)\n"
+        "        message(\"foreign sentence\")\n"
+        "    end\n"
+        "end\n";
+    static const char *wrong_target_handler =
+        "prototype stone\n"
+        "    on use(actor)\n"
+        "        message(\"valid but wrong target\")\n"
+        "    end\n"
+        "end\n";
+    PaliError error;
+    CHECK(world_init(&behavior_world, UINT64_C(0x0b4a7105),
+                     PAL_TEST_ASSET_ROOT, &error),
+          error.message);
+    const InquiryProgress genesis =
+        world_inquiry_progress(&behavior_world, INQUIRY_FIRST_SCAR);
+    CHECK(world_active_inquiry(&behavior_world) == INQUIRY_FIRST_SCAR &&
+              genesis.completed_steps == 0 && genesis.step_count == 2 &&
+              behavior_world.knowledge.access_depth == ACCESS_DEPTH_STATE,
+          "Genesis begins with one derived Inquiry at State depth");
+
+    const int first_apple = first_entity(&behavior_world, PROTOTYPE_APPLE);
+    const int second_apple =
+        next_entity(&behavior_world, PROTOTYPE_APPLE, first_apple);
+    const int third_apple =
+        next_entity(&behavior_world, PROTOTYPE_APPLE, second_apple);
+    CHECK(first_apple >= 0 && second_apple >= 0 && third_apple >= 0,
+          "Behavior proof has three distinct apples");
+    if (first_apple < 0 || second_apple < 0 || third_apple < 0) {
+        return;
+    }
+    const uint64_t first_id =
+        behavior_world.universe.entities[first_apple].id;
+    CHECK(world_apply_entity_value_patch(
+              &behavior_world, first_id, CONCEPT_NUTRITION,
+              pali_number(19.0), &error) &&
+              world_inquiry_progress(&behavior_world,
+                                     INQUIRY_FIRST_SCAR)
+                      .completed_steps == 1 &&
+              world_use_entity(&behavior_world, first_apple, &error),
+          "the First Scar proof is derived from Patch plus invocation");
+    CHECK(world_reconcile_inquiry_knowledge(&behavior_world) ==
+                  KNOWLEDGE_GRANT_BEHAVIOR_DEPTH &&
+              behavior_world.knowledge.access_depth ==
+                  ACCESS_DEPTH_BEHAVIOR &&
+              world_concept_access(&behavior_world, CONCEPT_HUNGER) ==
+                  CONCEPT_ACCESS_READABLE &&
+              world_active_inquiry(&behavior_world) ==
+                  INQUIRY_WEIGHT_OF_THINGS &&
+              world_reconcile_inquiry_knowledge(&behavior_world) ==
+                  KNOWLEDGE_GRANT_NONE,
+          "First Scar grants Behavior Knowledge once and yields to Weight");
+
+    const int stone = first_entity(&behavior_world, PROTOTYPE_STONE);
+    const int tree = first_entity(&behavior_world, PROTOTYPE_TREE);
+    const int fire = first_entity(&behavior_world, PROTOTYPE_FIRE);
+    CHECK(stone >= 0 && tree >= 0 && fire >= 0,
+          "Behavior grammar proof has three material kinds");
+    if (stone < 0 || tree < 0 || fire < 0) {
+        return;
+    }
+    CHECK(world_observe_entity_concept(
+              &behavior_world, behavior_world.universe.entities[stone].id,
+              CONCEPT_MASS) == OBSERVATION_RECORDED &&
+              world_observe_entity_concept(
+                  &behavior_world,
+                  behavior_world.universe.entities[tree].id,
+                  CONCEPT_MASS) == OBSERVATION_REVELATION &&
+              world_observe_entity_concept(
+                  &behavior_world,
+                  behavior_world.universe.entities[fire].id,
+                  CONCEPT_MASS) == OBSERVATION_NOTATION &&
+              world_active_inquiry(&behavior_world) ==
+                  INQUIRY_SENTENCE_INSIDE,
+          "exact mass Notation clears Weight and opens the Behavior Inquiry");
+
+    CHECK(platform_ensure_directory(PAL_TEST_TMP_ROOT, &error), error.message);
+    char capture_save[PLATFORM_PATH_CAP];
+    (void)snprintf(capture_save, sizeof(capture_save),
+                   "%s/milestone-0.4-open.pal", PAL_TEST_TMP_ROOT);
+    CHECK(save_write_atomic(&behavior_world, capture_save, &error),
+          "the open Behavior Inquiry is capturable");
+
+    Entity *scarred = &behavior_world.universe.entities[second_apple];
+    Entity *inherited = &behavior_world.universe.entities[third_apple];
+    UseBehaviorDraft default_draft;
+    CHECK(world_get_entity_use_behavior_draft(&behavior_world, scarred,
+                                              &default_draft) &&
+              default_draft.hunger == BEHAVIOR_HUNGER_SOOTHE &&
+              default_draft.voice == BEHAVIOR_VOICE_FADE &&
+              default_draft.fate == BEHAVIOR_FATE_CEASE &&
+              world_behavior_is_patchable(&behavior_world, scarred),
+          "the existing apple sentence projects into typed Clause choices");
+
+    PaliDocument rejected;
+    CHECK(pali_parse_document(over_budget_handler, &rejected, &error),
+          error.message);
+    const uint64_t before_budget_rejection =
+        world_state_fingerprint(&behavior_world);
+    CHECK(!world_apply_entity_behavior_patch(
+              &behavior_world, scarred->id, &rejected, &error) &&
+              strstr(error.message, "budget") != NULL &&
+              world_state_fingerprint(&behavior_world) ==
+                  before_budget_rejection,
+          "over-budget Behavior is rejected before it can become a Patch");
+    CHECK(pali_parse_document(wrong_type_handler, &rejected, &error),
+          error.message);
+    CHECK(!world_apply_entity_behavior_patch(
+              &behavior_world, scarred->id, &rejected, &error) &&
+              world_state_fingerprint(&behavior_world) ==
+                  before_budget_rejection,
+          "wrong-type Clause sockets reject transactionally");
+    CHECK(pali_parse_document(foreign_handler, &rejected, &error),
+          error.message);
+    CHECK(!world_apply_entity_behavior_patch(
+              &behavior_world, scarred->id, &rejected, &error) &&
+              strstr(error.message, "apple grammar") != NULL &&
+              world_state_fingerprint(&behavior_world) ==
+                  before_budget_rejection,
+          "non-generated apple Behavior rejects transactionally");
+
+    const UseBehaviorDraft changed = {
+        BEHAVIOR_HUNGER_SHARPEN, BEHAVIOR_VOICE_REMEMBER,
+        BEHAVIOR_FATE_REMAIN};
+    PaliDocument changed_handler;
+    CHECK(world_build_use_behavior_document(
+              &behavior_world, scarred, changed, &changed_handler, &error) &&
+              world_apply_entity_behavior_patch(
+                  &behavior_world, scarred->id, &changed_handler, &error) &&
+              world_apply_entity_value_patch(
+                  &behavior_world, scarred->id, CONCEPT_NUTRITION,
+                  pali_number(7.0), &error) &&
+              world_entity_has_behavior_patch(&behavior_world, scarred) &&
+              !world_entity_has_behavior_patch(&behavior_world, inherited) &&
+              world_active_inquiry(&behavior_world) == INQUIRY_NONE,
+          "mouse grammar model gives one apple a sparse local Behavior Scar");
+
+    behavior_world.embodiment.hunger = 60.0f;
+    CHECK(world_use_entity(&behavior_world, second_apple, &error) &&
+              fabsf(behavior_world.embodiment.hunger - 67.0f) < 0.001f &&
+              scarred->active &&
+              strcmp(behavior_world.message,
+                     "The apple remembers being eaten.") == 0,
+          "local Behavior executes changed effect, voice, and fate");
+    CHECK(world_use_entity(&behavior_world, third_apple, &error) &&
+              fabsf(behavior_world.embodiment.hunger - 47.0f) < 0.001f &&
+              !inherited->active,
+          "another apple still executes inherited Prototype Behavior");
+
+    char save_path[PLATFORM_PATH_CAP];
+    (void)snprintf(save_path, sizeof(save_path),
+                   "%s/milestone-0.4-complete.pal", PAL_TEST_TMP_ROOT);
+    const uint64_t before_save = world_state_fingerprint(&behavior_world);
+    CHECK(save_write_atomic(&behavior_world, save_path, &error) &&
+              save_load(&loaded_world, save_path, PAL_TEST_ASSET_ROOT,
+                        &error) &&
+              world_state_fingerprint(&loaded_world) == before_save,
+          "save v4 restores the complete sparse Behavior Patch");
+    const int scarred_slot = scarred->local_override;
+    CHECK(scarred_slot >= 0 && scarred_slot < WORLD_MAX_LOCAL_OVERRIDES,
+          "Behavior Scar retains a local Patch slot");
+    if (scarred_slot >= 0 && scarred_slot < WORLD_MAX_LOCAL_OVERRIDES) {
+        LocalBehaviorPatch *behavior =
+            &behavior_world.universe.local_overrides[scarred_slot].behavior;
+        char saved_behavior_source[PALI_SOURCE_CAP];
+        memcpy(saved_behavior_source, behavior->source,
+               sizeof(saved_behavior_source));
+        (void)snprintf(behavior->source, sizeof(behavior->source), "%s",
+                       wrong_target_handler);
+        char semantic_rejection_save[PLATFORM_PATH_CAP];
+        (void)snprintf(semantic_rejection_save,
+                       sizeof(semantic_rejection_save),
+                       "%s/milestone-0.4-invalid-behavior.pal",
+                       PAL_TEST_TMP_ROOT);
+        CHECK(!save_write_atomic(&behavior_world, semantic_rejection_save,
+                                 &error),
+              "serializer rejects a Behavior Patch for the wrong Prototype");
+        memcpy(behavior->source, saved_behavior_source,
+               sizeof(behavior->source));
+    }
+    Entity *loaded_scarred =
+        world_entity_by_id(&loaded_world, scarred->id);
+    loaded_world.embodiment.hunger = 30.0f;
+    CHECK(loaded_scarred != NULL &&
+              world_entity_has_behavior_patch(&loaded_world,
+                                               loaded_scarred) &&
+              world_use_entity(
+                  &loaded_world,
+                  (int)(loaded_scarred - loaded_world.universe.entities),
+                  &error) &&
+              fabsf(loaded_world.embodiment.hunger - 37.0f) < 0.001f &&
+              loaded_scarred->active,
+          "restored local Behavior composes with its sparse value Scar");
+
+    if (scarred_slot >= 0 && scarred_slot < WORLD_MAX_LOCAL_OVERRIDES) {
+        CHECK(world_clear_entity_value_patch(&behavior_world, scarred->id,
+                                             CONCEPT_NUTRITION, &error),
+              error.message);
+        char empty_record_save[PLATFORM_PATH_CAP];
+        (void)snprintf(empty_record_save, sizeof(empty_record_save),
+                       "%s/milestone-0.4-empty-local.pal",
+                       PAL_TEST_TMP_ROOT);
+        LocalOverride *empty_override =
+            &behavior_world.universe.local_overrides[scarred_slot];
+        const LocalBehaviorPatch retained_behavior =
+            empty_override->behavior;
+        memset(&empty_override->behavior, 0,
+               sizeof(empty_override->behavior));
+        CHECK(!save_write_atomic(&behavior_world, empty_record_save,
+                                 &error),
+              "serializer rejects an active but empty Entity Patch binding");
+        empty_override->behavior = retained_behavior;
+        size_t empty_handler_offset = 0;
+        const uint8_t no_behavior = 0u;
+        const uint64_t before_empty_load =
+            world_state_fingerprint(&loaded_world);
+        const size_t behavior_source_length =
+            strlen(behavior_world.universe.local_overrides[scarred_slot]
+                       .behavior.source);
+        CHECK(save_write_atomic(&behavior_world, empty_record_save, &error) &&
+                  find_save_bytes(empty_record_save,
+                                  "prototype apple\n    on use(actor)",
+                                  &empty_handler_offset) &&
+                  empty_handler_offset >= 3u &&
+                  rewrite_save_bytes(empty_record_save,
+                                     empty_handler_offset - 3u,
+                                     &no_behavior, 1u) &&
+                  remove_save_bytes(
+                      empty_record_save, empty_handler_offset - 2u,
+                      sizeof(uint16_t) + behavior_source_length) &&
+                  save_validate_file(empty_record_save, &error) &&
+                  !save_load(&loaded_world, empty_record_save,
+                             PAL_TEST_ASSET_ROOT, &error) &&
+                  strstr(error.message, "empty") != NULL &&
+                  world_state_fingerprint(&loaded_world) ==
+                      before_empty_load,
+              "empty v4 Entity Patch records reject transactionally");
+    }
+
+    size_t handler_offset = 0;
+    const char *handler_prefix = "prototype apple\n    on use(actor)";
+    const uint8_t malformed_token = (uint8_t)'?';
+    const uint64_t before_malformed_load =
+        world_state_fingerprint(&loaded_world);
+    CHECK(find_save_bytes(save_path, handler_prefix, &handler_offset) &&
+              rewrite_save_bytes(
+                  save_path,
+                  handler_offset + strlen("prototype apple\n    on "),
+                  &malformed_token, 1) &&
+              save_validate_file(save_path, &error) &&
+              !save_load(&loaded_world, save_path, PAL_TEST_ASSET_ROOT,
+                         &error) &&
+              world_state_fingerprint(&loaded_world) ==
+                  before_malformed_load,
+          "checksummed malformed Behavior source rejects load transactionally");
+}
+
 int main(void) {
     test_language();
     test_generation();
     test_knowledge_revelation();
     test_patch_gameplay_and_save();
+    test_inquiry_and_behavior_grammar();
     if (failures != 0) {
         (void)fprintf(stderr, "%d test failure(s)\n", failures);
         return 1;
