@@ -44,6 +44,13 @@ static const ConceptDefinition base_concepts[CONCEPT_COUNT] = {
                    FACET_SPATIAL, CONCEPT_OP_PROTECTED, 0.0, 10000.0, 0.1},
     [CONCEPT_Y] = {CONCEPT_Y, "y", PALI_VALUE_NUMBER, ACCESS_DEPTH_STATE,
                    FACET_SPATIAL, CONCEPT_OP_PROTECTED, 0.0, 10000.0, 0.1},
+    [CONCEPT_PARENTAGE] = {
+        CONCEPT_PARENTAGE, "parentage", PALI_VALUE_TEXT,
+        ACCESS_DEPTH_LINEAGE, FACET_RELATIONAL, CONCEPT_OP_PROTECTED,
+        0.0, 0.0, 0.0},
+    [CONCEPT_VIGOR] = {CONCEPT_VIGOR, "vigor", PALI_VALUE_NUMBER,
+                       ACCESS_DEPTH_LINEAGE, FACET_VITAL,
+                       CONCEPT_OP_PROTECTED, 0.0, 100.0, 1.0},
 };
 
 static bool bounded_text(const char text[PALI_TEXT_CAP]) {

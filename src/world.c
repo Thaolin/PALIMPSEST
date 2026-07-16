@@ -14,6 +14,8 @@ typedef struct HostContext {
     const PaliProgram *program;
 } HostContext;
 
+static void step_tree_fruit(World *world, Entity *tree);
+
 static const char *const PROTOTYPE_NAMES[PROTOTYPE_COUNT] = {
     "stone", "tree", "apple", "fire", "moth"};
 
@@ -187,6 +189,20 @@ static uint64_t entity_id(uint64_t seed, uint16_t serial,
     return id == 0 ? 1 : id;
 }
 
+uint64_t world_descendant_id(const World *world, uint64_t parent_id,
+                             uint32_t birth_ordinal,
+                             PrototypeId prototype) {
+    if (world == NULL || parent_id == 0 || birth_ordinal == 0 ||
+        prototype < 0 || prototype >= PROTOTYPE_COUNT) {
+        return 0;
+    }
+    uint64_t id = mix64(world->universe.root_seed ^ mix64(parent_id) ^
+                        ((uint64_t)birth_ordinal << 17) ^
+                        ((uint64_t)prototype << 48) ^
+                        UINT64_C(0x44455343454e4453));
+    return id == 0 ? 1 : id;
+}
+
 static Entity *add_entity(World *world, PrototypeId prototype, float x,
                           float y) {
     if (world->universe.entity_count >= WORLD_MAX_ENTITIES) {
@@ -202,8 +218,90 @@ static Entity *add_entity(World *world, PrototypeId prototype, float x,
     entity->active = true;
     entity->local_override = -1;
     entity->rng_state = mix64(entity->id ^ UINT64_C(0x4352454154555245));
+    if (prototype == PROTOTYPE_TREE) {
+        entity->fruit_ticks =
+            (uint16_t)(60u + (uint16_t)(entity->id % UINT64_C(120)));
+    }
     world->universe.entity_count++;
     return entity;
+}
+
+static void release_entity_override(World *world, Entity *entity) {
+    if (world == NULL || entity == NULL || entity->local_override < 0 ||
+        entity->local_override >= WORLD_MAX_LOCAL_OVERRIDES) {
+        return;
+    }
+    LocalOverride *override =
+        &world->universe.local_overrides[entity->local_override];
+    if (override->active && override->entity_id == entity->id) {
+        memset(override, 0, sizeof(*override));
+    }
+    entity->local_override = -1;
+}
+
+bool world_restore_descendant(World *world, uint64_t id,
+                              uint64_t parent_id,
+                              uint32_t birth_ordinal,
+                              PrototypeId prototype, PaliError *error) {
+    if (world == NULL || id == 0 || prototype != PROTOTYPE_APPLE ||
+        id != world_descendant_id(world, parent_id, birth_ordinal,
+                                  prototype) ||
+        world_entity_by_id_const(world, id) != NULL) {
+        set_error(error, 0, 0, "descendant identity is not valid");
+        return false;
+    }
+    const Entity *parent = world_entity_by_id_const(world, parent_id);
+    if (parent == NULL || parent->prototype != PROTOTYPE_TREE) {
+        set_error(error, 0, 0, "descendant Parentage has no tree");
+        return false;
+    }
+    Entity *entity = NULL;
+    Entity *fallback = NULL;
+    for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
+        Entity *candidate = &world->universe.entities[index];
+        if (!candidate->active && candidate->parent_id != 0) {
+            if (fallback == NULL) {
+                fallback = candidate;
+            }
+            if (candidate->local_override >= 0 &&
+                candidate->local_override < WORLD_MAX_LOCAL_OVERRIDES) {
+                const LocalOverride *override =
+                    &world->universe
+                         .local_overrides[candidate->local_override];
+                if (override->active &&
+                    override->entity_id == candidate->id) {
+                    entity = candidate;
+                    break;
+                }
+            }
+        }
+    }
+    if (entity == NULL) {
+        entity = fallback;
+    }
+    if (entity != NULL) {
+        release_entity_override(world, entity);
+    }
+    if (entity == NULL) {
+        if (world->universe.entity_count >= WORLD_MAX_ENTITIES) {
+            set_error(error, 0, 0, "descendant capacity is full");
+            return false;
+        }
+        entity =
+            &world->universe.entities[world->universe.entity_count++];
+    }
+    memset(entity, 0, sizeof(*entity));
+    entity->id = id;
+    entity->parent_id = parent_id;
+    entity->birth_ordinal = birth_ordinal;
+    entity->prototype = (uint8_t)prototype;
+    entity->x = parent->x;
+    entity->y = parent->y;
+    entity->active = true;
+    entity->dirty = true;
+    entity->local_override = -1;
+    entity->rng_state = mix64(id ^ UINT64_C(0x4352454154555245));
+    return true;
 }
 
 static bool find_spawn_position(World *world, DeterministicRng *rng,
@@ -301,6 +399,7 @@ bool world_init(World *world, uint64_t seed, const char *pali_asset_root,
         (float)(WORLD_MAP_HEIGHT * WORLD_TILE_SIZE) * 0.5f;
     world->embodiment.hunger = 36.0f;
     world->embodiment.warmth = 72.0f;
+    world->embodiment.vigor = 0.0f;
     (void)snprintf(world->message, sizeof(world->message),
                    "Click or E opens. Right-click or F invokes nearby Behavior.");
     return true;
@@ -376,29 +475,99 @@ static const LocalOverride *entity_override_const(const World *world,
 bool world_entity_has_behavior_patch(const World *world,
                                      const Entity *entity) {
     const LocalOverride *override = entity_override_const(world, entity);
-    return override != NULL && override->behavior.active;
+    return override != NULL && override->has_behavior;
 }
 
-const PaliProgram *world_entity_use_program(const World *world,
-                                            const Entity *entity) {
+PatchReach world_entity_behavior_provenance(const World *world,
+                                            const Entity *entity,
+                                            uint64_t *out_id) {
     const LocalOverride *override = entity_override_const(world, entity);
-    if (override != NULL && override->behavior.active) {
-        return &override->behavior.program;
+    if (override != NULL && override->has_behavior) {
+        if (out_id != NULL) {
+            *out_id = override->behavior_provenance_id;
+        }
+        return (PatchReach)override->behavior_provenance_reach;
     }
-    return world_entity_program(world, entity);
+    if (out_id != NULL) {
+        *out_id = entity != NULL ? (uint64_t)entity->prototype : 0;
+    }
+    return PATCH_REACH_PROTOTYPE;
 }
 
-const PaliDocument *world_entity_behavior_document(const World *world,
-                                                   const Entity *entity) {
-    const LocalOverride *override = entity_override_const(world, entity);
-    if (override != NULL && override->behavior.active) {
-        return &override->behavior.document;
+PatchReach world_entity_concept_provenance(const World *world,
+                                           const Entity *entity,
+                                           ConceptId concept,
+                                           uint64_t *out_id) {
+    if (world == NULL || entity == NULL) {
+        if (out_id != NULL) {
+            *out_id = 0;
+        }
+        return PATCH_REACH_ENTITY;
     }
-    if (world == NULL || entity == NULL ||
+    if (concept == CONCEPT_PARENTAGE && entity->parent_id != 0) {
+        if (out_id != NULL) {
+            *out_id = entity->parent_id;
+        }
+        return PATCH_REACH_LINEAGE;
+    }
+    const ConceptDefinition *definition = lexicon_find_by_id(concept);
+    if (definition != NULL) {
+        for (uint8_t index = 0; index < entity->state_count; ++index) {
+            if (strcmp(entity->state[index].name, definition->name) == 0) {
+                if (out_id != NULL) {
+                    *out_id = entity->id;
+                }
+                return PATCH_REACH_ENTITY;
+            }
+        }
+    }
+    const LocalOverride *override = entity_override_const(world, entity);
+    if (override != NULL) {
+        for (uint8_t index = 0; index < override->value_count; ++index) {
+            if (override->values[index].concept == concept) {
+                if (out_id != NULL) {
+                    *out_id = override->values[index].provenance_id;
+                }
+                return (PatchReach)override->values[index].provenance_reach;
+            }
+        }
+    }
+    if (out_id != NULL) {
+        *out_id = (uint64_t)entity->prototype;
+    }
+    return PATCH_REACH_PROTOTYPE;
+}
+
+static int behavior_draft_index(UseBehaviorDraft draft) {
+    if (draft.hunger < 0 || draft.hunger >= BEHAVIOR_HUNGER_COUNT ||
+        draft.voice < 0 || draft.voice >= BEHAVIOR_VOICE_COUNT ||
+        draft.fate < 0 || draft.fate >= BEHAVIOR_FATE_COUNT ||
+        draft.aftertaste < 0 ||
+        draft.aftertaste >= BEHAVIOR_AFTERTASTE_COUNT) {
+        return -1;
+    }
+    return (((int)draft.hunger * BEHAVIOR_VOICE_COUNT + (int)draft.voice) *
+                BEHAVIOR_FATE_COUNT +
+            (int)draft.fate) *
+               BEHAVIOR_AFTERTASTE_COUNT +
+           (int)draft.aftertaste;
+}
+
+bool world_entity_behavior_document(const World *world, const Entity *entity,
+                                    PaliDocument *out) {
+    if (world == NULL || entity == NULL || out == NULL ||
         entity->prototype >= PROTOTYPE_COUNT) {
-        return NULL;
+        return false;
     }
-    return &world->universe.prototypes[entity->prototype].document;
+    const LocalOverride *override = entity_override_const(world, entity);
+    if (override != NULL && override->has_behavior) {
+        PaliError error;
+        return world_build_use_behavior_document(world, entity,
+                                                 override->behavior, out,
+                                                 &error);
+    }
+    *out = world->universe.prototypes[entity->prototype].document;
+    return true;
 }
 
 static const LocalPatchValue *override_value(const LocalOverride *override,
@@ -418,6 +587,16 @@ bool world_get_entity_property(const World *world, const Entity *entity,
                                const char *name, PaliValue *out) {
     if (world == NULL || entity == NULL || name == NULL || out == NULL) {
         return false;
+    }
+    if (strcmp(name, "parentage") == 0) {
+        if (entity->parent_id == 0) {
+            return false;
+        }
+        char parentage[PALI_TEXT_CAP];
+        (void)snprintf(parentage, sizeof(parentage), "tree/%016llx",
+                       (unsigned long long)entity->parent_id);
+        *out = pali_text(parentage);
+        return true;
     }
     for (uint8_t index = 0; index < entity->state_count; ++index) {
         if (strcmp(entity->state[index].name, name) == 0) {
@@ -585,7 +764,9 @@ InquiryProgress world_inquiry_progress(const World *world,
             }
             bool changes_nutrition = false;
             for (uint8_t value = 0; value < override->value_count; ++value) {
-                if (override->values[value].concept == CONCEPT_NUTRITION) {
+                if (override->values[value].concept == CONCEPT_NUTRITION &&
+                    override->values[value].provenance_reach ==
+                        (uint8_t)PATCH_REACH_ENTITY) {
                     changes_nutrition = true;
                     break;
                 }
@@ -619,15 +800,55 @@ InquiryProgress world_inquiry_progress(const World *world,
     }
     if (inquiry == INQUIRY_SENTENCE_INSIDE) {
         progress.step_count = 1;
+        if (world->knowledge.access_depth >=
+            (uint8_t)ACCESS_DEPTH_LINEAGE) {
+            progress.completed_steps = 1;
+            return progress;
+        }
         for (int slot = 0; slot < WORLD_MAX_LOCAL_OVERRIDES; ++slot) {
             const LocalOverride *override =
                 &world->universe.local_overrides[slot];
             const Entity *entity =
-                override->active && override->behavior.active
+                override->active && override->has_behavior &&
+                        override->behavior_provenance_reach ==
+                            (uint8_t)PATCH_REACH_ENTITY
                     ? world_entity_by_id_const(world, override->entity_id)
                     : NULL;
             if (entity != NULL && entity->prototype == PROTOTYPE_APPLE) {
                 progress.completed_steps = 1;
+                break;
+            }
+        }
+        return progress;
+    }
+    if (inquiry == INQUIRY_FRUIT_REMEMBERS) {
+        progress.step_count = 3;
+        bool has_descendant =
+            world->knowledge.access_depth >= (uint8_t)ACCESS_DEPTH_LINEAGE;
+        for (uint16_t index = 0;
+             !has_descendant && index < world->universe.entity_count;
+             ++index) {
+            const Entity *entity = &world->universe.entities[index];
+            has_descendant = entity->prototype == PROTOTYPE_TREE &&
+                             entity->descendants_born > 0;
+        }
+        if (has_descendant) {
+            progress.completed_steps = 1;
+        }
+        for (int index = 0; index < WORLD_MAX_LINEAGES; ++index) {
+            const LineageDefinition *lineage =
+                &world->universe.lineages[index];
+            if (!lineage->active) {
+                continue;
+            }
+            if (lineage->has_nutrition_patch ||
+                lineage->has_behavior_patch) {
+                if (progress.completed_steps < 2) {
+                    progress.completed_steps = 2;
+                }
+            }
+            if (lineage->inherited_births > 0) {
+                progress.completed_steps = 3;
                 break;
             }
         }
@@ -652,6 +873,11 @@ InquiryId world_active_inquiry(const World *world) {
     if (sentence.completed_steps < sentence.step_count) {
         return INQUIRY_SENTENCE_INSIDE;
     }
+    const InquiryProgress fruit =
+        world_inquiry_progress(world, INQUIRY_FRUIT_REMEMBERS);
+    if (fruit.completed_steps < fruit.step_count) {
+        return INQUIRY_FRUIT_REMEMBERS;
+    }
     return INQUIRY_NONE;
 }
 
@@ -673,6 +899,35 @@ KnowledgeGrant world_reconcile_inquiry_knowledge(World *world) {
         (void)snprintf(world->message, sizeof(world->message),
                        "Revelation: Behavior opens. Things have sentences inside.");
         return KNOWLEDGE_GRANT_BEHAVIOR_DEPTH;
+    }
+    const InquiryProgress sentence =
+        world_inquiry_progress(world, INQUIRY_SENTENCE_INSIDE);
+    bool descendant_exists = false;
+    for (uint16_t index = 0;
+         !descendant_exists && index < world->universe.entity_count;
+         ++index) {
+        const Entity *entity = &world->universe.entities[index];
+        descendant_exists = entity->prototype == PROTOTYPE_TREE &&
+                            entity->descendants_born > 0;
+    }
+    const uint64_t parentage = concept_bit(CONCEPT_PARENTAGE);
+    const uint64_t vigor = concept_bit(CONCEPT_VIGOR);
+    const uint64_t warmth = concept_bit(CONCEPT_WARMTH);
+    if (sentence.completed_steps == sentence.step_count &&
+        descendant_exists &&
+        (world->knowledge.access_depth < (uint8_t)ACCESS_DEPTH_LINEAGE ||
+         !world_has_reach(world, PATCH_REACH_LINEAGE) ||
+         (world->knowledge.readable_concepts & parentage) == 0 ||
+         (world->knowledge.readable_concepts & vigor) == 0 ||
+         (world->knowledge.readable_concepts & warmth) == 0)) {
+        world->knowledge.access_depth = (uint8_t)ACCESS_DEPTH_LINEAGE;
+        world->knowledge.perceived_concepts |= parentage | vigor | warmth;
+        world->knowledge.readable_concepts |= parentage | vigor | warmth;
+        world->knowledge.reach_mask |=
+            patch_reach_bit(PATCH_REACH_LINEAGE);
+        (void)snprintf(world->message, sizeof(world->message),
+                       "Revelation: fruit remembers the tree that imagined it.");
+        return KNOWLEDGE_GRANT_LINEAGE_DEPTH;
     }
     return KNOWLEDGE_GRANT_NONE;
 }
@@ -753,15 +1008,21 @@ void world_step(World *world, WorldInput input) {
         input.move_x /= length;
         input.move_y /= length;
     }
+    const float movement_speed =
+        0.62f * (1.0f + world->embodiment.vigor * 0.005f);
     move_with_collision(world, &world->embodiment.x, &world->embodiment.y,
-                        input.move_x * 0.62f, input.move_y * 0.62f, 2.5f, 0);
+                        input.move_x * movement_speed,
+                        input.move_y * movement_speed, 2.5f, 0);
 
     world->embodiment.hunger =
         clamp_stat(world->embodiment.hunger + 0.0025f);
     world->embodiment.warmth =
         clamp_stat(world->embodiment.warmth - 0.0030f);
+    world->embodiment.vigor =
+        clamp_stat(world->embodiment.vigor - 0.0500f);
 
-    for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
+    const uint16_t materialized_count = world->universe.entity_count;
+    for (uint16_t index = 0; index < materialized_count; ++index) {
         Entity *entity = &world->universe.entities[index];
         if (entity->active && entity->prototype == PROTOTYPE_FIRE) {
             const float dx = entity->x - world->embodiment.x;
@@ -776,6 +1037,7 @@ void world_step(World *world, WorldInput input) {
             }
         }
         step_moth(world, entity);
+        step_tree_fruit(world, entity);
     }
     world->universe.tick++;
 }
@@ -843,6 +1105,10 @@ static bool host_get(void *user, PaliTarget target, const char *name,
         *out = pali_number((double)context->world->embodiment.warmth);
         return true;
     }
+    if (strcmp(name, "vigor") == 0) {
+        *out = pali_number((double)context->world->embodiment.vigor);
+        return true;
+    }
     if (strcmp(name, "x") == 0) {
         *out = pali_number((double)context->world->embodiment.x);
         return true;
@@ -897,6 +1163,11 @@ static bool host_set(void *user, PaliTarget target, const char *name,
             clamp_number_to_stat(value.as.number);
         return true;
     }
+    if (strcmp(name, "vigor") == 0) {
+        context->world->embodiment.vigor =
+            clamp_number_to_stat(value.as.number);
+        return true;
+    }
     return host_error(error, "actor property is read-only or unknown");
 }
 
@@ -906,6 +1177,14 @@ static bool host_call(void *user, PaliHostCall call,
     if (call == PALI_HOST_DESTROY) {
         context->self->active = false;
         context->self->dirty = true;
+        if (context->self->parent_id != 0) {
+            Entity *parent = world_entity_by_id(
+                context->world, context->self->parent_id);
+            if (parent != NULL && parent->prototype == PROTOTYPE_TREE) {
+                parent->fruit_ticks = WORLD_FRUIT_REGROW_TICKS;
+                parent->dirty = true;
+            }
+        }
         return true;
     }
     if (call == PALI_HOST_MESSAGE) {
@@ -973,9 +1252,10 @@ static bool behavior_concept_is_readable(const World *world,
            access == CONCEPT_ACCESS_PATCHABLE;
 }
 
-static bool behavior_document_is_known(const World *world,
+static bool behavior_document_is_valid(const World *world,
                                        const PaliDocument *prototype,
                                        const PaliDocument *handler,
+                                       bool require_knowledge,
                                        PaliError *error) {
     PaliValueType expression_types[PALI_MAX_EXPRESSIONS];
     memset(expression_types, 0, sizeof(expression_types));
@@ -993,7 +1273,8 @@ static bool behavior_document_is_known(const World *world,
                     pali_document_property(prototype, name);
                 if (concept == NULL || property == NULL ||
                     property->type != concept->value_type ||
-                    !behavior_concept_is_readable(world, concept->id)) {
+                    (require_knowledge &&
+                     !behavior_concept_is_readable(world, concept->id))) {
                     set_error(error, (int)expression->line, 1,
                               "Behavior refers to an unreadable self concept");
                     return false;
@@ -1006,9 +1287,11 @@ static bool behavior_document_is_known(const World *world,
                 const ConceptDefinition *concept = lexicon_find_by_name(name);
                 if (concept == NULL ||
                     (concept->id != CONCEPT_HUNGER &&
-                     concept->id != CONCEPT_WARMTH && concept->id != CONCEPT_X &&
-                     concept->id != CONCEPT_Y) ||
-                    !behavior_concept_is_readable(world, concept->id)) {
+                     concept->id != CONCEPT_WARMTH &&
+                     concept->id != CONCEPT_VIGOR &&
+                     concept->id != CONCEPT_X && concept->id != CONCEPT_Y) ||
+                    (require_knowledge &&
+                     !behavior_concept_is_readable(world, concept->id))) {
                     set_error(error, (int)expression->line, 1,
                               "Behavior refers to an unreadable actor concept");
                     return false;
@@ -1047,8 +1330,10 @@ static bool behavior_document_is_known(const World *world,
                     lexicon_find_by_name(handler->names[statement->name]);
                 if (concept == NULL ||
                     (concept->id != CONCEPT_HUNGER &&
-                     concept->id != CONCEPT_WARMTH) ||
-                    !behavior_concept_is_readable(world, concept->id) ||
+                     concept->id != CONCEPT_WARMTH &&
+                     concept->id != CONCEPT_VIGOR) ||
+                    (require_knowledge &&
+                     !behavior_concept_is_readable(world, concept->id)) ||
                     expression_types[statement->expression] !=
                         concept->value_type) {
                     set_error(error, (int)statement->line, 1,
@@ -1063,8 +1348,9 @@ static bool behavior_document_is_known(const World *world,
                 const PaliValue *property =
                     pali_document_property(prototype, name);
                 if (concept == NULL || property == NULL ||
-                    world_concept_access(world, concept->id) !=
-                        CONCEPT_ACCESS_PATCHABLE ||
+                    (require_knowledge &&
+                     world_concept_access(world, concept->id) !=
+                         CONCEPT_ACCESS_PATCHABLE) ||
                     expression_types[statement->expression] !=
                         property->type) {
                     set_error(error, (int)statement->line, 1,
@@ -1108,7 +1394,7 @@ static bool resolve_behavior_program(const World *world,
     }
     PaliDocument resolved;
     if (!merge_behavior_document(prototype, handler, &resolved, error) ||
-        !behavior_document_is_known(world, prototype, handler, error) ||
+        !behavior_document_is_valid(world, prototype, handler, true, error) ||
         !pali_compile_document(&resolved, out, error)) {
         return false;
     }
@@ -1128,16 +1414,12 @@ bool world_behavior_is_patchable(const World *world, const Entity *entity) {
            world_has_reach(world, PATCH_REACH_ENTITY);
 }
 
-bool world_build_use_behavior_document(const World *world,
-                                       const Entity *entity,
-                                       UseBehaviorDraft draft,
-                                       PaliDocument *out,
-                                       PaliError *error) {
-    if (world == NULL || entity == NULL || out == NULL ||
-        entity->prototype != PROTOTYPE_APPLE ||
-        draft.hunger < 0 || draft.hunger >= BEHAVIOR_HUNGER_COUNT ||
-        draft.voice < 0 || draft.voice >= BEHAVIOR_VOICE_COUNT ||
-        draft.fate < 0 || draft.fate >= BEHAVIOR_FATE_COUNT) {
+static bool build_use_behavior_document(const char *prototype_name,
+                                        UseBehaviorDraft draft,
+                                        PaliDocument *out,
+                                        PaliError *error) {
+    if (prototype_name == NULL || out == NULL ||
+        behavior_draft_index(draft) < 0) {
         set_error(error, 0, 0, "Behavior Draft is not a known apple grammar");
         return false;
     }
@@ -1146,6 +1428,14 @@ bool world_build_use_behavior_document(const World *world,
         hunger = "        actor.hunger = max(0, actor.hunger - self.nutrition)\n";
     } else if (draft.hunger == BEHAVIOR_HUNGER_SHARPEN) {
         hunger = "        actor.hunger = min(100, actor.hunger + self.nutrition)\n";
+    }
+    const char *aftertaste = "";
+    if (draft.aftertaste == BEHAVIOR_AFTERTASTE_KINDLE) {
+        aftertaste =
+            "        actor.warmth = min(100, actor.warmth + self.nutrition)\n";
+    } else if (draft.aftertaste == BEHAVIOR_AFTERTASTE_QUICKEN) {
+        aftertaste =
+            "        actor.vigor = min(100, actor.vigor + self.nutrition)\n";
     }
     const char *voice = "";
     if (draft.voice == BEHAVIOR_VOICE_FADE) {
@@ -1159,9 +1449,8 @@ bool world_build_use_behavior_document(const World *world,
     char source[PALI_SOURCE_CAP];
     const int written = snprintf(
         source, sizeof(source),
-        "prototype %s\n    on use(actor)\n%s%s%s    end\nend\n",
-        world_prototype_name((PrototypeId)entity->prototype), hunger, voice,
-        fate);
+        "prototype %s\n    on use(actor)\n%s%s%s%s    end\nend\n",
+        prototype_name, hunger, aftertaste, voice, fate);
     if (written < 0 || (size_t)written >= sizeof(source)) {
         set_error(error, 0, 0, "Behavior Draft exceeds its source bound");
         return false;
@@ -1169,32 +1458,94 @@ bool world_build_use_behavior_document(const World *world,
     return pali_parse_document(source, out, error);
 }
 
-static bool behavior_document_is_generated_apple_draft(
-    const World *world, const Entity *entity, const char *source,
-    PaliError *error) {
+bool world_build_apple_behavior_document(const World *world,
+                                         UseBehaviorDraft draft,
+                                         PaliDocument *out,
+                                         PaliError *error) {
+    if (world == NULL) {
+        set_error(error, 0, 0, "Behavior Draft has no Universe");
+        return false;
+    }
+    return build_use_behavior_document(
+        world_prototype_name(PROTOTYPE_APPLE), draft, out, error);
+}
+
+bool world_build_use_behavior_document(const World *world,
+                                       const Entity *entity,
+                                       UseBehaviorDraft draft,
+                                       PaliDocument *out,
+                                       PaliError *error) {
+    if (world == NULL || entity == NULL ||
+        entity->prototype != PROTOTYPE_APPLE) {
+        set_error(error, 0, 0, "Behavior Draft is not a known apple grammar");
+        return false;
+    }
+    return build_use_behavior_document(
+        world_prototype_name((PrototypeId)entity->prototype), draft, out,
+        error);
+}
+
+static bool behavior_draft_from_source(const World *world,
+                                       const Entity *entity,
+                                       const char *source,
+                                       UseBehaviorDraft *out,
+                                       PaliError *error) {
     for (int hunger = 0; hunger < BEHAVIOR_HUNGER_COUNT; ++hunger) {
         for (int voice = 0; voice < BEHAVIOR_VOICE_COUNT; ++voice) {
             for (int fate = 0; fate < BEHAVIOR_FATE_COUNT; ++fate) {
-                const UseBehaviorDraft draft = {
-                    (BehaviorHungerClause)hunger,
-                    (BehaviorVoiceClause)voice,
-                    (BehaviorFateClause)fate};
-                PaliDocument candidate;
-                char candidate_source[PALI_SOURCE_CAP];
-                if (!world_build_use_behavior_document(world, entity, draft,
-                                                       &candidate, error) ||
-                    !pali_format_document(&candidate, candidate_source,
-                                          sizeof(candidate_source), error)) {
-                    return false;
-                }
-                if (strcmp(source, candidate_source) == 0) {
-                    return true;
+                for (int aftertaste = 0;
+                     aftertaste < BEHAVIOR_AFTERTASTE_COUNT; ++aftertaste) {
+                    const UseBehaviorDraft draft = {
+                        (BehaviorHungerClause)hunger,
+                        (BehaviorVoiceClause)voice,
+                        (BehaviorFateClause)fate,
+                        (BehaviorAftertasteClause)aftertaste};
+                    PaliDocument candidate;
+                    char candidate_source[PALI_SOURCE_CAP];
+                    if (!world_build_use_behavior_document(
+                            world, entity, draft, &candidate, error) ||
+                        !pali_format_document(
+                            &candidate, candidate_source,
+                            sizeof(candidate_source), error)) {
+                        return false;
+                    }
+                    if (strcmp(source, candidate_source) == 0) {
+                        if (out != NULL) {
+                            *out = draft;
+                        }
+                        return true;
+                    }
                 }
             }
         }
     }
     set_error(error, 1, 1, "Behavior Patch is not a known apple grammar");
     return false;
+}
+
+bool world_behavior_draft_from_document(const World *world,
+                                        const Entity *entity,
+                                        const PaliDocument *handler,
+                                        UseBehaviorDraft *out,
+                                        PaliError *error) {
+    if (world == NULL || entity == NULL || handler == NULL || out == NULL ||
+        entity->prototype != PROTOTYPE_APPLE) {
+        set_error(error, 0, 0, "Behavior Patch has no apple target");
+        return false;
+    }
+    char normalized[PALI_SOURCE_CAP];
+    PaliDocument normalized_document;
+    PaliProgram validation;
+    if (!pali_format_document(handler, normalized, sizeof(normalized),
+                              error) ||
+        !pali_parse_document(normalized, &normalized_document, error) ||
+        !resolve_behavior_program(
+            world,
+            &world->universe.prototypes[entity->prototype].document,
+            &normalized_document, &validation, error)) {
+        return false;
+    }
+    return behavior_draft_from_source(world, entity, normalized, out, error);
 }
 
 bool world_get_entity_use_behavior_draft(const World *world,
@@ -1204,40 +1555,25 @@ bool world_get_entity_use_behavior_draft(const World *world,
         entity->prototype != PROTOTYPE_APPLE) {
         return false;
     }
-    const PaliDocument *effective =
-        world_entity_behavior_document(world, entity);
-    if (effective == NULL) {
-        return false;
+    const LocalOverride *override = entity_override_const(world, entity);
+    if (override != NULL && override->has_behavior) {
+        if (behavior_draft_index(override->behavior) < 0) {
+            return false;
+        }
+        *out = override->behavior;
+        return true;
     }
     PaliDocument fragment;
-    behavior_fragment_from_document(effective, &fragment);
+    behavior_fragment_from_document(
+        &world->universe.prototypes[entity->prototype].document, &fragment);
     char effective_source[PALI_SOURCE_CAP];
     PaliError error;
     if (!pali_format_document(&fragment, effective_source,
                               sizeof(effective_source), &error)) {
         return false;
     }
-    for (int hunger = 0; hunger < BEHAVIOR_HUNGER_COUNT; ++hunger) {
-        for (int voice = 0; voice < BEHAVIOR_VOICE_COUNT; ++voice) {
-            for (int fate = 0; fate < BEHAVIOR_FATE_COUNT; ++fate) {
-                const UseBehaviorDraft draft = {
-                    (BehaviorHungerClause)hunger,
-                    (BehaviorVoiceClause)voice,
-                    (BehaviorFateClause)fate};
-                PaliDocument candidate;
-                char candidate_source[PALI_SOURCE_CAP];
-                if (world_build_use_behavior_document(
-                        world, entity, draft, &candidate, &error) &&
-                    pali_format_document(&candidate, candidate_source,
-                                         sizeof(candidate_source), &error) &&
-                    strcmp(candidate_source, effective_source) == 0) {
-                    *out = draft;
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
+    return behavior_draft_from_source(world, entity, effective_source, out,
+                                      &error);
 }
 
 bool world_use_entity(World *world, int entity_index, PaliError *error) {
@@ -1251,10 +1587,24 @@ bool world_use_entity(World *world, int entity_index, PaliError *error) {
         set_error(error, 0, 0, "entity no longer exists");
         return false;
     }
+    PaliProgram local_program;
+    const LocalOverride *override = entity_override_const(world, entity);
+    const PaliProgram *use_program = world_entity_program(world, entity);
+    if (override != NULL && override->has_behavior) {
+        PaliDocument handler;
+        if (!world_build_use_behavior_document(
+                world, entity, override->behavior, &handler, error) ||
+            !resolve_behavior_program(
+                world, &world->universe.prototypes[entity->prototype].document,
+                &handler, &local_program, error)) {
+            return false;
+        }
+        use_program = &local_program;
+    }
     HostContext context;
     context.world = world;
     context.self = entity;
-    context.program = world_entity_use_program(world, entity);
+    context.program = use_program;
     PaliHost host;
     host.user = &context;
     host.get_property = host_get;
@@ -1308,8 +1658,6 @@ bool world_apply_prototype_source(World *world, PrototypeId prototype,
             return false;
         }
     }
-    PaliProgram resolved_behaviors[WORLD_MAX_LOCAL_OVERRIDES];
-    bool updates_behavior[WORLD_MAX_LOCAL_OVERRIDES] = {false};
     for (int slot = 0; slot < WORLD_MAX_LOCAL_OVERRIDES; ++slot) {
         const LocalOverride *override =
             &world->universe.local_overrides[slot];
@@ -1335,13 +1683,49 @@ bool world_apply_prototype_source(World *world, PrototypeId prototype,
                 return false;
             }
         }
-        if (override->behavior.active) {
-            if (!resolve_behavior_program(world, &candidate_document,
-                                          &override->behavior.document,
-                                          &resolved_behaviors[slot], error)) {
+        if (override->has_behavior) {
+            PaliDocument handler;
+            PaliProgram validation;
+            if (prototype != PROTOTYPE_APPLE ||
+                !build_use_behavior_document(candidate_document.prototype_name,
+                                             override->behavior, &handler,
+                                             error) ||
+                !resolve_behavior_program(world, &candidate_document,
+                                          &handler, &validation, error)) {
+                set_error(error, 1, 1,
+                          "prototype patch conflicts with a local Behavior Patch");
                 return false;
             }
-            updates_behavior[slot] = true;
+        }
+    }
+    if (prototype == PROTOTYPE_APPLE) {
+        for (int slot = 0; slot < WORLD_MAX_LINEAGES; ++slot) {
+            const LineageDefinition *lineage =
+                &world->universe.lineages[slot];
+            if (!lineage->active) {
+                continue;
+            }
+            const PaliValue *broader =
+                pali_document_property(&candidate_document, "nutrition");
+            if (lineage->has_nutrition_patch &&
+                (broader == NULL || broader->type != PALI_VALUE_NUMBER)) {
+                set_error(error, 1, 1,
+                          "prototype patch conflicts with a Lineage value");
+                return false;
+            }
+            if (lineage->has_behavior_patch) {
+                PaliDocument handler;
+                PaliProgram validation;
+                if (!build_use_behavior_document(
+                        candidate_document.prototype_name,
+                        lineage->draft.behavior, &handler, error) ||
+                    !resolve_behavior_program(world, &candidate_document,
+                                              &handler, &validation, error)) {
+                    set_error(error, 1, 1,
+                              "prototype patch conflicts with a Lineage Behavior");
+                    return false;
+                }
+            }
         }
     }
     definition->document = candidate_document;
@@ -1350,12 +1734,6 @@ bool world_apply_prototype_source(World *world, PrototypeId prototype,
                    sizeof(definition->current_source), "%s", normalized);
     definition->patched =
         strcmp(definition->current_source, definition->default_source) != 0;
-    for (int slot = 0; slot < WORLD_MAX_LOCAL_OVERRIDES; ++slot) {
-        if (updates_behavior[slot]) {
-            world->universe.local_overrides[slot].behavior.program =
-                resolved_behaviors[slot];
-        }
-    }
     (void)snprintf(world->message, sizeof(world->message),
                    "Shared prototype '%s' compiled.", definition->name);
     return true;
@@ -1370,9 +1748,32 @@ static int available_override_slot(const World *world) {
     return -1;
 }
 
+static bool recycled_descendant_will_free_override(const World *world) {
+    if (world == NULL) {
+        return false;
+    }
+    for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
+        const Entity *candidate = &world->universe.entities[index];
+        if (candidate->active || candidate->parent_id == 0) {
+            continue;
+        }
+        if (candidate->local_override >= 0 &&
+            candidate->local_override < WORLD_MAX_LOCAL_OVERRIDES) {
+            const LocalOverride *override =
+                &world->universe
+                     .local_overrides[candidate->local_override];
+            if (override->active &&
+                override->entity_id == candidate->id) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 static bool local_override_is_empty(const LocalOverride *override) {
     return override == NULL ||
-           (override->value_count == 0 && !override->behavior.active);
+           (override->value_count == 0 && !override->has_behavior);
 }
 
 static int local_value_index(const LocalOverride *override,
@@ -1414,6 +1815,87 @@ static bool patch_permission(const World *world, ConceptId concept,
     return true;
 }
 
+static bool provenance_is_valid(const World *world, const Entity *entity,
+                                uint8_t reach, uint64_t provenance_id) {
+    if (reach == (uint8_t)PATCH_REACH_ENTITY) {
+        return provenance_id == entity->id;
+    }
+    if (reach == (uint8_t)PATCH_REACH_LINEAGE &&
+        entity->parent_id != 0 && provenance_id == entity->parent_id) {
+        const Entity *tree =
+            world_entity_by_id_const(world, provenance_id);
+        return tree != NULL && tree->prototype == PROTOTYPE_TREE;
+    }
+    return false;
+}
+
+bool world_restore_local_override(World *world, LocalOverride definition,
+                                  PaliError *error) {
+    Entity *entity = world_entity_by_id(world, definition.entity_id);
+    if (world == NULL || entity == NULL || !definition.active ||
+        entity->local_override != -1 ||
+        definition.value_count > WORLD_LOCAL_PATCH_VALUES ||
+        (definition.value_count == 0 && !definition.has_behavior)) {
+        set_error(error, 0, 0, "saved Entity Patch is not valid");
+        return false;
+    }
+    const PaliDocument *prototype =
+        &world->universe.prototypes[entity->prototype].document;
+    for (uint8_t index = 0; index < definition.value_count; ++index) {
+        const LocalPatchValue *value = &definition.values[index];
+        const ConceptDefinition *concept =
+            lexicon_find_by_id(value->concept);
+        const PaliValue *broader =
+            concept != NULL
+                ? pali_document_property(prototype, concept->name)
+                : NULL;
+        if (concept == NULL ||
+            (concept->operation_flags & CONCEPT_OP_REPLACE) == 0 ||
+            !lexicon_value_is_valid(concept, value->value) ||
+            broader == NULL || broader->type != value->value.type ||
+            !provenance_is_valid(world, entity, value->provenance_reach,
+                                 value->provenance_id)) {
+            set_error(error, 0, 0,
+                      "saved Entity value violates its semantic contract");
+            return false;
+        }
+        for (uint8_t earlier = 0; earlier < index; ++earlier) {
+            if (definition.values[earlier].concept == value->concept) {
+                set_error(error, 0, 0,
+                          "saved Entity Patch repeats a concept");
+                return false;
+            }
+        }
+    }
+    if (definition.has_behavior) {
+        PaliDocument handler;
+        PaliProgram validation;
+        if (entity->prototype != PROTOTYPE_APPLE ||
+            !provenance_is_valid(world, entity,
+                                 definition.behavior_provenance_reach,
+                                 definition.behavior_provenance_id) ||
+            !world_build_use_behavior_document(
+                world, entity, definition.behavior, &handler, error) ||
+            !resolve_behavior_program(world, prototype, &handler,
+                                      &validation, error)) {
+            if (error != NULL && error->message[0] == '\0') {
+                set_error(error, 0, 0,
+                          "saved Entity Behavior violates its semantic contract");
+            }
+            return false;
+        }
+    }
+    const int slot = available_override_slot(world);
+    if (slot < 0) {
+        set_error(error, 0, 0, "Entity Patch capacity reached");
+        return false;
+    }
+    world->universe.local_overrides[slot] = definition;
+    entity->local_override = (int8_t)slot;
+    entity->dirty = true;
+    return true;
+}
+
 bool world_clear_entity_behavior_patch(World *world, uint64_t entity_id,
                                        PaliError *error) {
     Entity *entity = world_entity_by_id(world, entity_id);
@@ -1436,10 +1918,13 @@ bool world_clear_entity_behavior_patch(World *world, uint64_t entity_id,
         set_error(error, 0, 0, "Entity Patch provenance is inconsistent");
         return false;
     }
-    if (!override->behavior.active) {
+    if (!override->has_behavior) {
         return true;
     }
     memset(&override->behavior, 0, sizeof(override->behavior));
+    override->behavior_provenance_id = 0;
+    override->behavior_provenance_reach = 0;
+    override->has_behavior = false;
     if (local_override_is_empty(override)) {
         memset(override, 0, sizeof(*override));
         entity->local_override = -1;
@@ -1477,14 +1962,15 @@ bool world_apply_entity_behavior_patch(World *world, uint64_t entity_id,
     }
     PrototypeDefinition *prototype =
         &world->universe.prototypes[entity->prototype];
-    PaliProgram resolved_program;
+    PaliProgram validation_program;
     if (!resolve_behavior_program(world, &prototype->document,
-                                  &normalized_document, &resolved_program,
+                                  &normalized_document, &validation_program,
                                   error)) {
         return false;
     }
-    if (!behavior_document_is_generated_apple_draft(
-            world, entity, normalized_source, error)) {
+    UseBehaviorDraft draft;
+    if (!behavior_draft_from_source(world, entity, normalized_source, &draft,
+                                    error)) {
         return false;
     }
 
@@ -1519,13 +2005,10 @@ bool world_apply_entity_behavior_patch(World *world, uint64_t entity_id,
         candidate.active = true;
         candidate.entity_id = entity_id;
     }
-    memset(&candidate.behavior, 0, sizeof(candidate.behavior));
-    candidate.behavior.active = true;
-    candidate.behavior.document = normalized_document;
-    candidate.behavior.program = resolved_program;
-    (void)snprintf(candidate.behavior.source,
-                   sizeof(candidate.behavior.source), "%s",
-                   normalized_source);
+    candidate.behavior = draft;
+    candidate.behavior_provenance_id = entity_id;
+    candidate.behavior_provenance_reach = (uint8_t)PATCH_REACH_ENTITY;
+    candidate.has_behavior = true;
     world->universe.local_overrides[slot] = candidate;
     entity->local_override = (int8_t)slot;
     entity->dirty = true;
@@ -1648,6 +2131,9 @@ bool world_apply_entity_value_patch(World *world, uint64_t entity_id,
     }
     candidate.values[value_index].concept = concept_id;
     candidate.values[value_index].value = value;
+    candidate.values[value_index].provenance_id = entity_id;
+    candidate.values[value_index].provenance_reach =
+        (uint8_t)PATCH_REACH_ENTITY;
     world->universe.local_overrides[slot] = candidate;
     entity->local_override = (int8_t)slot;
     entity->dirty = true;
@@ -1656,6 +2142,388 @@ bool world_apply_entity_value_patch(World *world, uint64_t entity_id,
                    world_prototype_name((PrototypeId)entity->prototype),
                    concept->name);
     return true;
+}
+
+static bool behavior_drafts_equal(UseBehaviorDraft left,
+                                  UseBehaviorDraft right) {
+    return left.hunger == right.hunger && left.voice == right.voice &&
+           left.fate == right.fate &&
+           left.aftertaste == right.aftertaste;
+}
+
+static LineageDefinition *lineage_for_tree(World *world,
+                                           uint64_t tree_id) {
+    if (world == NULL || tree_id == 0) {
+        return NULL;
+    }
+    for (int index = 0; index < WORLD_MAX_LINEAGES; ++index) {
+        LineageDefinition *lineage = &world->universe.lineages[index];
+        if (lineage->active && lineage->progenitor_id == tree_id) {
+            return lineage;
+        }
+    }
+    return NULL;
+}
+
+const LineageDefinition *world_tree_lineage(const World *world,
+                                            const Entity *tree) {
+    if (world == NULL || tree == NULL ||
+        tree->prototype != PROTOTYPE_TREE) {
+        return NULL;
+    }
+    return lineage_for_tree((World *)(uintptr_t)world, tree->id);
+}
+
+static LineageDefinition *available_lineage(World *world) {
+    for (int index = 0; index < WORLD_MAX_LINEAGES; ++index) {
+        if (!world->universe.lineages[index].active) {
+            return &world->universe.lineages[index];
+        }
+    }
+    return NULL;
+}
+
+static bool default_fruit_draft(const World *world,
+                                FruitLineageDraft *out) {
+    if (world == NULL || out == NULL) {
+        return false;
+    }
+    const PaliValue *nutrition = pali_document_property(
+        &world->universe.prototypes[PROTOTYPE_APPLE].document, "nutrition");
+    Entity apple;
+    memset(&apple, 0, sizeof(apple));
+    apple.prototype = PROTOTYPE_APPLE;
+    apple.local_override = -1;
+    if (nutrition == NULL || nutrition->type != PALI_VALUE_NUMBER ||
+        !world_get_entity_use_behavior_draft(world, &apple,
+                                             &out->behavior)) {
+        return false;
+    }
+    out->nutrition = nutrition->as.number;
+    return true;
+}
+
+bool world_get_tree_lineage_draft(const World *world, const Entity *tree,
+                                  FruitLineageDraft *out) {
+    if (world == NULL || tree == NULL || out == NULL ||
+        tree->prototype != PROTOTYPE_TREE ||
+        !default_fruit_draft(world, out)) {
+        return false;
+    }
+    const LineageDefinition *lineage = world_tree_lineage(world, tree);
+    if (lineage != NULL) {
+        if (lineage->has_nutrition_patch) {
+            out->nutrition = lineage->draft.nutrition;
+        }
+        if (lineage->has_behavior_patch) {
+            out->behavior = lineage->draft.behavior;
+        }
+    }
+    return true;
+}
+
+static int fruit_nutrition_inflection(uint64_t tree_id,
+                                      uint32_t birth_ordinal) {
+    const uint64_t mixed =
+        mix64(tree_id ^ ((uint64_t)birth_ordinal << 21) ^
+              UINT64_C(0x494e464c454354));
+    return (int)(mixed %
+                 (uint64_t)(WORLD_FRUIT_INFLECTION_RADIUS * 2 + 1)) -
+           WORLD_FRUIT_INFLECTION_RADIUS;
+}
+
+double world_tree_preview_fruit_nutrition(const World *world,
+                                          const Entity *tree,
+                                          FruitLineageDraft draft) {
+    if (world == NULL || tree == NULL ||
+        tree->prototype != PROTOTYPE_TREE) {
+        return 0.0;
+    }
+    double nutrition =
+        draft.nutrition +
+        (double)fruit_nutrition_inflection(tree->id,
+                                           tree->descendants_born + 1u);
+    const ConceptDefinition *concept =
+        lexicon_find_by_id(CONCEPT_NUTRITION);
+    if (concept != NULL) {
+        if (nutrition < concept->numeric_min) {
+            nutrition = concept->numeric_min;
+        } else if (nutrition > concept->numeric_max) {
+            nutrition = concept->numeric_max;
+        }
+    }
+    return nutrition;
+}
+
+double world_tree_next_fruit_nutrition(const World *world,
+                                       const Entity *tree) {
+    FruitLineageDraft draft;
+    if (!world_get_tree_lineage_draft(world, tree, &draft)) {
+        return 0.0;
+    }
+    return world_tree_preview_fruit_nutrition(world, tree, draft);
+}
+
+const Entity *world_tree_current_fruit(const World *world,
+                                       const Entity *tree) {
+    if (world == NULL || tree == NULL ||
+        tree->prototype != PROTOTYPE_TREE) {
+        return NULL;
+    }
+    for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
+        const Entity *entity = &world->universe.entities[index];
+        if (entity->active && entity->prototype == PROTOTYPE_APPLE &&
+            entity->parent_id == tree->id) {
+            return entity;
+        }
+    }
+    return NULL;
+}
+
+bool world_tree_lineage_is_patchable(const World *world,
+                                     const Entity *tree) {
+    return world != NULL && tree != NULL && tree->active &&
+           tree->prototype == PROTOTYPE_TREE &&
+           world->knowledge.access_depth >= (uint8_t)ACCESS_DEPTH_LINEAGE &&
+           world_has_reach(world, PATCH_REACH_LINEAGE);
+}
+
+static bool validate_lineage_draft(const World *world,
+                                   FruitLineageDraft draft,
+                                   PaliError *error) {
+    const ConceptDefinition *nutrition =
+        lexicon_find_by_id(CONCEPT_NUTRITION);
+    PaliDocument handler;
+    PaliProgram validation;
+    return nutrition != NULL &&
+           lexicon_value_is_valid(nutrition,
+                                  pali_number(draft.nutrition)) &&
+           world_build_apple_behavior_document(world, draft.behavior,
+                                               &handler, error) &&
+           resolve_behavior_program(
+               world,
+               &world->universe.prototypes[PROTOTYPE_APPLE].document,
+               &handler, &validation, error);
+}
+
+bool world_apply_tree_lineage_draft(World *world, uint64_t tree_id,
+                                    FruitLineageDraft draft,
+                                    PaliError *error) {
+    Entity *tree = world_entity_by_id(world, tree_id);
+    if (!world_tree_lineage_is_patchable(world, tree)) {
+        set_error(error, 0, 0,
+                  "Knowledge cannot Patch this tree's future fruit");
+        return false;
+    }
+    if (!validate_lineage_draft(world, draft, error)) {
+        if (error != NULL && error->message[0] == '\0') {
+            set_error(error, 0, 0,
+                      "future fruit violates its Lineage grammar");
+        }
+        return false;
+    }
+    FruitLineageDraft inherited;
+    if (!default_fruit_draft(world, &inherited)) {
+        set_error(error, 0, 0, "apple inheritance has no broader meaning");
+        return false;
+    }
+    const bool nutrition_changed = draft.nutrition != inherited.nutrition;
+    const bool behavior_changed =
+        !behavior_drafts_equal(draft.behavior, inherited.behavior);
+    LineageDefinition *lineage = lineage_for_tree(world, tree_id);
+    if (lineage == NULL && !nutrition_changed && !behavior_changed) {
+        return true;
+    }
+    if (lineage == NULL) {
+        lineage = available_lineage(world);
+        if (lineage == NULL) {
+            set_error(error, 0, 0, "Lineage capacity is full");
+            return false;
+        }
+        memset(lineage, 0, sizeof(*lineage));
+        lineage->active = true;
+        lineage->progenitor_id = tree_id;
+    }
+    lineage->draft = draft;
+    lineage->has_nutrition_patch = nutrition_changed;
+    lineage->has_behavior_patch = behavior_changed;
+    if (!nutrition_changed && !behavior_changed &&
+        lineage->inherited_births == 0) {
+        memset(lineage, 0, sizeof(*lineage));
+    }
+    tree->dirty = true;
+    (void)snprintf(world->message, sizeof(world->message),
+                   nutrition_changed || behavior_changed
+                       ? "This tree will teach its future fruit."
+                       : "This tree's future fruit returns to inheritance.");
+    return true;
+}
+
+bool world_clear_tree_lineage_patch(World *world, uint64_t tree_id,
+                                    PaliError *error) {
+    const Entity *tree = world_entity_by_id_const(world, tree_id);
+    FruitLineageDraft inherited;
+    if (tree == NULL || !default_fruit_draft(world, &inherited)) {
+        set_error(error, 0, 0, "Lineage target does not exist");
+        return false;
+    }
+    return world_apply_tree_lineage_draft(world, tree_id, inherited, error);
+}
+
+bool world_restore_lineage(World *world, LineageDefinition definition,
+                           PaliError *error) {
+    Entity *tree = world_entity_by_id(world, definition.progenitor_id);
+    if (tree == NULL || tree->prototype != PROTOTYPE_TREE ||
+        !definition.active ||
+        (!definition.has_nutrition_patch &&
+         !definition.has_behavior_patch && definition.inherited_births == 0) ||
+        lineage_for_tree(world, definition.progenitor_id) != NULL ||
+        !validate_lineage_draft(world, definition.draft, error)) {
+        if (error != NULL && error->message[0] == '\0') {
+            set_error(error, 0, 0, "saved Lineage is not valid");
+        }
+        return false;
+    }
+    LineageDefinition *slot = available_lineage(world);
+    if (slot == NULL) {
+        set_error(error, 0, 0, "Lineage capacity is full");
+        return false;
+    }
+    *slot = definition;
+    return true;
+}
+
+static bool find_fruit_position(const World *world, const Entity *tree,
+                                uint32_t birth_ordinal, float *out_x,
+                                float *out_y) {
+    static const float DIRECTIONS[8][2] = {
+        {1.0f, 0.0f},  {0.7f, 0.7f},  {0.0f, 1.0f}, {-0.7f, 0.7f},
+        {-1.0f, 0.0f}, {-0.7f, -0.7f}, {0.0f, -1.0f}, {0.7f, -0.7f}};
+    const uint64_t start =
+        mix64(tree->id ^ ((uint64_t)birth_ordinal << 13));
+    for (int attempt = 0; attempt < 16; ++attempt) {
+        const int direction = (int)((start + (uint64_t)attempt) % 8u);
+        const float radius = attempt < 8 ? 10.0f : 15.0f;
+        const float x = tree->x + DIRECTIONS[direction][0] * radius;
+        const float y = tree->y + DIRECTIONS[direction][1] * radius;
+        if (!position_blocked(world, x, y, 2.0f, 0) &&
+            !position_has_entity(world, x, y, 4.0f)) {
+            *out_x = x;
+            *out_y = y;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool materialize_fruit_inheritance(World *world, Entity *fruit,
+                                          Entity *tree,
+                                          LineageDefinition *lineage,
+                                          double nutrition) {
+    FruitLineageDraft broader;
+    if (!default_fruit_draft(world, &broader)) {
+        return false;
+    }
+    const bool inherit_nutrition =
+        nutrition != broader.nutrition ||
+        (lineage != NULL && lineage->has_nutrition_patch);
+    const bool inherit_behavior =
+        lineage != NULL && lineage->has_behavior_patch;
+    if (!inherit_nutrition && !inherit_behavior) {
+        return true;
+    }
+    const int slot = available_override_slot(world);
+    if (slot < 0) {
+        return false;
+    }
+    LocalOverride *override = &world->universe.local_overrides[slot];
+    memset(override, 0, sizeof(*override));
+    override->active = true;
+    override->entity_id = fruit->id;
+    if (inherit_nutrition) {
+        override->value_count = 1;
+        override->values[0].concept = CONCEPT_NUTRITION;
+        override->values[0].value = pali_number(nutrition);
+        override->values[0].provenance_id = tree->id;
+        override->values[0].provenance_reach =
+            (uint8_t)PATCH_REACH_LINEAGE;
+    }
+    if (inherit_behavior) {
+        override->behavior = lineage->draft.behavior;
+        override->behavior_provenance_id = tree->id;
+        override->behavior_provenance_reach =
+            (uint8_t)PATCH_REACH_LINEAGE;
+        override->has_behavior = true;
+    }
+    fruit->local_override = (int8_t)slot;
+    return true;
+}
+
+static void step_tree_fruit(World *world, Entity *tree) {
+    if (world == NULL || tree == NULL || !tree->active ||
+        tree->prototype != PROTOTYPE_TREE ||
+        world_tree_current_fruit(world, tree) != NULL) {
+        return;
+    }
+    if (tree->fruit_ticks > 0) {
+        tree->fruit_ticks--;
+        tree->dirty = true;
+        if (tree->fruit_ticks > 0) {
+            return;
+        }
+    }
+    const uint32_t ordinal = tree->descendants_born + 1u;
+    const double nutrition = world_tree_next_fruit_nutrition(world, tree);
+    FruitLineageDraft broader;
+    if (!default_fruit_draft(world, &broader)) {
+        tree->fruit_ticks = 60;
+        return;
+    }
+    LineageDefinition *lineage = lineage_for_tree(world, tree->id);
+    const bool needs_override =
+        nutrition != broader.nutrition ||
+        (lineage != NULL && (lineage->has_nutrition_patch ||
+                             lineage->has_behavior_patch));
+    if ((needs_override && available_override_slot(world) < 0 &&
+         !recycled_descendant_will_free_override(world)) ||
+        ordinal == 0) {
+        tree->fruit_ticks = 60;
+        return;
+    }
+    float x = 0.0f;
+    float y = 0.0f;
+    if (!find_fruit_position(world, tree, ordinal, &x, &y)) {
+        tree->fruit_ticks = 60;
+        return;
+    }
+    const uint64_t id = world_descendant_id(
+        world, tree->id, ordinal, PROTOTYPE_APPLE);
+    PaliError error;
+    if (!world_restore_descendant(world, id, tree->id, ordinal,
+                                  PROTOTYPE_APPLE, &error)) {
+        tree->fruit_ticks = 60;
+        return;
+    }
+    Entity *fruit = world_entity_by_id(world, id);
+    if (fruit == NULL || !materialize_fruit_inheritance(
+                             world, fruit, tree, lineage, nutrition)) {
+        if (fruit != NULL) {
+            fruit->active = false;
+        }
+        tree->fruit_ticks = 60;
+        return;
+    }
+    fruit->x = x;
+    fruit->y = y;
+    tree->descendants_born = ordinal;
+    tree->fruit_ticks = 0;
+    tree->dirty = true;
+    if (lineage != NULL &&
+        (lineage->has_nutrition_patch || lineage->has_behavior_patch)) {
+        lineage->inherited_births++;
+        (void)snprintf(world->message, sizeof(world->message),
+                       "A future sentence becomes fruit.");
+    }
 }
 
 bool world_apply_prototype_value_patch(World *world, PrototypeId prototype,
@@ -1722,6 +2590,20 @@ static uint64_t hash_float(uint64_t hash, float value) {
     return hash_bytes(hash, &bits, sizeof(bits));
 }
 
+static uint64_t hash_double(uint64_t hash, double value) {
+    uint64_t bits = 0;
+    memcpy(&bits, &value, sizeof(bits));
+    return hash_bytes(hash, &bits, sizeof(bits));
+}
+
+static uint64_t hash_behavior_draft(uint64_t hash,
+                                    UseBehaviorDraft draft) {
+    const uint8_t clauses[4] = {
+        (uint8_t)draft.hunger, (uint8_t)draft.voice,
+        (uint8_t)draft.fate, (uint8_t)draft.aftertaste};
+    return hash_bytes(hash, clauses, sizeof(clauses));
+}
+
 static uint64_t hash_value(uint64_t hash, PaliValue value) {
     const uint8_t type = (uint8_t)value.type;
     hash = hash_bytes(hash, &type, sizeof(type));
@@ -1757,10 +2639,18 @@ uint64_t world_genesis_fingerprint(const World *world) {
                       sizeof(world->universe.root_seed));
     hash = hash_bytes(hash, world->universe.tiles,
                       sizeof(world->universe.tiles));
-    hash = hash_bytes(hash, &world->universe.entity_count,
-                      sizeof(world->universe.entity_count));
+    uint16_t genesis_count = 0;
+    for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
+        if (world->universe.entities[index].parent_id == 0) {
+            genesis_count++;
+        }
+    }
+    hash = hash_bytes(hash, &genesis_count, sizeof(genesis_count));
     for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
         const Entity *entity = &world->universe.entities[index];
+        if (entity->parent_id != 0) {
+            continue;
+        }
         hash = hash_bytes(hash, &entity->id, sizeof(entity->id));
         hash = hash_bytes(hash, &entity->prototype, sizeof(entity->prototype));
         hash = hash_float(hash, entity->x);
@@ -1795,6 +2685,7 @@ uint64_t world_state_fingerprint(const World *world) {
     hash = hash_float(hash, world->embodiment.y);
     hash = hash_float(hash, world->embodiment.hunger);
     hash = hash_float(hash, world->embodiment.warmth);
+    hash = hash_float(hash, world->embodiment.vigor);
     for (int index = 0; index < PROTOTYPE_COUNT; ++index) {
         hash = hash_bytes(hash,
                           world->universe.prototypes[index].current_source,
@@ -1802,6 +2693,17 @@ uint64_t world_state_fingerprint(const World *world) {
     }
     for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
         const Entity *entity = &world->universe.entities[index];
+        hash = hash_bytes(hash, &entity->id, sizeof(entity->id));
+        hash = hash_bytes(hash, &entity->prototype,
+                          sizeof(entity->prototype));
+        hash = hash_bytes(hash, &entity->parent_id,
+                          sizeof(entity->parent_id));
+        hash = hash_bytes(hash, &entity->birth_ordinal,
+                          sizeof(entity->birth_ordinal));
+        hash = hash_bytes(hash, &entity->descendants_born,
+                          sizeof(entity->descendants_born));
+        hash = hash_bytes(hash, &entity->fruit_ticks,
+                          sizeof(entity->fruit_ticks));
         hash = hash_bytes(hash, &entity->active, sizeof(entity->active));
         hash = hash_bytes(hash, &entity->dirty, sizeof(entity->dirty));
         hash = hash_bytes(hash, &entity->rng_state, sizeof(entity->rng_state));
@@ -1828,15 +2730,49 @@ uint64_t world_state_fingerprint(const World *world) {
                 hash = hash_bytes(hash, &override->values[value].concept,
                                   sizeof(override->values[value].concept));
                 hash = hash_value(hash, override->values[value].value);
+                hash = hash_bytes(
+                    hash, &override->values[value].provenance_id,
+                    sizeof(override->values[value].provenance_id));
+                hash = hash_bytes(
+                    hash, &override->values[value].provenance_reach,
+                    sizeof(override->values[value].provenance_reach));
             }
             const uint8_t has_behavior =
-                override->behavior.active ? 1u : 0u;
+                override->has_behavior ? 1u : 0u;
             hash = hash_bytes(hash, &has_behavior, sizeof(has_behavior));
-            if (override->behavior.active) {
-                hash = hash_bytes(hash, override->behavior.source,
-                                  strlen(override->behavior.source));
+            if (override->has_behavior) {
+                hash = hash_behavior_draft(hash, override->behavior);
+                hash = hash_bytes(
+                    hash, &override->behavior_provenance_id,
+                    sizeof(override->behavior_provenance_id));
+                hash = hash_bytes(
+                    hash, &override->behavior_provenance_reach,
+                    sizeof(override->behavior_provenance_reach));
             }
         }
+    }
+    for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
+        const Entity *tree = &world->universe.entities[index];
+        if (tree->prototype != PROTOTYPE_TREE) {
+            continue;
+        }
+        const LineageDefinition *lineage =
+            world_tree_lineage(world, tree);
+        const uint8_t active = lineage != NULL ? 1u : 0u;
+        hash = hash_bytes(hash, &active, sizeof(active));
+        if (lineage == NULL) {
+            continue;
+        }
+        hash = hash_bytes(hash, &lineage->progenitor_id,
+                          sizeof(lineage->progenitor_id));
+        hash = hash_double(hash, lineage->draft.nutrition);
+        hash = hash_behavior_draft(hash, lineage->draft.behavior);
+        hash = hash_bytes(hash, &lineage->inherited_births,
+                          sizeof(lineage->inherited_births));
+        const uint8_t flags[2] = {
+            lineage->has_nutrition_patch ? 1u : 0u,
+            lineage->has_behavior_patch ? 1u : 0u};
+        hash = hash_bytes(hash, flags, sizeof(flags));
     }
     return hash;
 }

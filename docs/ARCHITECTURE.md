@@ -5,21 +5,21 @@
 - `src/main.c`: raylib window/input/timing, executable-relative asset path,
   default save path selection, and the fixed-step accumulator.
 - `src/ui.c`: integer-scaled world rendering, the structured Lens, typed
-  Behavior Clause controls, the Inquiry panel, and the developer-only
-  fixed-capacity source editor.
+  Behavior Clause controls, the future-fruit Lineage form and exact preview,
+  the Inquiry panel, and the developer-only fixed-capacity source editor.
 - `src/lexicon.c`: stable concept identities, Facets, semantic types, bounds,
   operations, and Reach vocabulary.
 - `src/world.c`: deterministic generation, collision, survival simulation,
-  Entity/Prototype value and Behavior resolution, state-derived Inquiries,
-  per-creature RNG, and PALI host bindings.
+  tree-to-fruit births, Entity/Lineage/Prototype value and Behavior resolution,
+  state-derived Inquiries, per-creature RNG, and PALI host bindings.
 - `src/pali_lexer.c`: source characters to tokens with line/column locations.
 - `src/pali_compiler.c`: recursive-descent parser, bounded typed document,
   deterministic formatter, semantic validation, and bytecode compiler.
 - `src/pali_vm.c`: typed runtime values, stack VM, arithmetic, budget, and host
   callback boundary.
-- `src/save.c`: portable little-endian v4 save encoding, checksum validation,
-  sparse value and local-handler materialization, and reconstruction from
-  Genesis with v2/v3 migration.
+- `src/save.c`: portable little-endian v5 save encoding, checksum validation,
+  sparse value and handler materialization, and reconstruction from Genesis
+  with v2/v3/v4 migration.
 - `src/platform.c`: isolated atomic replacement, durable file flush, directory,
   and default user-save behavior.
 
@@ -29,10 +29,12 @@ world, and persistence paths without opening a window.
 ## Data flow
 
 At startup, the platform supplies explicit asset and save paths. A new world
-loads and compiles base `.pali` definitions, then terrain and entity genesis use
-separate RNG streams derived from the displayed root seed. A load performs the
-same genesis and applies stored prototype patches, semantic Entity Scars, entity
-changes, local Behavior handlers, and player state.
+loads and compiles base `.pali` definitions, then terrain and Entity Genesis use
+separate RNG streams derived from the displayed root seed. Each tree
+subsequently owns a bounded fruit timer and birth ordinal. A load performs the
+same Genesis, restores post-Genesis descendants, and applies stored Prototype
+patches, Lineage definitions, sparse Entity or birth-captured Scars, Entity
+changes, local Behavior handlers, Knowledge, and Embodiment state.
 
 During play, raylib input becomes a `WorldInput`. The accumulator advances the
 world only in 1/60-second steps. Inspecting pauses simulation. The normal Lens
@@ -48,9 +50,12 @@ a callback-only whitelist even when the handler itself has local Provenance.
 
 Inquiries are projections, not another persistence store. Their progress and
 active ordering derive from existing Entity Scars, Entity activity,
-Observations, Notation, and Knowledge. Completing The First Scar reconciles one
-monotonic Knowledge grant: Behavior Access Depth plus readable hunger. The UI
-shows that transition explicitly, while its current/completed Inquiry index is
+Observations, Notation, Parentage, tree birth counters, Lineage definitions,
+inherited births, and Knowledge. Completing The First Scar reconciles one
+monotonic Knowledge grant: Behavior Access Depth plus readable hunger. After a
+Behavior Scar and a materialized descendant exist, The Fruit Remembers
+reconciles Lineage Depth and Reach plus readable Parentage, warmth, and vigor. The UI
+shows both transitions explicitly, while its current/completed Inquiry index is
 reconstructed from the same state after load.
 
 The application reconciles derived Knowledge at the startup and successful
@@ -65,19 +70,22 @@ coordinate space and is transformed by 3/2 into a 480x336 viewport. HUD and
 editor text draw natively in presentation coordinates. Raising UI resolution
 therefore cannot alter generation, collision, fixed-step movement, or saves.
 
-State property resolution is:
+An Entity's State property resolution is:
 
 1. sparse instance state;
-2. sparse Entity Patch value for that stable entity ID and concept;
+2. sparse local value for that stable entity ID and concept, carrying Entity or
+   birth-captured Lineage Provenance;
 3. shared prototype program.
 
 Behavior handler resolution is independent:
 
-1. normalized local handler source for that stable Entity ID, when present;
+1. normalized local handler for that stable Entity ID, carrying Entity or
+   birth-captured Lineage Provenance, when present;
 2. the shared Prototype handler otherwise.
 
-The eight-slot Entity Patch pool stores concept-addressed typed values and an
-optional normalized local Behavior handler under one stable Entity binding.
+The 32-slot Local Override pool stores up to four concept-addressed typed values
+and an optional typed Behavior draft under one stable Entity binding. The
+12-slot Lineage pool stores sparse future-fruit definitions by progenitor tree.
 This bounded layout remains within the 256 KiB compile-time `World` cap.
 Value nodes and the handler retain separate Provenance: either may exist or be
 reverted without removing the other. A local handler is resolved and compiled
@@ -87,7 +95,38 @@ later unrelated Prototype color and Behavior changes until its Behavior is
 separately Patched; an apple with a local handler still sees later Prototype
 property changes unless that property has its own narrower value Scar.
 Prototype source mutation exists only in the explicit developer profile; the
-normal Lens exposes Entity Reach and does not reveal the broader target.
+normal Lens exposes only Knowledge-granted Entity or Lineage Reach and does not
+reveal the broader Prototype target.
+
+## Lineage and birth
+
+A tree bears at most one active descendant apple. Its initial timer is derived
+from its stable ID; when its fruit ceases, the timer is reset to 300 fixed
+steps. A successful birth increments the tree's ordinal. Capacity or placement
+failure leaves no partial active child and retries after a bounded 60-step
+delay.
+
+Descendant identity is a deterministic mix of Genesis seed, progenitor ID,
+birth ordinal, and apple Prototype. Placement and nourishment Inflection also
+derive from the tree ID and ordinal, so unrelated random consumption cannot
+shift them. The nourishment Inflection is an integer in `[-2, 2]`, added to the
+Lineage or Prototype base and clamped to the nutrition concept's `0..100`
+range. The tree Lens uses the same function to show the exact next result.
+
+A Lineage definition is applied to a child only when that child materializes.
+The child captures nourishment when the Lineage addresses it or the birth
+Inflection differs from broader meaning, and captures Behavior only when that
+Lineage addresses Behavior. Both carry the progenitor ID and Lineage Reach as
+Provenance. Untouched nodes still resolve from the current apple Prototype. No
+child performs a live ancestry lookup, so later tree edits cannot retroactively
+alter already materialized fruit.
+
+The structured Behavior grammar has four optional effect groups in execution
+order: hunger, Aftertaste, voice, and fate. `KINDLE` adds nourishment to warmth;
+`QUICKEN` adds nourishment to vigor. Vigor decays by `0.05` each fixed step and
+increases movement speed by `0.5%` per remaining point. Aftertaste therefore
+runs before a possible `CEASE` fate. Its socket remains veiled at Behavior
+Depth and becomes readable and patchable with Lineage Knowledge.
 
 ## Identity layers
 
@@ -97,7 +136,8 @@ universe:
 - `UniverseState`: root seed, tick, terrain, entities, definitions, overrides;
 - `KnowledgeState`: known concepts, access capability bits, concept-indexed
   notation bits, and bounded per-concept Prototype Observation masks;
-- `EmbodimentState`: stable body ID, position, hunger, and warmth.
+- `EmbodimentState`: stable body ID, position, hunger, warmth, and decaying
+  vigor.
 
 This is the seam for future knowledge progression and embodiment transfer; no
 speculative transfer system is built.
@@ -137,7 +177,8 @@ Hard capacities are checked rather than overrun:
 
 - `World`: compile-time maximum 256 KiB
 - entities: 64
-- Entity Patch bindings: 8; values per binding: 4
+- Local Override bindings: 32; values per binding: 4
+- Lineage definitions: 12; one active descendant fruit per tree
 - PALI source: 4095 bytes plus terminator
 - properties/document: 16; statements: 16; expression nodes: 64; instance
   state properties/entity: 4
@@ -179,15 +220,20 @@ Saving writes `PATH.tmp`, flushes it to durable storage, rereads and validates
 the complete file, then atomically replaces the previous save where the OS
 supports it. A failed compile or failed load does not mutate the live world.
 
-The v4 payload stores the root recipe plus player/tick/Knowledge state, changed
-normalized Prototype source, stable concept IDs and typed Entity Patch values,
-an optional normalized local handler source for each Entity binding, only dirty
-generated Entities, and concept-indexed Observation masks. Terrain, unchanged
-definitions, effective Inquiry state, typed handler documents, and bytecode are
+The v5 payload stores the root recipe plus Embodiment/tick/Knowledge state,
+including vigor; changed normalized Prototype source; post-Genesis descendant
+identity and Parentage; Lineage definitions and inherited-birth counts; stable
+concept IDs, typed sparse values, and value/Behavior Provenance; normalized
+local Behavior source; dirty Entity state including tree counters and timers;
+and concept-indexed Observation masks. Terrain, unchanged definitions,
+effective Inquiry state, typed handler documents, and bytecode are
 reconstructed rather than duplicated.
 
-The loader accepts v2 and v3 transactionally. A v3 save retains its Observation
-ledger and begins with no local Behavior handlers. A v2 save begins with an
-empty Observation ledger and receives exact nutrition Notation to preserve the
-precision its Lens already displayed. Neither legacy path invents Inquiry
-completion state; current and completed Inquiries derive after reconstruction.
+The loader accepts v2, v3, and v4 transactionally. A v4 save restores its local
+Behavior handlers but begins with Genesis tree state, no post-Genesis
+descendants or Lineage definitions, and zero vigor. A v3 save also retains its
+Observation ledger and begins with no local Behavior handlers. A v2 save begins
+with an empty Observation ledger and receives exact nutrition Notation to
+preserve the precision its Lens already displayed. No legacy path invents
+Parentage or Inquiry completion; current and completed Inquiries derive after
+reconstruction.

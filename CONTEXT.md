@@ -53,6 +53,26 @@ A recorded descent relationship through which future Entities may inherit a
 definition without rewriting existing ancestors or siblings.
 _Avoid_: Inheritance tree, descendants list
 
+**Parentage**:
+The immutable relation between one materialized descendant and its immediate
+progenitor.
+_Avoid_: Owner, spawner, source Entity
+
+**Inheritance**:
+The birth-time acquisition of addressed meaning from a Lineage definition.
+Later Lineage changes affect future births, not already materialized Entities.
+_Avoid_: Live ancestry lookup, Prototype copy
+
+**Inflection**:
+A bounded deterministic birth-specific variation in inherited meaning, allowing
+descendants to share one grammar without becoming identical copies.
+_Avoid_: Random mutation, stat roll
+
+**Aftertaste**:
+A temporary embodied consequence left by an Entity's use Behavior, such as
+fading Vigor or Warmth.
+_Avoid_: Buff, status effect, power-up
+
 **Archetype**:
 A semantic definition of what qualifies as a kind of thing, independent of the
 Prototype that originally produced an Entity.

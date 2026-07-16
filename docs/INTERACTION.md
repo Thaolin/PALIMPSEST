@@ -2,13 +2,16 @@
 
 ## Status
 
-Implemented through the 0.4 vertical slice. The normal inspector is the
+Implemented through the 0.5 vertical slice. The normal inspector is the
 structured, Entity-derived Lens; the raw-source inspector is available only in
 explicit developer mode. The player can now turn one Veiled concept into
 qualitative and then exact meaning through persistent Observation. The First
 Scar opens Behavior and readable hunger; exact mass Notation then makes one
-apple's Behavior mouse-patchable through typed Clauses. Prototype Reach remains
-hidden from ordinary Knowledge.
+apple's Behavior mouse-patchable through typed Clauses. A materialized
+descendant opens The Fruit Remembers; its Knowledge grant reveals Parentage,
+vigor, the previously veiled Aftertaste socket, and Lineage Reach. A tree then
+opens as **FUTURE FRUIT / THIS LINEAGE** with an exact next-birth preview.
+Prototype Reach remains hidden from ordinary Knowledge.
 
 ## Intent
 
@@ -49,6 +52,10 @@ state or accept arbitrary source text.
 9. **Inquiries ask; state answers.** Current and completed Inquiries are derived
    from Universe and Knowledge state. They do not carry parallel completion
    flags or become a tutorial-objective subsystem.
+10. **Lineage is captured at birth.** A tree's future-fruit definition is
+    applied to a child only while that child materializes. The child keeps
+    sparse addressed nodes and immutable Parentage/Provenance; later tree edits
+    do not rewrite it.
 
 ## What can be opened
 
@@ -95,6 +102,7 @@ VITAL
 BEHAVIOR
   WHEN [this entity is used by an actor]         fixed
   DO   [SOOTHE HUNGER]                           patchable
+  AFTER [{ a consequence still veiled }]         veiled
   SAY  [BECOME LESS REAL]                        patchable
   THEN [CEASE]                                   patchable
        CLAUSE COST [current / 24]
@@ -105,7 +113,10 @@ BEHAVIOR
 At Genesis the Lens stops at State depth. Completing The First Scar grants
 Behavior Access Depth and makes hunger Readable, with an explicit Knowledge
 notice. Behavior remains readable until exact mass Notation turns the known
-apple grammar into the Clause controls above.
+apple grammar into the Clause controls above. Aftertaste remains veiled and
+unpatchable at this depth. The Fruit Remembers later grants Lineage Depth and
+makes the warmth/vigor consequences readable, turning `AFTER` into the fourth
+choice control.
 
 There is no “every apple” selector in this Lens. The target summary changes
 only after Prototype Reach itself has been revealed.
@@ -179,12 +190,18 @@ the Universe or Knowledge:
   bit. Its phases therefore survive save/load without a completion flag.
 - **The Sentence Inside** becomes current after exact mass Notation and reads
   whether one apple carries a local Behavior Scar.
+- **The Fruit Remembers** reads whether any tree has produced a descendant,
+  whether one tree carries a future-fruit Scar, and whether a later birth has
+  captured it. The first witnessed birth visibly grants Lineage Depth and
+  Reach plus readable Parentage and vigor once; the remaining steps ask the
+  player to Scar that Lineage and receive its inherited proof.
 
 The first incomplete derived Inquiry is current. The side panel can switch
 between its detail and a compact index containing completed pages plus the
 current one; later unknown Inquiries are not advertised. Saving persists only
-the underlying Scars, Entity state, Observation ledger, Notation, and
-Knowledge, so the same index is reconstructed on load.
+the underlying Scars, Entity and tree state, Parentage, Lineage definitions,
+Observation ledger, Notation, and Knowledge, so the same index is reconstructed
+on load.
 
 ## Lexicon
 
@@ -221,7 +238,9 @@ scope dropdown presented at the start of the game.
 
 Normal early Knowledge grants Entity Reach only. The Lens therefore says
 “THIS APPLE” as a target summary; it does not show a menu containing four
-padlocked future options.
+padlocked future options. The Fruit Remembers later grants Lineage Reach; an
+opened tree then says **FUTURE FRUIT / THIS LINEAGE** and explicitly limits the
+target to that tree's future descendants.
 
 Prototype Reach must exist in the engine, validator, save format, tests, and a
 developer Knowledge profile now. It must not appear in the normal Lens until a
@@ -271,6 +290,10 @@ later history milestone.
     **RESET STATE** and Behavior **REVERT** restore their respective drafts;
     **CLOSE** discards uncommitted changes. Keyboard shortcuts remain
     accelerators, not required knowledge.
+11. With Lineage Knowledge, opening a tree replaces the ordinary Entity target
+    with a mouse-complete future-fruit form. Its nourishment stepper and four
+    Clause rows continuously recompute the exact next nourishment/Aftertaste
+    preview; **INSCRIBE** commits only that tree's Lineage Draft.
 
 The first implementation does not require drag-and-drop. Clause rows, choice
 menus, add buttons, and target pickers provide complete mouse operation without
@@ -298,28 +321,34 @@ allowing malformed data.
 
 ## Behavior Clauses
 
-Behavior is presented as a sentence-like structured document. For the 0.4
-apple grammar, the trigger remains protected while three choice rows cycle
-through known, type-compatible alternatives:
+Behavior is presented as a sentence-like structured document. The current
+apple grammar keeps the trigger protected and exposes four typed choice rows,
+with `AFTER` veiled until Lineage Knowledge makes its sockets legible:
 
 ```text
 WHEN  [this entity is used by an actor]                 fixed
 DO    [SOOTHE HUNGER | SHARPEN HUNGER | LEAVE HUNGER]
+AFTER [NONE | KINDLE WARMTH | QUICKEN VIGOR]
 SAY   [BECOME LESS REAL | REMEMBER BEING EATEN | SAY NOTHING]
 THEN  [CEASE | REMAIN]
 ```
 
 Soothe subtracts this apple's nourishment from actor hunger, sharpen adds it,
-and leave omits the hunger effect. Fade and remember emit their known messages;
-silent omits the voice effect. Cease destroys the fictional Entity; remain
-omits that effect. The fixed trigger and selected effects compile to ordinary
-PALI rather than a second execution system.
+and leave omits the hunger effect. None leaves no Aftertaste; kindle adds
+nourishment to warmth; quicken adds nourishment to vigor. Vigor decays while
+temporarily increasing movement speed. Fade and remember emit their known
+messages; silent omits the voice effect. Cease destroys the fictional Entity;
+remain omits that effect. Execution and normalized source order are `DO`,
+`AFTER`, `SAY`, `THEN`, so Aftertaste is applied before a possible `CEASE`.
+The fixed trigger and selected effects compile to ordinary PALI rather than a
+second execution system.
 
 Each Clause declares its input and output types, required concepts, allowed
 operators, structural role, and execution cost. The Lens shows current Clause
 cost against a preinstall budget of 24 instructions. A candidate is normalized,
-validated against Access Depth, Entity Reach, known sockets, types, protected
-structure, and that budget, then compiled without touching the live Universe.
+validated against Access Depth, the selected Reach, known sockets, types,
+protected structure, and that budget, then compiled without touching the live
+Universe.
 The same 24-instruction bound applies when a local handler executes. An
 over-budget or wrong-type candidate leaves the prior Behavior unchanged.
 
@@ -328,9 +357,10 @@ omitted only through the known choices above. “Cease” compiles to a safe
 fictional host operation; it never deallocates arbitrary C storage.
 
 Behavior Patchability is itself derived from Knowledge. The First Scar grants
-Behavior Access Depth and readable hunger. Exact mass Notation then makes this
-bounded apple grammar Patchable at Entity Reach and visibly announces that
-Clauses have opened.
+Behavior Access Depth and readable hunger. Exact mass Notation then makes the
+hunger, voice, and fate rows Patchable at Entity Reach and visibly announces
+that Clauses have opened. `AFTER` remains a veiled fourth row until Lineage
+Depth reveals its warmth/vigor sockets.
 
 The committed document is a normalized handler-only source fragment attached
 to the stable Entity. Behavior Provenance and value Provenance resolve
@@ -342,8 +372,46 @@ independently even though both fit in one sparse Local Override binding:
    the matching local value Scar, then the current Prototype value.
 3. Reverting a local handler preserves local nourishment or other value nodes;
    changing a value does not copy or freeze Behavior.
-4. Save v4 persists the normalized handler source and reconstructs its typed
-   document and bytecode on load rather than serializing executable code.
+4. Save v5 persists the normalized handler source and its Provenance, then
+   reconstructs the typed document and bytecode on load rather than serializing
+   executable code.
+
+## Future-fruit Lineage interaction
+
+Each tree owns a stable progenitor identity, a birth ordinal, and at most one
+active descendant apple. After its current fruit ceases, a bounded deterministic
+timer permits another birth. The child's stable ID, placement, and nourishment
+Inflection derive from the tree and ordinal rather than unrelated randomness.
+
+Once The Fruit Remembers grants Lineage Knowledge, opening a tree presents:
+
+```text
+TREE                                  FUTURE FRUIT
+                                      THIS LINEAGE / birth N
+
+INHERITANCE                          NEXT 19 / +19 VIGOR
+  BASE [ - ] [NOURISH 20] [ + ]
+  DO    [SOOTHE HUNGER]
+  AFTER [QUICKEN VIGOR]
+  SAY   [BECOME LESS REAL]
+  THEN  [CEASE]
+       CLAUSE COST [current / 24]
+
+                         [REVERT] [INSCRIBE]
+```
+
+`NEXT` is exact: the Lens applies the same deterministic `[-2, 2]` nutrition
+Inflection and `0..100` clamp used by the next materialization, and names the
+selected plain/kindle/quicken Aftertaste. The draft is fully mouse-operable.
+Inscribing compares it with broader apple meaning and stores only changed
+nutrition and Behavior nodes under that tree's Lineage.
+
+At birth, the child captures those addressed nodes with the tree ID and
+Lineage Provenance. Any nutrition differing from broader meaning, including by
+Inflection, is likewise captured. Untouched meaning continues to resolve from
+the apple Prototype.
+Current fruit, older siblings, and unrelated trees do not change; editing the
+tree again affects only later births.
 
 ## Future Semantic Construction interaction
 
@@ -468,10 +536,12 @@ The first Behavior-grammar milestone is complete when:
    later questions remain absent.
 4. Right-click invokes a nearby pointed Entity and `F` invokes the nearest
    Entity's effective Behavior.
-5. Exact mass Notation makes the apple's fixed trigger and hunger, voice, and
-   fate Clause choices mouse-patchable at Entity Reach.
+5. Exact mass Notation makes the apple's fixed trigger plus hunger, voice, and
+   fate choices mouse-patchable at Entity Reach; a fourth `AFTER` row remains
+   veiled until Lineage Depth.
 6. Known choices can soothe, sharpen, or leave hunger; fade, remember, or
-   silence the apple's voice; and make it cease or remain.
+   silence the apple's voice; make it cease or remain; and, once revealed,
+   leave no Aftertaste, kindle warmth, or quicken decaying movement vigor.
 7. Wrong-type and over-24-instruction candidates reject transactionally before
    installation, preserving the prior live handler.
 8. One apple can carry a local Behavior Scar without changing another apple.
@@ -479,11 +549,40 @@ The first Behavior-grammar milestone is complete when:
 9. Save v4 retains normalized local handler source, reconstructs its typed
    document and bytecode, and accepts genuine v2 and v3 payloads.
 
+## 0.5 acceptance slice
+
+The first Lineage milestone is complete when:
+
+1. Each tree bears at most one current apple through a bounded deterministic
+   delay; consuming that fruit permits a later birth rather than unbounded
+   population growth.
+2. A descendant apple has stable Parentage and an identity derived from its
+   progenitor and birth ordinal, independent of unrelated randomness.
+3. The state-derived Inquiry **The Fruit Remembers** recognizes a materialized
+   descendant, visibly grants Lineage Depth and Reach once, and then asks for a
+   future-fruit Scar and its inherited proof.
+4. Opening a tree with Lineage Knowledge shows **FUTURE FRUIT / THIS LINEAGE**
+   and presents mouse-complete nourishment and four Behavior rows. Its exact
+   preview combines the next deterministic nutrition Inflection with the
+   selected plain, kindle, or quicken Aftertaste.
+5. Inscribing that form changes one tree's future-fruit definition. Its current
+   apple, existing siblings, and every unrelated tree remain unchanged.
+6. The next apple born to that tree captures only addressed State and Behavior
+   nodes with Lineage Provenance; untouched meaning still resolves from the
+   apple Prototype.
+7. Editing the tree again cannot retroactively alter a materialized child.
+8. Save v5 restores post-Genesis descendants, Parentage, birth order, tree
+   timers, Lineage definitions, inherited nodes, and partial Inquiry progress;
+   genuine v2-v4 saves migrate without invented descendants.
+9. Reproduction, Lineage records, Patch bindings, compilation, and save images
+   remain within explicit fixed capacities and fail transactionally.
+
 ## Deferred
 
 - Discovery rules for concepts beyond the first mass Revelation.
 - Behavior grammar beyond the bounded apple choices.
-- Lineage, Archetype, and Universe Reach.
+- Archetype and Universe Reach.
+- Inventory, harvesting, cross-tree breeding, and a general ecology.
 - Causal cost, resistance, gods protecting definitions, and broad-impact
   preview simulation.
 - Controller interaction.

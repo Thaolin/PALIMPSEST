@@ -19,6 +19,7 @@ typedef struct Options {
     const char *save_path;
     const char *capture_path;
     bool capture_inspector;
+    bool capture_lineage;
     bool developer;
 } Options;
 
@@ -29,7 +30,8 @@ static void print_usage(void) {
     (void)printf(
         "PALIMPSEST: The First Patch\n"
         "  palimpest [--seed N] [--new] [--save PATH]\n"
-        "             [--capture PNG] [--capture-inspector PNG] [--developer]\n"
+        "             [--capture PNG] [--capture-inspector PNG]\n"
+        "             [--capture-lineage PNG] [--developer]\n"
         "\n--seed and --new begin a deterministic new clearing.\n");
 }
 
@@ -69,6 +71,11 @@ static bool parse_options(int argc, char **argv, Options *options) {
                    index + 1 < argc) {
             options->capture_path = argv[++index];
             options->capture_inspector = true;
+        } else if (strcmp(argv[index], "--capture-lineage") == 0 &&
+                   index + 1 < argc) {
+            options->capture_path = argv[++index];
+            options->capture_inspector = true;
+            options->capture_lineage = true;
         } else if (strcmp(argv[index], "--developer") == 0) {
             options->developer = true;
         } else {
@@ -230,14 +237,32 @@ int main(int argc, char **argv) {
     ui_present_knowledge_grant(
         &game_ui, world_reconcile_inquiry_knowledge(&game_world));
     if (options.capture_inspector) {
+        const PrototypeId capture_prototype =
+            options.capture_lineage ? PROTOTYPE_TREE : PROTOTYPE_APPLE;
+        int capture_index = -1;
         for (uint16_t index = 0; index < game_world.universe.entity_count;
              ++index) {
             const Entity *candidate = &game_world.universe.entities[index];
-            if (candidate->prototype == PROTOTYPE_APPLE &&
+            if (candidate->prototype == (uint8_t)capture_prototype &&
                 candidate->active) {
-                ui_open_inspector(&game_ui, &game_world, (int)index);
-                break;
+                if (capture_index < 0) {
+                    capture_index = (int)index;
+                }
+                const LineageDefinition *lineage =
+                    options.capture_lineage
+                        ? world_tree_lineage(&game_world, candidate)
+                        : NULL;
+                if (!options.capture_lineage ||
+                    (lineage != NULL &&
+                     (lineage->has_nutrition_patch ||
+                      lineage->has_behavior_patch))) {
+                    capture_index = (int)index;
+                    break;
+                }
             }
+        }
+        if (capture_index >= 0) {
+            ui_open_inspector(&game_ui, &game_world, capture_index);
         }
     }
 
@@ -347,6 +372,8 @@ int main(int argc, char **argv) {
                 set_world_message("Reload failed", &error);
             }
         }
+        ui_present_knowledge_grant(
+            &game_ui, world_reconcile_inquiry_knowledge(&game_world));
         if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) &&
             IsKeyPressed(KEY_Q)) {
             running = false;
@@ -364,7 +391,7 @@ int main(int argc, char **argv) {
 
         rendered_frames++;
         const bool capture_now = options.capture_path != NULL &&
-                                 rendered_frames == 8;
+                                 rendered_frames == 30;
         if (capture_now) {
             Image screenshot = LoadImageFromTexture(canvas.texture);
             ImageFlipVertical(&screenshot);

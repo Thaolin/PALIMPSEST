@@ -16,6 +16,7 @@ static const Color OCHRE_INK = {105, 72, 20, 255};
 static const Color ERROR_RED = {202, 76, 65, 255};
 static const Color ERROR_INK = {150, 42, 38, 255};
 static const Color COLD_BLUE = {83, 144, 166, 255};
+static const Color VIGOR_VIOLET = {151, 112, 190, 255};
 
 static Font interface_font;
 static bool interface_font_ready = false;
@@ -123,15 +124,19 @@ static Rectangle knowledge_notice_rectangle(void) {
 }
 
 static Rectangle behavior_hunger_button(void) {
-    return (Rectangle){438.0f, 151.0f, 252.0f, 35.0f};
+    return (Rectangle){438.0f, 143.0f, 252.0f, 32.0f};
 }
 
 static Rectangle behavior_voice_button(void) {
-    return (Rectangle){438.0f, 196.0f, 252.0f, 35.0f};
+    return (Rectangle){438.0f, 215.0f, 252.0f, 32.0f};
 }
 
 static Rectangle behavior_fate_button(void) {
-    return (Rectangle){438.0f, 241.0f, 252.0f, 35.0f};
+    return (Rectangle){438.0f, 251.0f, 252.0f, 32.0f};
+}
+
+static Rectangle behavior_aftertaste_button(void) {
+    return (Rectangle){438.0f, 179.0f, 252.0f, 32.0f};
 }
 
 static Rectangle behavior_revert_button(void) {
@@ -140,6 +145,14 @@ static Rectangle behavior_revert_button(void) {
 
 static Rectangle behavior_inscribe_button(void) {
     return (Rectangle){567.0f, 310.0f, 123.0f, 28.0f};
+}
+
+static Rectangle lineage_nutrition_decrement_button(void) {
+    return (Rectangle){438.0f, 108.0f, 28.0f, 27.0f};
+}
+
+static Rectangle lineage_nutrition_increment_button(void) {
+    return (Rectangle){662.0f, 108.0f, 28.0f, 27.0f};
 }
 
 static Rectangle nourishment_decrement_button(int y) {
@@ -205,6 +218,9 @@ void ui_present_knowledge_grant(UiState *ui, KnowledgeGrant grant) {
     if (grant == KNOWLEDGE_GRANT_BEHAVIOR_DEPTH) {
         ui->knowledge_notice = UI_KNOWLEDGE_NOTICE_BEHAVIOR;
         ui->knowledge_notice_frames = 300;
+    } else if (grant == KNOWLEDGE_GRANT_LINEAGE_DEPTH) {
+        ui->knowledge_notice = UI_KNOWLEDGE_NOTICE_LINEAGE;
+        ui->knowledge_notice_frames = 300;
     }
 }
 
@@ -262,6 +278,17 @@ static void capture_behavior_draft(UiState *ui, const World *world,
     }
 }
 
+static void capture_lineage_draft(UiState *ui, const World *world,
+                                  const Entity *entity) {
+    ui->has_lineage_draft =
+        world_tree_lineage_is_patchable(world, entity) &&
+        world_get_tree_lineage_draft(world, entity,
+                                     &ui->lineage_draft);
+    if (!ui->has_lineage_draft) {
+        memset(&ui->lineage_draft, 0, sizeof(ui->lineage_draft));
+    }
+}
+
 void ui_open_inspector(UiState *ui, const World *world, int entity_index) {
     if (ui == NULL || world == NULL || entity_index < 0 ||
         entity_index >= (int)world->universe.entity_count) {
@@ -275,6 +302,7 @@ void ui_open_inspector(UiState *ui, const World *world, int entity_index) {
     memset(&ui->error, 0, sizeof(ui->error));
     capture_nourishment_draft(ui, world, entity);
     capture_behavior_draft(ui, world, entity);
+    capture_lineage_draft(ui, world, entity);
     editor_set(&ui->editor,
                world_prototype_source(world,
                                       (PrototypeId)entity->prototype));
@@ -548,11 +576,12 @@ static bool nourishment_is_patchable(const UiState *ui, const World *world) {
                CONCEPT_ACCESS_PATCHABLE;
 }
 
-static int lens_row_height(ConceptId concept, ConceptAccess access) {
+static int lens_row_height(ConceptId concept, ConceptAccess access,
+                           bool compact) {
     return concept == CONCEPT_NUTRITION &&
                    access == CONCEPT_ACCESS_PATCHABLE
-               ? 47
-               : 27;
+               ? compact ? 42 : 47
+               : compact ? 24 : 27;
 }
 
 static void build_lens_layout(const World *world, const Entity *entity,
@@ -560,6 +589,7 @@ static void build_lens_layout(const World *world, const Entity *entity,
     memset(layout, 0, sizeof(*layout));
     int cursor = 89;
     bool has_section = false;
+    const bool compact = entity->parent_id != 0;
     for (int facet_index = (int)FACET_SENSORY;
          facet_index <= (int)FACET_SPATIAL; ++facet_index) {
         const Facet facet = (Facet)facet_index;
@@ -582,10 +612,10 @@ static void build_lens_layout(const World *world, const Entity *entity,
             }
             if (starts_facet) {
                 if (has_section) {
-                    cursor += 5;
+                    cursor += compact ? 2 : 5;
                 }
                 section_y = cursor;
-                cursor += 18;
+                cursor += compact ? 15 : 18;
             }
             if (layout->row_count >= CONCEPT_COUNT) {
                 return;
@@ -598,7 +628,7 @@ static void build_lens_layout(const World *world, const Entity *entity,
             row->facet = facet;
             row->section_y = section_y;
             row->y = cursor;
-            row->height = lens_row_height(concept, access);
+            row->height = lens_row_height(concept, access, compact);
             row->starts_facet = starts_facet;
             row->bounds = (Rectangle){20.0f, (float)(cursor - 2), 328.0f,
                                       (float)(row->height - 1)};
@@ -672,22 +702,64 @@ static bool behavior_is_patchable(const UiState *ui, const World *world,
            world_behavior_is_patchable(world, entity);
 }
 
-static void cycle_behavior_hunger(UiState *ui) {
-    ui->behavior_draft.hunger = (BehaviorHungerClause)(
-        ((int)ui->behavior_draft.hunger + 1) % BEHAVIOR_HUNGER_COUNT);
+static bool lineage_is_patchable(const UiState *ui, const World *world,
+                                 const Entity *entity) {
+    return ui->has_lineage_draft &&
+           world_tree_lineage_is_patchable(world, entity);
+}
+
+static UseBehaviorDraft *active_behavior_draft(UiState *ui,
+                                                bool lineage) {
+    return lineage ? &ui->lineage_draft.behavior : &ui->behavior_draft;
+}
+
+static void cycle_behavior_hunger(UiState *ui, bool lineage) {
+    UseBehaviorDraft *draft = active_behavior_draft(ui, lineage);
+    draft->hunger = (BehaviorHungerClause)(
+        ((int)draft->hunger + 1) % BEHAVIOR_HUNGER_COUNT);
     ui->has_error = false;
 }
 
-static void cycle_behavior_voice(UiState *ui) {
-    ui->behavior_draft.voice = (BehaviorVoiceClause)(
-        ((int)ui->behavior_draft.voice + 1) % BEHAVIOR_VOICE_COUNT);
+static void cycle_behavior_voice(UiState *ui, bool lineage) {
+    UseBehaviorDraft *draft = active_behavior_draft(ui, lineage);
+    draft->voice = (BehaviorVoiceClause)(
+        ((int)draft->voice + 1) % BEHAVIOR_VOICE_COUNT);
     ui->has_error = false;
 }
 
-static void cycle_behavior_fate(UiState *ui) {
-    ui->behavior_draft.fate = (BehaviorFateClause)(
-        ((int)ui->behavior_draft.fate + 1) % BEHAVIOR_FATE_COUNT);
+static void cycle_behavior_fate(UiState *ui, bool lineage) {
+    UseBehaviorDraft *draft = active_behavior_draft(ui, lineage);
+    draft->fate = (BehaviorFateClause)(
+        ((int)draft->fate + 1) % BEHAVIOR_FATE_COUNT);
     ui->has_error = false;
+}
+
+static void cycle_behavior_aftertaste(UiState *ui, bool lineage) {
+    UseBehaviorDraft *draft = active_behavior_draft(ui, lineage);
+    draft->aftertaste = (BehaviorAftertasteClause)(
+        ((int)draft->aftertaste + 1) % BEHAVIOR_AFTERTASTE_COUNT);
+    ui->has_error = false;
+}
+
+static void adjust_lineage_nutrition(UiState *ui, int direction) {
+    const ConceptDefinition *definition =
+        lexicon_find_by_id(CONCEPT_NUTRITION);
+    if (definition == NULL || !ui->has_lineage_draft) {
+        return;
+    }
+    const double step = definition->numeric_step > 0.0
+                            ? definition->numeric_step
+                            : 1.0;
+    double candidate = ui->lineage_draft.nutrition +
+                       (double)direction * step;
+    if (candidate < definition->numeric_min) {
+        candidate = definition->numeric_min;
+    } else if (candidate > definition->numeric_max) {
+        candidate = definition->numeric_max;
+    }
+    ui->lineage_draft.nutrition = candidate;
+    ui->has_error = false;
+    memset(&ui->error, 0, sizeof(ui->error));
 }
 
 static void inscribe_behavior(UiState *ui, World *world, Entity *entity) {
@@ -707,22 +779,45 @@ static void inscribe_behavior(UiState *ui, World *world, Entity *entity) {
     }
 }
 
+static void inscribe_lineage(UiState *ui, World *world, Entity *tree) {
+    PaliError error;
+    memset(&error, 0, sizeof(error));
+    if (world_apply_tree_lineage_draft(world, tree->id,
+                                       ui->lineage_draft, &error)) {
+        ui->has_error = false;
+        memset(&ui->error, 0, sizeof(ui->error));
+        capture_lineage_draft(ui, world, tree);
+    } else {
+        ui->has_error = true;
+        ui->error = error;
+    }
+}
+
 static bool point_over_lens_control(Vector2 point, bool patchable,
                                     int nourishment_y,
                                     ConceptId hovered_concept,
-                                    bool behavior_patchable) {
+                                    bool behavior_patchable,
+                                    bool lineage_patchable,
+                                    bool aftertaste_patchable) {
     if (CheckCollisionPointRec(point, lens_close_button())) {
         return true;
     }
     if (hovered_concept != CONCEPT_NONE) {
         return true;
     }
-    if (behavior_patchable &&
+    if ((behavior_patchable || lineage_patchable) &&
         (CheckCollisionPointRec(point, behavior_hunger_button()) ||
          CheckCollisionPointRec(point, behavior_voice_button()) ||
          CheckCollisionPointRec(point, behavior_fate_button()) ||
+         (aftertaste_patchable &&
+          CheckCollisionPointRec(point, behavior_aftertaste_button())) ||
          CheckCollisionPointRec(point, behavior_revert_button()) ||
-         CheckCollisionPointRec(point, behavior_inscribe_button()))) {
+         CheckCollisionPointRec(point, behavior_inscribe_button()) ||
+         (lineage_patchable &&
+          (CheckCollisionPointRec(
+               point, lineage_nutrition_decrement_button()) ||
+           CheckCollisionPointRec(
+               point, lineage_nutrition_increment_button()))))) {
         return true;
     }
     return patchable &&
@@ -768,12 +863,20 @@ static void update_lens(UiState *ui, World *world, Entity *entity,
     const bool patchable = nourishment_is_patchable(ui, world);
     const bool patchable_behavior =
         behavior_is_patchable(ui, world, entity);
+    const bool patchable_lineage =
+        lineage_is_patchable(ui, world, entity);
+    const bool patchable_aftertaste =
+        patchable_lineage ||
+        (patchable_behavior &&
+         world->knowledge.access_depth >=
+             (uint8_t)ACCESS_DEPTH_LINEAGE);
     const bool control = IsKeyDown(KEY_LEFT_CONTROL) ||
                          IsKeyDown(KEY_RIGHT_CONTROL);
     const bool mouse_click = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     SetMouseCursor(point_over_lens_control(
                         virtual_mouse, patchable, nourishment_y,
-                        ui->hovered_concept, patchable_behavior)
+                        ui->hovered_concept, patchable_behavior,
+                        patchable_lineage, patchable_aftertaste)
                        ? MOUSE_CURSOR_POINTING_HAND
                        : MOUSE_CURSOR_DEFAULT);
 
@@ -795,31 +898,67 @@ static void update_lens(UiState *ui, World *world, Entity *entity,
         }
         return;
     }
-    if (patchable_behavior && mouse_click &&
+    if ((patchable_behavior || patchable_lineage) && mouse_click &&
         CheckCollisionPointRec(virtual_mouse, behavior_hunger_button())) {
-        cycle_behavior_hunger(ui);
+        cycle_behavior_hunger(ui, patchable_lineage);
         return;
     }
-    if (patchable_behavior && mouse_click &&
+    if ((patchable_behavior || patchable_lineage) && mouse_click &&
         CheckCollisionPointRec(virtual_mouse, behavior_voice_button())) {
-        cycle_behavior_voice(ui);
+        cycle_behavior_voice(ui, patchable_lineage);
         return;
     }
-    if (patchable_behavior && mouse_click &&
+    if ((patchable_behavior || patchable_lineage) && mouse_click &&
         CheckCollisionPointRec(virtual_mouse, behavior_fate_button())) {
-        cycle_behavior_fate(ui);
+        cycle_behavior_fate(ui, patchable_lineage);
         return;
     }
-    if (patchable_behavior && mouse_click &&
+    if (patchable_aftertaste && mouse_click &&
+        CheckCollisionPointRec(virtual_mouse,
+                               behavior_aftertaste_button())) {
+        cycle_behavior_aftertaste(ui, patchable_lineage);
+        return;
+    }
+    if ((patchable_behavior || patchable_lineage) && mouse_click &&
         CheckCollisionPointRec(virtual_mouse, behavior_revert_button())) {
-        capture_behavior_draft(ui, world, entity);
+        if (patchable_lineage) {
+            capture_lineage_draft(ui, world, entity);
+        } else {
+            capture_behavior_draft(ui, world, entity);
+        }
         ui->has_error = false;
         memset(&ui->error, 0, sizeof(ui->error));
         return;
     }
-    if (patchable_behavior && mouse_click &&
+    if ((patchable_behavior || patchable_lineage) && mouse_click &&
         CheckCollisionPointRec(virtual_mouse, behavior_inscribe_button())) {
-        inscribe_behavior(ui, world, entity);
+        if (patchable_lineage) {
+            inscribe_lineage(ui, world, entity);
+        } else {
+            inscribe_behavior(ui, world, entity);
+        }
+        return;
+    }
+    if (patchable_lineage && mouse_click &&
+        CheckCollisionPointRec(virtual_mouse,
+                               lineage_nutrition_decrement_button())) {
+        adjust_lineage_nutrition(ui, -1);
+        return;
+    }
+    if (patchable_lineage && mouse_click &&
+        CheckCollisionPointRec(virtual_mouse,
+                               lineage_nutrition_increment_button())) {
+        adjust_lineage_nutrition(ui, 1);
+        return;
+    }
+    if (patchable_lineage && control && IsKeyPressed(KEY_R)) {
+        capture_lineage_draft(ui, world, entity);
+        ui->has_error = false;
+        memset(&ui->error, 0, sizeof(ui->error));
+        return;
+    }
+    if (patchable_lineage && control && IsKeyPressed(KEY_ENTER)) {
+        inscribe_lineage(ui, world, entity);
         return;
     }
     if (!patchable) {
@@ -967,12 +1106,27 @@ static void draw_entity(const World *world, const Entity *entity,
             DrawCircle(x - 4, y, 4.0f, color);
             DrawCircle(x + 4, y, 4.0f, color);
             draw_text(";", x - 1, y - 7, 6, Fade(PARCHMENT, 0.45f));
+            if (world->knowledge.access_depth >=
+                    (uint8_t)ACCESS_DEPTH_LINEAGE) {
+                const LineageDefinition *lineage =
+                    world_tree_lineage(world, entity);
+                if (lineage != NULL &&
+                    (lineage->has_nutrition_patch ||
+                     lineage->has_behavior_patch)) {
+                    DrawLine(x - 5, y - 5, x + 5, y + 1, PAL_GOLD);
+                }
+            }
             break;
         case PROTOTYPE_APPLE:
             DrawCircle(x, y, 3.0f, color);
             DrawPixel(x - 1, y - 1, (Color){255, 203, 143, 255});
             DrawLine(x, y - 3, x + 1, y - 5, (Color){76, 52, 35, 255});
             DrawPixel(x + 2, y - 4, (Color){92, 126, 63, 255});
+            if (entity->parent_id != 0 &&
+                world->knowledge.access_depth >=
+                    (uint8_t)ACCESS_DEPTH_LINEAGE) {
+                DrawCircleLines(x, y, 4.5f, Fade(PAL_GOLD, 0.78f));
+            }
             break;
         case PROTOTYPE_FIRE:
             DrawTriangle((Vector2){(float)x, (float)(y - 6)},
@@ -1492,7 +1646,7 @@ static void draw_text_wrapped_two_lines(const char *text, int x, int y,
 }
 
 static void draw_clause_row(int y, const char *lead, const char *text) {
-    const Rectangle row = {374.0f, (float)y, 326.0f, 39.0f};
+    const Rectangle row = {374.0f, (float)y, 326.0f, 35.0f};
     DrawRectangleRec(row, Fade(PARCHMENT_DARK, 0.13f));
     DrawRectangleLinesEx(row, 1.0f, Fade(PARCHMENT_DARK, 0.65f));
     draw_text(lead, 381, y + 13, TYPE_CAPTION, OCHRE_INK);
@@ -1580,6 +1734,17 @@ static const char *behavior_fate_label(BehaviorFateClause clause) {
     return clause == BEHAVIOR_FATE_REMAIN ? "REMAIN" : "CEASE";
 }
 
+static const char *behavior_aftertaste_label(
+    BehaviorAftertasteClause clause) {
+    if (clause == BEHAVIOR_AFTERTASTE_KINDLE) {
+        return "KINDLE WARMTH";
+    }
+    if (clause == BEHAVIOR_AFTERTASTE_QUICKEN) {
+        return "QUICKEN VIGOR";
+    }
+    return "LEAVE NO AFTERTASTE";
+}
+
 static void draw_behavior_choice(Rectangle bounds, const char *lead,
                                  const char *value) {
     DrawRectangleRec(bounds, Fade(PAL_GOLD, 0.16f));
@@ -1602,6 +1767,15 @@ static void draw_patchable_behavior(const UiState *ui, const World *world,
                          behavior_voice_label(ui->behavior_draft.voice));
     draw_behavior_choice(behavior_fate_button(), "THEN",
                          behavior_fate_label(ui->behavior_draft.fate));
+    if (world->knowledge.access_depth >=
+        (uint8_t)ACCESS_DEPTH_LINEAGE) {
+        draw_behavior_choice(
+            behavior_aftertaste_button(), "AFTER",
+            behavior_aftertaste_label(ui->behavior_draft.aftertaste));
+    } else {
+        draw_clause_row(179, "AFTER",
+                        "{ a consequence still veiled }");
+    }
 
     PaliDocument draft;
     PaliProgram program;
@@ -1623,9 +1797,86 @@ static void draw_patchable_behavior(const UiState *ui, const World *world,
     draw_button(behavior_inscribe_button(), "INSCRIBE", PAL_GOLD);
 }
 
+static void draw_lineage_nutrition(const UiState *ui) {
+    draw_text("BASE", 378, 117, TYPE_CAPTION, OCHRE_INK);
+    draw_button(lineage_nutrition_decrement_button(), "-", PAL_GOLD);
+    const Rectangle value_bounds = {471.0f, 108.0f, 186.0f, 27.0f};
+    DrawRectangleRec(value_bounds, Fade(INK, 0.10f));
+    DrawRectangleLinesEx(value_bounds, 1.0f, PARCHMENT_DARK);
+    char value[48];
+    (void)snprintf(value, sizeof(value), "NOURISH  %.12g",
+                   ui->lineage_draft.nutrition);
+    const int x = (int)value_bounds.x +
+                  ((int)value_bounds.width - text_width(value, TYPE_BODY)) / 2;
+    draw_text(value, x, 115, TYPE_BODY, INK);
+    draw_button(lineage_nutrition_increment_button(), "+", PAL_GOLD);
+}
+
+static void draw_patchable_lineage(const UiState *ui, const World *world,
+                                   const Entity *tree) {
+    const double next = world_tree_preview_fruit_nutrition(
+        world, tree, ui->lineage_draft);
+    char prediction[96];
+    if (ui->lineage_draft.behavior.aftertaste ==
+        BEHAVIOR_AFTERTASTE_QUICKEN) {
+        (void)snprintf(prediction, sizeof(prediction),
+                       "NEXT %.12g / +%.12g VIGOR", next, next);
+    } else if (ui->lineage_draft.behavior.aftertaste ==
+               BEHAVIOR_AFTERTASTE_KINDLE) {
+        (void)snprintf(prediction, sizeof(prediction),
+                       "NEXT %.12g / +%.12g WARMTH", next, next);
+    } else {
+        (void)snprintf(prediction, sizeof(prediction),
+                       "NEXT %.12g / NO AFTER", next);
+    }
+    draw_text("INHERITANCE", 374, 87, TYPE_SECTION, INK_SOFT);
+    draw_text_fit(prediction, 515, 89, 178, TYPE_CAPTION, OCHRE_INK);
+    draw_lineage_nutrition(ui);
+    draw_behavior_choice(
+        behavior_hunger_button(), "DO",
+        behavior_hunger_label(ui->lineage_draft.behavior.hunger));
+    draw_behavior_choice(
+        behavior_voice_button(), "SAY",
+        behavior_voice_label(ui->lineage_draft.behavior.voice));
+    draw_behavior_choice(
+        behavior_fate_button(), "THEN",
+        behavior_fate_label(ui->lineage_draft.behavior.fate));
+    draw_behavior_choice(
+        behavior_aftertaste_button(), "AFTER",
+        behavior_aftertaste_label(ui->lineage_draft.behavior.aftertaste));
+
+    PaliDocument draft;
+    PaliProgram program;
+    PaliError error;
+    int cost = 0;
+    memset(&error, 0, sizeof(error));
+    if (world_build_apple_behavior_document(
+            world, ui->lineage_draft.behavior, &draft, &error) &&
+        pali_compile_document(&draft, &program, &error)) {
+        cost = (int)program.code_count;
+    }
+    char budget[48];
+    (void)snprintf(budget, sizeof(budget), "CLAUSE COST %d / %d", cost,
+                   WORLD_BEHAVIOR_PATCH_BUDGET);
+    draw_text(budget, 378, 286, TYPE_CAPTION, INK_SOFT);
+    const LineageDefinition *lineage = world_tree_lineage(world, tree);
+    if (lineage != NULL &&
+        (lineage->has_nutrition_patch || lineage->has_behavior_patch)) {
+        draw_text("LINEAGE SCAR", 580, 286, TYPE_CAPTION, OCHRE_INK);
+    } else if (lineage != NULL && lineage->inherited_births > 0) {
+        draw_text("LINEAGE MEMORY", 570, 286, TYPE_CAPTION, INK_SOFT);
+    }
+    draw_button(behavior_revert_button(), "REVERT", PARCHMENT_DARK);
+    draw_button(behavior_inscribe_button(), "INSCRIBE", PAL_GOLD);
+}
+
 static void draw_behavior_clauses(const UiState *ui, const World *world,
                                   const Entity *entity) {
     if (world->knowledge.access_depth < (uint8_t)ACCESS_DEPTH_BEHAVIOR) {
+        return;
+    }
+    if (lineage_is_patchable(ui, world, entity)) {
+        draw_patchable_lineage(ui, world, entity);
         return;
     }
     if (behavior_is_patchable(ui, world, entity)) {
@@ -1634,12 +1885,13 @@ static void draw_behavior_clauses(const UiState *ui, const World *world,
     }
     draw_text("BEHAVIOR", 374, 87, TYPE_SECTION, INK_SOFT);
     draw_text("CLAUSES / READ ONLY", 541, 89, TYPE_CAPTION, INK_SOFT);
-    const PaliDocument *document =
-        world_entity_behavior_document(world, entity);
-    if (document == NULL || !document->has_use) {
+    PaliDocument behavior_document;
+    if (!world_entity_behavior_document(world, entity, &behavior_document) ||
+        !behavior_document.has_use) {
         draw_clause_row(108, "WHEN", "no readable response is inscribed");
         return;
     }
+    const PaliDocument *document = &behavior_document;
 
     draw_clause_row(108, "WHEN", "this entity is used by an actor");
     const uint16_t visible_statements =
@@ -1688,6 +1940,84 @@ static const char *facet_name(Facet facet) {
     }
 }
 
+static PatchReach entity_meaning_provenance(const World *world,
+                                            const Entity *entity,
+                                            uint64_t *out_id) {
+    uint64_t nutrition_id = 0;
+    uint64_t behavior_id = 0;
+    const PatchReach nutrition = world_entity_concept_provenance(
+        world, entity, CONCEPT_NUTRITION, &nutrition_id);
+    const PatchReach behavior = world_entity_behavior_provenance(
+        world, entity, &behavior_id);
+    if (nutrition == PATCH_REACH_ENTITY ||
+        behavior == PATCH_REACH_ENTITY) {
+        if (out_id != NULL) {
+            *out_id = nutrition == PATCH_REACH_ENTITY
+                          ? nutrition_id
+                          : behavior_id;
+        }
+        return PATCH_REACH_ENTITY;
+    }
+    if (nutrition == PATCH_REACH_LINEAGE ||
+        behavior == PATCH_REACH_LINEAGE) {
+        if (out_id != NULL) {
+            *out_id = nutrition == PATCH_REACH_LINEAGE
+                          ? nutrition_id
+                          : behavior_id;
+        }
+        return PATCH_REACH_LINEAGE;
+    }
+    if (entity->parent_id != 0) {
+        if (out_id != NULL) {
+            *out_id = entity->parent_id;
+        }
+        return PATCH_REACH_LINEAGE;
+    }
+    if (out_id != NULL) {
+        *out_id = behavior_id;
+    }
+    return PATCH_REACH_PROTOTYPE;
+}
+
+static void draw_lens_provenance(const World *world,
+                                 const Entity *entity,
+                                 bool lineage_target) {
+    if (lineage_target) {
+        const LineageDefinition *lineage =
+            world_tree_lineage(world, entity);
+        const bool patched = lineage != NULL &&
+                             (lineage->has_nutrition_patch ||
+                              lineage->has_behavior_patch);
+        draw_text(patched ? "LINEAGE SCAR" : "LINEAGE REACH", 15, 42,
+                  TYPE_BODY, patched ? OCHRE_INK : INK_SOFT);
+        draw_text_fit(patched
+                          ? "Provenance / future births inherit this tree"
+                          : "Provenance / broader apple meaning",
+                      patched ? 116 : 127, 42,
+                      patched ? 322 : 311, TYPE_BODY, INK_SOFT);
+        return;
+    }
+    uint64_t provenance_id = 0;
+    const PatchReach reach = entity_meaning_provenance(
+        world, entity, &provenance_id);
+    if (reach == PATCH_REACH_ENTITY) {
+        draw_text("LOCAL SCAR", 15, 42, TYPE_BODY, OCHRE_INK);
+        draw_text("Provenance / this material Entity", 102, 42,
+                  TYPE_BODY, INK_SOFT);
+    } else if (reach == PATCH_REACH_LINEAGE) {
+        char source[128];
+        (void)snprintf(source, sizeof(source),
+                       "Provenance / tree %08llx at birth",
+                       (unsigned long long)(provenance_id &
+                                            UINT64_C(0xffffffff)));
+        draw_text("LINEAGE BORN", 15, 42, TYPE_BODY, OCHRE_INK);
+        draw_text_fit(source, 119, 42, 319, TYPE_BODY, INK_SOFT);
+    } else {
+        draw_text("Provenance / inherited Prototype meaning", 15, 42,
+                  TYPE_BODY, INK_SOFT);
+    }
+}
+
 static void draw_structured_lens(const UiState *ui, const World *world) {
     const Entity *entity =
         world_entity_by_id_const(world, ui->inspected_entity_id);
@@ -1703,20 +2033,27 @@ static void draw_structured_lens(const UiState *ui, const World *world) {
                    world_prototype_name((PrototypeId)entity->prototype));
     char title[64];
     char target[64];
+    const bool lineage_target =
+        lineage_is_patchable(ui, world, entity);
     (void)snprintf(title, sizeof(title), "LENS / %s", kind);
-    (void)snprintf(target, sizeof(target), "THIS %s", kind);
+    if (lineage_target) {
+        (void)snprintf(target, sizeof(target), "FUTURE FRUIT");
+    } else {
+        (void)snprintf(target, sizeof(target), "THIS %s", kind);
+    }
     draw_text(title, 14, 10, TYPE_TITLE, INK);
     draw_text(target, 447, 11, TYPE_HEADING, INK);
-    draw_text("one material entity", 448, 37, TYPE_BODY, INK_SOFT);
-    draw_button(lens_close_button(), "CLOSE", PARCHMENT_DARK);
-    if (entity->local_override >= 0) {
-        draw_text("LOCAL SCAR", 15, 42, TYPE_BODY, OCHRE_INK);
-        draw_text("Provenance / a sparse Entity Patch resolves here", 102,
-                  42, TYPE_BODY, INK_SOFT);
+    if (lineage_target) {
+        char birth[64];
+        (void)snprintf(birth, sizeof(birth),
+                       "THIS LINEAGE / birth %u",
+                       (unsigned int)(entity->descendants_born + 1u));
+        draw_text_fit(birth, 448, 37, 170, TYPE_BODY, INK_SOFT);
     } else {
-        draw_text("Provenance / inherited meaning", 15, 42, TYPE_BODY,
-                  INK_SOFT);
+        draw_text("one material entity", 448, 37, TYPE_BODY, INK_SOFT);
     }
+    draw_button(lens_close_button(), "CLOSE", PARCHMENT_DARK);
+    draw_lens_provenance(world, entity, lineage_target);
     DrawLine(14, 69, 702, 69, PARCHMENT_DARK);
 
     DrawRectangleRec((Rectangle){12.0f, 82.0f, 344.0f, 268.0f},
@@ -1765,9 +2102,17 @@ static void draw_structured_lens(const UiState *ui, const World *world) {
     } else if (ui->hovered_concept != CONCEPT_NONE) {
         draw_text("Attend / retain this impression.", 15, 372,
                   TYPE_BODY, PAL_GOLD);
-    } else if (entity->local_override >= 0) {
+    } else if (lineage_target) {
+        draw_text("Reach / this tree's future fruit only", 15, 372,
+                  TYPE_BODY, PARCHMENT);
+    } else if (entity_meaning_provenance(world, entity, NULL) ==
+               PATCH_REACH_ENTITY) {
         draw_text("This entity carries a local Entity Scar.", 15, 372,
                   TYPE_BODY, PARCHMENT);
+    } else if (entity_meaning_provenance(world, entity, NULL) ==
+               PATCH_REACH_LINEAGE) {
+        draw_text("Birth fixed this sentence; later edits cannot follow.",
+                  15, 372, TYPE_BODY, PARCHMENT);
     } else {
         draw_text("Reach / this entity only", 15, 372, TYPE_BODY,
                   PARCHMENT);
@@ -1880,6 +2225,9 @@ static const char *inquiry_title(InquiryId inquiry) {
     if (inquiry == INQUIRY_SENTENCE_INSIDE) {
         return "THE SENTENCE INSIDE";
     }
+    if (inquiry == INQUIRY_FRUIT_REMEMBERS) {
+        return "THE FRUIT REMEMBERS";
+    }
     return "NO CURRENT INQUIRY";
 }
 
@@ -1938,8 +2286,29 @@ static void draw_inquiry_detail(const World *world, InquiryId inquiry) {
                       TYPE_BODY, INK);
         draw_inquiry_step(160, "REWRITE AN APPLE",
                           "Change its Behavior.", false, true);
-        draw_text_fit("Hunger. Voice. Fate.", 501, 214, 197,
+        draw_text_fit("Hunger. Voice. Fate. Aftertaste.", 501, 214, 197,
                       TYPE_CAPTION, INK_SOFT);
+    } else if (inquiry == INQUIRY_FRUIT_REMEMBERS) {
+        draw_text_fit("TEACH THE NEXT BITE", 501, 136, 197,
+                      TYPE_BODY, INK);
+        draw_inquiry_step(150, "WITNESS A CHILD",
+                          progress.completed_steps >= 1
+                              ? "Parentage became legible."
+                              : "Find fruit born from a tree.",
+                          progress.completed_steps >= 1,
+                          progress.completed_steps == 0);
+        draw_inquiry_step(184, "SCAR A LINEAGE",
+                          progress.completed_steps >= 2
+                              ? "A tree learned a sentence."
+                              : "Open a tree; change future fruit.",
+                          progress.completed_steps >= 2,
+                          progress.completed_steps == 1);
+        draw_inquiry_step(218, "TASTE INHERITANCE",
+                          progress.completed_steps >= 3
+                              ? "The next fruit remembered."
+                              : "Invoke; await its heir.",
+                          progress.completed_steps >= 3,
+                          progress.completed_steps == 2);
     } else {
         draw_text_fit("THE PAGE HAS RUN OUT BEFORE REALITY", 501, 136, 197,
                       TYPE_BODY, INK);
@@ -1955,7 +2324,7 @@ static void draw_inquiry_detail(const World *world, InquiryId inquiry) {
 
 static void draw_inquiry_index(const World *world, InquiryId active) {
     draw_text("KNOWN INQUIRIES", 501, 116, TYPE_CAPTION, OCHRE_INK);
-    int y = 142;
+    int y = 130;
     for (InquiryId inquiry = INQUIRY_FIRST_SCAR;
          inquiry < INQUIRY_COUNT; inquiry = (InquiryId)(inquiry + 1)) {
         const InquiryProgress progress =
@@ -1967,14 +2336,14 @@ static void draw_inquiry_index(const World *world, InquiryId active) {
         }
         draw_text(complete ? "[x]" : "[+]", 501, y, TYPE_BODY,
                   complete ? INK_SOFT : OCHRE_INK);
-        draw_text_fit(inquiry_title(inquiry), 532, y, 166, TYPE_BODY,
+        draw_text_fit(inquiry_title(inquiry), 532, y, 125, TYPE_BODY,
                       complete ? INK_SOFT : INK);
         char progress_text[32];
-        (void)snprintf(progress_text, sizeof(progress_text), "%u / %u",
+        (void)snprintf(progress_text, sizeof(progress_text), "%u/%u",
                        (unsigned int)progress.completed_steps,
                        (unsigned int)progress.step_count);
-        draw_text(progress_text, 532, y + 19, TYPE_CAPTION, INK_SOFT);
-        y += 48;
+        draw_text(progress_text, 666, y + 2, TYPE_CAPTION, INK_SOFT);
+        y += 29;
     }
     draw_text("The list ends where Knowledge does.", 501, 247,
               TYPE_CAPTION, INK_SOFT);
@@ -1988,17 +2357,20 @@ static void draw_knowledge_notice(const UiState *ui) {
     const Rectangle notice = knowledge_notice_rectangle();
     DrawRectangleRec(notice, Fade(INK, 0.97f));
     DrawRectangleLinesEx(notice, 2.0f, PAL_GOLD);
-    draw_text(ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_BEHAVIOR
-                  ? "KNOWLEDGE DEEPENS"
-                  : "NOTATION BECOMES GRAMMAR",
+    const bool behavior =
+        ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_BEHAVIOR;
+    const bool lineage =
+        ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_LINEAGE;
+    draw_text(behavior || lineage ? "KNOWLEDGE DEEPENS"
+                                  : "NOTATION BECOMES GRAMMAR",
               501, 55, TYPE_CAPTION, PAL_GOLD);
-    draw_text(ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_BEHAVIOR
-                  ? "BEHAVIOR"
-                  : "CLAUSES",
+    draw_text(behavior ? "BEHAVIOR" : lineage ? "LINEAGE" : "CLAUSES",
               501, 75, TYPE_HEADING, PARCHMENT);
-    draw_text_fit(ui->knowledge_notice == UI_KNOWLEDGE_NOTICE_BEHAVIOR
+    draw_text_fit(behavior
                       ? "Things have sentences inside."
-                      : "Apple Behavior can now be Patched.",
+                      : lineage
+                            ? "Trees can teach their future fruit."
+                            : "Apple Behavior can now be Patched.",
                   501, 102, 196, TYPE_BODY, PARCHMENT);
 }
 
@@ -2066,16 +2438,27 @@ void ui_draw(const UiState *ui, const World *world, int nearby_entity,
         draw_text(tick, hud_x, 9, TYPE_BODY, PARCHMENT);
         hud_x += text_width(tick, TYPE_BODY) + 12;
     }
-    hud_x += draw_bar(hud_x, 9, 48, world->embodiment.hunger, ERROR_RED,
-                      "HUNGER") + 12;
-    (void)draw_bar(hud_x, 9, 48, world->embodiment.warmth, COLD_BLUE,
-                   "WARMTH");
+    const bool knows_lineage =
+        world->knowledge.access_depth >= (uint8_t)ACCESS_DEPTH_LINEAGE;
+    const int bar_width = knows_lineage ? 30 : 48;
+    const int bar_gap = knows_lineage ? 7 : 12;
+    hud_x += draw_bar(hud_x, 9, bar_width, world->embodiment.hunger,
+                      ERROR_RED, "HUNGER") + bar_gap;
+    hud_x += draw_bar(hud_x, 9, bar_width, world->embodiment.warmth,
+                      COLD_BLUE, "WARMTH") + bar_gap;
+    if (knows_lineage) {
+        (void)draw_bar(hud_x, 9, bar_width, world->embodiment.vigor,
+                       VIGOR_VIOLET, "VIGOR");
+    }
     const char *mode =
         ui->developer_mode
             ? "PALI/DEV"
-            : world->knowledge.access_depth >= (uint8_t)ACCESS_DEPTH_BEHAVIOR
-                  ? "LENS/BEHAVIOR"
-                  : "LENS/STATE";
+            : knows_lineage
+                  ? "LENS/LINEAGE"
+                  : world->knowledge.access_depth >=
+                            (uint8_t)ACCESS_DEPTH_BEHAVIOR
+                        ? "LENS/BEHAVIOR"
+                        : "LENS/STATE";
     draw_text(mode,
               PAL_VIRTUAL_WIDTH - text_width(mode, TYPE_BODY) - 9, 9,
               TYPE_BODY, PAL_GOLD);

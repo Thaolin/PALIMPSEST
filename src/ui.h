@@ -25,7 +25,8 @@ typedef struct SourceEditor {
 typedef enum UiKnowledgeNotice {
     UI_KNOWLEDGE_NOTICE_NONE = 0,
     UI_KNOWLEDGE_NOTICE_BEHAVIOR,
-    UI_KNOWLEDGE_NOTICE_GRAMMAR
+    UI_KNOWLEDGE_NOTICE_GRAMMAR,
+    UI_KNOWLEDGE_NOTICE_LINEAGE
 } UiKnowledgeNotice;
 
 typedef struct UiState {
@@ -35,10 +36,12 @@ typedef struct UiState {
     bool has_error;
     bool has_nourishment_draft;
     bool has_behavior_draft;
+    bool has_lineage_draft;
     uint64_t inspected_entity_id;
     ConceptId hovered_concept;
     PaliValue nourishment_draft;
     UseBehaviorDraft behavior_draft;
+    FruitLineageDraft lineage_draft;
     UiKnowledgeNotice knowledge_notice;
     uint16_t knowledge_notice_frames;
     SourceEditor editor;

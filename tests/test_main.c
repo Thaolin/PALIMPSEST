@@ -16,6 +16,7 @@ static World knowledge_world;
 static World behavior_world;
 static UniverseState universe_snapshot;
 static uint8_t save_mutation[16384];
+static uint8_t legacy_save[16384];
 
 #define CHECK(condition, message)                                             \
     do {                                                                      \
@@ -102,6 +103,19 @@ static void write_u32_le(uint8_t *bytes, uint32_t value) {
     }
 }
 
+static void write_u16_le(uint8_t *bytes, uint16_t value) {
+    bytes[0] = (uint8_t)(value & UINT16_C(0xff));
+    bytes[1] = (uint8_t)(value >> 8);
+}
+
+static uint32_t read_u32_le(const uint8_t *bytes) {
+    uint32_t value = 0;
+    for (int index = 0; index < 4; ++index) {
+        value |= (uint32_t)bytes[index] << (index * 8);
+    }
+    return value;
+}
+
 static bool remove_save_bytes(const char *path, size_t offset, size_t count) {
     FILE *file = fopen(path, "rb");
     if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
@@ -149,8 +163,154 @@ static bool remove_save_bytes(const char *path, size_t offset, size_t count) {
     return fclose(file) == 0 && written;
 }
 
-static bool downgrade_save_to_v2(const char *path) {
-    const size_t observation_tail = (size_t)CONCEPT_COUNT * sizeof(uint32_t);
+typedef struct LegacyWire {
+    size_t read;
+    size_t write;
+    size_t length;
+    uint64_t descendant_ids[WORLD_MAX_ENTITIES];
+    uint16_t descendant_count;
+    bool ok;
+} LegacyWire;
+
+static bool legacy_skip(LegacyWire *wire, size_t count) {
+    if (!wire->ok || wire->read > wire->length ||
+        count > wire->length - wire->read) {
+        wire->ok = false;
+        return false;
+    }
+    wire->read += count;
+    return true;
+}
+
+static bool legacy_append(LegacyWire *wire, const void *bytes, size_t count) {
+    if (!wire->ok || wire->write > sizeof(legacy_save) ||
+        count > sizeof(legacy_save) - wire->write) {
+        wire->ok = false;
+        return false;
+    }
+    memcpy(legacy_save + wire->write, bytes, count);
+    wire->write += count;
+    return true;
+}
+
+static bool legacy_copy(LegacyWire *wire, size_t count) {
+    if (!wire->ok || wire->read > wire->length ||
+        count > wire->length - wire->read) {
+        wire->ok = false;
+        return false;
+    }
+    const bool appended =
+        legacy_append(wire, save_mutation + wire->read, count);
+    wire->read += count;
+    return appended;
+}
+
+static uint8_t legacy_take_u8(LegacyWire *wire) {
+    uint8_t value = 0;
+    if (wire->ok && wire->read < wire->length) {
+        value = save_mutation[wire->read++];
+    } else {
+        wire->ok = false;
+    }
+    return value;
+}
+
+static uint16_t legacy_take_u16(LegacyWire *wire) {
+    if (!wire->ok || wire->read > wire->length ||
+        sizeof(uint16_t) > wire->length - wire->read) {
+        wire->ok = false;
+        return 0;
+    }
+    const uint16_t value =
+        (uint16_t)((uint16_t)save_mutation[wire->read] |
+                   ((uint16_t)save_mutation[wire->read + 1u] << 8));
+    wire->read += sizeof(uint16_t);
+    return value;
+}
+
+static uint64_t legacy_take_u64(LegacyWire *wire) {
+    if (!wire->ok || wire->read > wire->length ||
+        sizeof(uint64_t) > wire->length - wire->read) {
+        wire->ok = false;
+        return 0;
+    }
+    uint64_t value = 0;
+    for (int index = 0; index < 8; ++index) {
+        value |= (uint64_t)save_mutation[wire->read + (size_t)index]
+                 << (index * 8);
+    }
+    wire->read += sizeof(uint64_t);
+    return value;
+}
+
+static bool legacy_put_u8(LegacyWire *wire, uint8_t value) {
+    return legacy_append(wire, &value, sizeof(value));
+}
+
+static bool legacy_put_u16(LegacyWire *wire, uint16_t value) {
+    uint8_t bytes[2];
+    write_u16_le(bytes, value);
+    return legacy_append(wire, bytes, sizeof(bytes));
+}
+
+static bool legacy_put_u64(LegacyWire *wire, uint64_t value) {
+    uint8_t bytes[8];
+    for (int index = 0; index < 8; ++index) {
+        bytes[index] = (uint8_t)(value >> (index * 8));
+    }
+    return legacy_append(wire, bytes, sizeof(bytes));
+}
+
+static bool legacy_copy_string(LegacyWire *wire) {
+    const size_t start = wire->read;
+    const uint16_t length = legacy_take_u16(wire);
+    if (!legacy_skip(wire, length)) {
+        return false;
+    }
+    return legacy_append(wire, save_mutation + start,
+                         sizeof(uint16_t) + (size_t)length);
+}
+
+static bool legacy_skip_string(LegacyWire *wire) {
+    const uint16_t length = legacy_take_u16(wire);
+    return legacy_skip(wire, length);
+}
+
+static bool legacy_copy_value(LegacyWire *wire) {
+    const uint8_t type = legacy_take_u8(wire);
+    if (!legacy_put_u8(wire, type)) {
+        return false;
+    }
+    switch ((PaliValueType)type) {
+        case PALI_VALUE_NIL:
+            return true;
+        case PALI_VALUE_NUMBER:
+            return legacy_copy(wire, sizeof(uint64_t));
+        case PALI_VALUE_BOOL:
+            return legacy_copy(wire, sizeof(uint8_t));
+        case PALI_VALUE_TEXT:
+            return legacy_copy_string(wire);
+        default:
+            wire->ok = false;
+            return false;
+    }
+}
+
+static bool legacy_is_descendant(const LegacyWire *wire, uint64_t id) {
+    for (uint16_t index = 0; index < wire->descendant_count; ++index) {
+        if (wire->descendant_ids[index] == id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool downgrade_save_to_version(const char *path, uint32_t version) {
+    enum { LEGACY_OBSERVATION_COUNT = 15 };
+    if (version < 2u || version > 4u ||
+        !save_validate_file(path, NULL)) {
+        return false;
+    }
     FILE *file = fopen(path, "rb");
     if (file == NULL || fseek(file, 0, SEEK_END) != 0) {
         if (file != NULL) {
@@ -160,32 +320,145 @@ static bool downgrade_save_to_v2(const char *path) {
     }
     const long measured = ftell(file);
     if (measured < 24 || (unsigned long)measured > sizeof(save_mutation) ||
-        (size_t)measured < 24u + observation_tail ||
         fseek(file, 0, SEEK_SET) != 0) {
         (void)fclose(file);
         return false;
     }
-    const size_t original_length = (size_t)measured;
+    const size_t length = (size_t)measured;
     const bool read_ok =
-        fread(save_mutation, 1, original_length, file) == original_length;
-    const bool read_closed = fclose(file) == 0;
-    if (!read_ok || !read_closed) {
+        fread(save_mutation, 1, length, file) == length;
+    const bool closed = fclose(file) == 0;
+    if (!read_ok || !closed ||
+        read_u32_le(save_mutation + 8u) != PAL_SAVE_VERSION) {
         return false;
     }
-    const size_t v2_length = original_length - observation_tail;
-    const size_t payload_length = v2_length - 24u;
-    if (payload_length > UINT32_MAX) {
+
+    memcpy(legacy_save, save_mutation, 24u);
+    LegacyWire wire = {.read = 24u,
+                       .write = 24u,
+                       .length = length,
+                       .ok = true};
+    const size_t common_without_vigor =
+        6u * sizeof(uint64_t) + 6u * sizeof(uint32_t) + sizeof(uint8_t);
+    (void)legacy_copy(&wire, common_without_vigor);
+    (void)legacy_skip(&wire, sizeof(uint32_t));
+
+    const uint8_t prototype_count = legacy_take_u8(&wire);
+    (void)legacy_put_u8(&wire, prototype_count);
+    for (uint8_t index = 0; index < prototype_count && wire.ok; ++index) {
+        (void)legacy_copy(&wire, sizeof(uint8_t));
+        (void)legacy_copy_string(&wire);
+    }
+
+    wire.descendant_count = legacy_take_u16(&wire);
+    if (wire.descendant_count > WORLD_MAX_ENTITIES) {
+        wire.ok = false;
+    }
+    for (uint16_t index = 0;
+         index < wire.descendant_count && wire.ok; ++index) {
+        wire.descendant_ids[index] = legacy_take_u64(&wire);
+        (void)legacy_skip(&wire, sizeof(uint64_t) + sizeof(uint32_t) +
+                                    sizeof(uint8_t));
+    }
+
+    const uint8_t lineage_count = legacy_take_u8(&wire);
+    for (uint8_t index = 0; index < lineage_count && wire.ok; ++index) {
+        (void)legacy_skip(&wire, 2u * sizeof(uint64_t));
+        (void)legacy_skip_string(&wire);
+        (void)legacy_skip(&wire, sizeof(uint32_t) + 2u * sizeof(uint8_t));
+    }
+
+    const uint8_t local_count = legacy_take_u8(&wire);
+    const size_t local_count_offset = wire.write;
+    (void)legacy_put_u8(&wire, 0);
+    uint8_t retained_locals = 0;
+    for (uint8_t index = 0; index < local_count && wire.ok; ++index) {
+        const size_t record_start = wire.write;
+        const uint64_t entity_id = legacy_take_u64(&wire);
+        (void)legacy_put_u64(&wire, entity_id);
+        const uint8_t value_count = legacy_take_u8(&wire);
+        (void)legacy_put_u8(&wire, value_count);
+        for (uint8_t value = 0; value < value_count && wire.ok; ++value) {
+            (void)legacy_copy(&wire, sizeof(uint16_t));
+            (void)legacy_copy_value(&wire);
+            (void)legacy_skip(&wire, sizeof(uint8_t) + sizeof(uint64_t));
+        }
+        const uint8_t has_behavior = legacy_take_u8(&wire);
+        if (has_behavior > 1u) {
+            wire.ok = false;
+            break;
+        }
+        if (version >= 4u) {
+            (void)legacy_put_u8(&wire, has_behavior);
+        }
+        if (has_behavior != 0u) {
+            if (version >= 4u) {
+                (void)legacy_copy_string(&wire);
+            } else {
+                (void)legacy_skip_string(&wire);
+            }
+            (void)legacy_skip(&wire, sizeof(uint8_t) + sizeof(uint64_t));
+        }
+        if (!legacy_is_descendant(&wire, entity_id) &&
+            (version >= 4u || value_count != 0u)) {
+            retained_locals++;
+        } else {
+            wire.write = record_start;
+        }
+    }
+    if (wire.ok) {
+        legacy_save[local_count_offset] = retained_locals;
+    }
+
+    const uint16_t dirty_count = legacy_take_u16(&wire);
+    const size_t dirty_count_offset = wire.write;
+    (void)legacy_put_u16(&wire, 0);
+    uint16_t retained_dirty = 0;
+    for (uint16_t index = 0; index < dirty_count && wire.ok; ++index) {
+        const size_t record_start = wire.write;
+        const uint64_t entity_id = legacy_take_u64(&wire);
+        (void)legacy_put_u64(&wire, entity_id);
+        (void)legacy_copy(&wire, sizeof(uint8_t) +
+                                    4u * sizeof(uint32_t) +
+                                    sizeof(uint64_t) + sizeof(uint16_t));
+        (void)legacy_skip(&wire, sizeof(uint32_t) + sizeof(uint16_t));
+        const uint8_t state_count = legacy_take_u8(&wire);
+        (void)legacy_put_u8(&wire, state_count);
+        for (uint8_t state = 0; state < state_count && wire.ok; ++state) {
+            (void)legacy_copy_string(&wire);
+            (void)legacy_copy_value(&wire);
+        }
+        if (!legacy_is_descendant(&wire, entity_id)) {
+            retained_dirty++;
+        } else {
+            wire.write = record_start;
+        }
+    }
+    if (wire.ok) {
+        write_u16_le(legacy_save + dirty_count_offset, retained_dirty);
+    }
+    (void)legacy_copy_string(&wire);
+    for (ConceptId id = CONCEPT_NONE; id < CONCEPT_COUNT && wire.ok; ++id) {
+        if (version >= 3u && id < (ConceptId)LEGACY_OBSERVATION_COUNT) {
+            (void)legacy_copy(&wire, sizeof(uint32_t));
+        } else {
+            (void)legacy_skip(&wire, sizeof(uint32_t));
+        }
+    }
+    if (!wire.ok || wire.read != wire.length || wire.write < 24u ||
+        wire.write - 24u > UINT32_MAX) {
         return false;
     }
-    write_u32_le(save_mutation + 8u, 2u);
-    write_u32_le(save_mutation + 12u, (uint32_t)payload_length);
+
+    write_u32_le(legacy_save + 8u, version);
+    write_u32_le(legacy_save + 12u, (uint32_t)(wire.write - 24u));
     uint64_t hash = UINT64_C(1469598103934665603);
-    for (size_t index = 24; index < v2_length; ++index) {
-        hash ^= save_mutation[index];
+    for (size_t index = 24u; index < wire.write; ++index) {
+        hash ^= legacy_save[index];
         hash *= UINT64_C(1099511628211);
     }
     for (int index = 0; index < 8; ++index) {
-        save_mutation[16u + (size_t)index] =
+        legacy_save[16u + (size_t)index] =
             (uint8_t)(hash >> (index * 8));
     }
     file = fopen(path, "wb");
@@ -193,7 +466,7 @@ static bool downgrade_save_to_v2(const char *path) {
         return false;
     }
     const bool written =
-        fwrite(save_mutation, 1, v2_length, file) == v2_length;
+        fwrite(legacy_save, 1, wire.write, file) == wire.write;
     return fclose(file) == 0 && written;
 }
 
@@ -217,6 +490,34 @@ static int next_entity(const World *world, PrototypeId prototype,
         }
     }
     return -1;
+}
+
+static uint16_t active_child_count(const World *world, uint64_t parent_id) {
+    uint16_t count = 0;
+    for (uint16_t index = 0; index < world->universe.entity_count; ++index) {
+        const Entity *entity = &world->universe.entities[index];
+        if (entity->active && entity->parent_id == parent_id) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static uint8_t active_lineage_count(const World *world) {
+    uint8_t count = 0;
+    for (int index = 0; index < WORLD_MAX_LINEAGES; ++index) {
+        if (world->universe.lineages[index].active) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static bool same_behavior_draft(UseBehaviorDraft left,
+                                UseBehaviorDraft right) {
+    return left.hunger == right.hunger && left.voice == right.voice &&
+           left.fate == right.fate &&
+           left.aftertaste == right.aftertaste;
 }
 
 static bool dummy_get(void *user, PaliTarget target, const char *name,
@@ -627,20 +928,22 @@ static void test_knowledge_revelation(void) {
               world_concept_observation_count(&loaded_world,
                                               CONCEPT_MASS) == 1 &&
               !world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
-          "save v4 restores partial Observation progress exactly");
-    const uint8_t save_v3[4] = {3u, 0u, 0u, 0u};
-    CHECK(rewrite_save_bytes(knowledge_save, 8u, save_v3,
-                             sizeof(save_v3)) &&
+          "save v5 restores partial Observation progress exactly");
+    CHECK(downgrade_save_to_version(knowledge_save, 3u) &&
               save_validate_file(knowledge_save, &error) &&
               save_load(&loaded_world, knowledge_save, PAL_TEST_ASSET_ROOT,
-                        &error) &&
+                         &error) &&
               world_concept_observation_count(&loaded_world,
-                                              CONCEPT_MASS) == 1,
+                                              CONCEPT_MASS) == 1 &&
+              loaded_world.universe.entity_count ==
+                  knowledge_world.universe.entity_count &&
+              active_lineage_count(&loaded_world) == 0u,
           "save v3 migrates with its Observation ledger and no Behavior Scar");
     const uint8_t no_old_notations[4] = {0u, 0u, 0u, 0u};
-    CHECK(rewrite_save_bytes(knowledge_save, 64u, no_old_notations,
-                             sizeof(no_old_notations)) &&
-              downgrade_save_to_v2(knowledge_save) &&
+    CHECK(save_write_atomic(&knowledge_world, knowledge_save, &error) &&
+              rewrite_save_bytes(knowledge_save, 64u, no_old_notations,
+                                 sizeof(no_old_notations)) &&
+              downgrade_save_to_version(knowledge_save, 2u) &&
               save_validate_file(knowledge_save, &error) &&
               save_load(&loaded_world, knowledge_save, PAL_TEST_ASSET_ROOT,
                         &error) &&
@@ -648,7 +951,10 @@ static void test_knowledge_revelation(void) {
                                               CONCEPT_MASS) == 0 &&
               world_knows_exact_notation(&loaded_world,
                                          CONCEPT_NUTRITION) &&
-              !world_knows_exact_notation(&loaded_world, CONCEPT_MASS),
+              !world_knows_exact_notation(&loaded_world, CONCEPT_MASS) &&
+              loaded_world.universe.entity_count ==
+                  knowledge_world.universe.entity_count &&
+              active_lineage_count(&loaded_world) == 0u,
           "save v2 migrates with no invented Observations and exact nutrition");
     CHECK(world_observe_entity_concept(&knowledge_world, second_apple->id,
                                        CONCEPT_MASS) ==
@@ -1046,12 +1352,6 @@ static void test_inquiry_and_behavior_grammar(void) {
         "        message(\"foreign sentence\")\n"
         "    end\n"
         "end\n";
-    static const char *wrong_target_handler =
-        "prototype stone\n"
-        "    on use(actor)\n"
-        "        message(\"valid but wrong target\")\n"
-        "    end\n"
-        "end\n";
     PaliError error;
     CHECK(world_init(&behavior_world, UINT64_C(0x0b4a7105),
                      PAL_TEST_ASSET_ROOT, &error),
@@ -1164,8 +1464,9 @@ static void test_inquiry_and_behavior_grammar(void) {
           "non-generated apple Behavior rejects transactionally");
 
     const UseBehaviorDraft changed = {
-        BEHAVIOR_HUNGER_SHARPEN, BEHAVIOR_VOICE_REMEMBER,
-        BEHAVIOR_FATE_REMAIN};
+        .hunger = BEHAVIOR_HUNGER_SHARPEN,
+        .voice = BEHAVIOR_VOICE_REMEMBER,
+        .fate = BEHAVIOR_FATE_REMAIN};
     PaliDocument changed_handler;
     CHECK(world_build_use_behavior_document(
               &behavior_world, scarred, changed, &changed_handler, &error) &&
@@ -1176,7 +1477,8 @@ static void test_inquiry_and_behavior_grammar(void) {
                   pali_number(7.0), &error) &&
               world_entity_has_behavior_patch(&behavior_world, scarred) &&
               !world_entity_has_behavior_patch(&behavior_world, inherited) &&
-              world_active_inquiry(&behavior_world) == INQUIRY_NONE,
+              world_active_inquiry(&behavior_world) ==
+                  INQUIRY_FRUIT_REMEMBERS,
           "mouse grammar model gives one apple a sparse local Behavior Scar");
 
     behavior_world.embodiment.hunger = 60.0f;
@@ -1197,20 +1499,48 @@ static void test_inquiry_and_behavior_grammar(void) {
     const uint64_t before_save = world_state_fingerprint(&behavior_world);
     CHECK(save_write_atomic(&behavior_world, save_path, &error) &&
               save_load(&loaded_world, save_path, PAL_TEST_ASSET_ROOT,
-                        &error) &&
+                         &error) &&
               world_state_fingerprint(&loaded_world) == before_save,
-          "save v4 restores the complete sparse Behavior Patch");
+          "save v5 restores the complete sparse Behavior Patch");
+    CHECK(downgrade_save_to_version(save_path, 4u) &&
+              save_validate_file(save_path, &error) &&
+              save_load(&loaded_world, save_path, PAL_TEST_ASSET_ROOT,
+                        &error) &&
+              world_state_fingerprint(&loaded_world) == before_save &&
+              active_lineage_count(&loaded_world) == 0u,
+          "genuine save v4 restores its sparse Behavior Patch");
+    char normalized_behavior_source[PALI_SOURCE_CAP];
+    size_t handler_offset = 0;
+    CHECK(pali_format_document(&changed_handler,
+                               normalized_behavior_source,
+                               sizeof(normalized_behavior_source), &error) &&
+              find_save_bytes(save_path, normalized_behavior_source,
+                              &handler_offset),
+          "save v4 regenerates the normalized Behavior source from its Draft");
+    static const uint8_t wrong_target_name[5] = {'s', 't', 'o', 'n', 'e'};
+    const uint64_t before_wrong_target_load =
+        world_state_fingerprint(&loaded_world);
+    CHECK(handler_offset >= 24u &&
+              rewrite_save_bytes(
+                  save_path, handler_offset + strlen("prototype "),
+                  wrong_target_name, sizeof(wrong_target_name)) &&
+              save_validate_file(save_path, &error) &&
+              !save_load(&loaded_world, save_path, PAL_TEST_ASSET_ROOT,
+                         &error) &&
+              world_state_fingerprint(&loaded_world) ==
+                  before_wrong_target_load,
+          "checksummed wrong-target Behavior source rejects load transactionally");
+    CHECK(save_write_atomic(&behavior_world, save_path, &error),
+          "valid compact Behavior Draft rewrites the v5 source record");
     const int scarred_slot = scarred->local_override;
     CHECK(scarred_slot >= 0 && scarred_slot < WORLD_MAX_LOCAL_OVERRIDES,
           "Behavior Scar retains a local Patch slot");
     if (scarred_slot >= 0 && scarred_slot < WORLD_MAX_LOCAL_OVERRIDES) {
-        LocalBehaviorPatch *behavior =
-            &behavior_world.universe.local_overrides[scarred_slot].behavior;
-        char saved_behavior_source[PALI_SOURCE_CAP];
-        memcpy(saved_behavior_source, behavior->source,
-               sizeof(saved_behavior_source));
-        (void)snprintf(behavior->source, sizeof(behavior->source), "%s",
-                       wrong_target_handler);
+        LocalOverride *override =
+            &behavior_world.universe.local_overrides[scarred_slot];
+        const UseBehaviorDraft retained_draft = override->behavior;
+        override->behavior.hunger =
+            (BehaviorHungerClause)BEHAVIOR_HUNGER_COUNT;
         char semantic_rejection_save[PLATFORM_PATH_CAP];
         (void)snprintf(semantic_rejection_save,
                        sizeof(semantic_rejection_save),
@@ -1218,9 +1548,8 @@ static void test_inquiry_and_behavior_grammar(void) {
                        PAL_TEST_TMP_ROOT);
         CHECK(!save_write_atomic(&behavior_world, semantic_rejection_save,
                                  &error),
-              "serializer rejects a Behavior Patch for the wrong Prototype");
-        memcpy(behavior->source, saved_behavior_source,
-               sizeof(behavior->source));
+              "serializer rejects an invalid compact Behavior Draft");
+        override->behavior = retained_draft;
     }
     Entity *loaded_scarred =
         world_entity_by_id(&loaded_world, scarred->id);
@@ -1246,21 +1575,24 @@ static void test_inquiry_and_behavior_grammar(void) {
                        PAL_TEST_TMP_ROOT);
         LocalOverride *empty_override =
             &behavior_world.universe.local_overrides[scarred_slot];
-        const LocalBehaviorPatch retained_behavior =
-            empty_override->behavior;
-        memset(&empty_override->behavior, 0,
-               sizeof(empty_override->behavior));
+        empty_override->has_behavior = false;
         CHECK(!save_write_atomic(&behavior_world, empty_record_save,
                                  &error),
               "serializer rejects an active but empty Entity Patch binding");
-        empty_override->behavior = retained_behavior;
+        empty_override->has_behavior = true;
         size_t empty_handler_offset = 0;
         const uint8_t no_behavior = 0u;
         const uint64_t before_empty_load =
             world_state_fingerprint(&loaded_world);
-        const size_t behavior_source_length =
-            strlen(behavior_world.universe.local_overrides[scarred_slot]
-                       .behavior.source);
+        PaliDocument retained_handler;
+        char retained_source[PALI_SOURCE_CAP];
+        CHECK(world_build_use_behavior_document(
+                  &behavior_world, scarred, empty_override->behavior,
+                  &retained_handler, &error) &&
+                  pali_format_document(&retained_handler, retained_source,
+                                       sizeof(retained_source), &error),
+              error.message);
+        const size_t behavior_source_length = strlen(retained_source);
         CHECK(save_write_atomic(&behavior_world, empty_record_save, &error) &&
                   find_save_bytes(empty_record_save,
                                   "prototype apple\n    on use(actor)",
@@ -1281,7 +1613,6 @@ static void test_inquiry_and_behavior_grammar(void) {
               "empty v4 Entity Patch records reject transactionally");
     }
 
-    size_t handler_offset = 0;
     const char *handler_prefix = "prototype apple\n    on use(actor)";
     const uint8_t malformed_token = (uint8_t)'?';
     const uint64_t before_malformed_load =
@@ -1299,12 +1630,459 @@ static void test_inquiry_and_behavior_grammar(void) {
           "checksummed malformed Behavior source rejects load transactionally");
 }
 
+static void test_lineage_inheritance_and_save(void) {
+    PaliError error;
+    const int tree_index = first_entity(&behavior_world, PROTOTYPE_TREE);
+    const int unrelated_tree_index =
+        next_entity(&behavior_world, PROTOTYPE_TREE, tree_index);
+    CHECK(tree_index >= 0 && unrelated_tree_index >= 0,
+          "Lineage test has two deterministic trees");
+    if (tree_index < 0 || unrelated_tree_index < 0) {
+        return;
+    }
+    Entity *tree = &behavior_world.universe.entities[tree_index];
+    Entity *unrelated_tree =
+        &behavior_world.universe.entities[unrelated_tree_index];
+    const uint64_t tree_id = tree->id;
+    const uint64_t unrelated_tree_id = unrelated_tree->id;
+    WorldInput idle = {0};
+    for (int tick = 0; tick < 180; ++tick) {
+        world_step(&behavior_world, idle);
+    }
+    bool every_tree_has_one_child = true;
+    for (uint16_t index = 0;
+         index < behavior_world.universe.entity_count; ++index) {
+        const Entity *candidate =
+            &behavior_world.universe.entities[index];
+        if (candidate->active && candidate->prototype == PROTOTYPE_TREE &&
+            active_child_count(&behavior_world, candidate->id) != 1u) {
+            every_tree_has_one_child = false;
+        }
+    }
+    CHECK(every_tree_has_one_child &&
+              active_child_count(&behavior_world, tree_id) == 1u,
+          "each tree retains exactly one current child");
+
+    const Entity *current_child =
+        world_tree_current_fruit(&behavior_world, tree);
+    const Entity *unrelated_child =
+        world_tree_current_fruit(&behavior_world, unrelated_tree);
+    CHECK(current_child != NULL && unrelated_child != NULL,
+          "deterministic tree timers materialize current fruit");
+    if (current_child == NULL || unrelated_child == NULL) {
+        return;
+    }
+    const uint64_t current_child_id = current_child->id;
+    const uint64_t unrelated_child_id = unrelated_child->id;
+    CHECK(current_child->parent_id == tree_id &&
+              current_child->birth_ordinal == 1u &&
+              current_child_id == world_descendant_id(
+                                      &behavior_world, tree_id, 1u,
+                                      PROTOTYPE_APPLE),
+          "descendant identity is stable across Parentage and birth ordinal");
+    const InquiryProgress born = world_inquiry_progress(
+        &behavior_world, INQUIRY_FRUIT_REMEMBERS);
+    CHECK(born.completed_steps == 1u && born.step_count == 3u &&
+              world_reconcile_inquiry_knowledge(&behavior_world) ==
+                  KNOWLEDGE_GRANT_LINEAGE_DEPTH &&
+              world_reconcile_inquiry_knowledge(&behavior_world) ==
+                  KNOWLEDGE_GRANT_NONE &&
+              behavior_world.knowledge.access_depth ==
+                  (uint8_t)ACCESS_DEPTH_LINEAGE &&
+              world_has_reach(&behavior_world, PATCH_REACH_LINEAGE) &&
+              world_concept_access(&behavior_world, CONCEPT_PARENTAGE) ==
+                  CONCEPT_ACCESS_READABLE &&
+              world_concept_access(&behavior_world, CONCEPT_VIGOR) ==
+                  CONCEPT_ACCESS_READABLE &&
+              world_concept_access(&behavior_world, CONCEPT_WARMTH) ==
+                  CONCEPT_ACCESS_READABLE,
+          "a materialized child grants Lineage Knowledge exactly once");
+
+    FruitLineageDraft inherited;
+    CHECK(world_get_tree_lineage_draft(&behavior_world, tree, &inherited),
+          "tree exposes its inherited future-fruit Draft");
+    FruitLineageDraft kindle = inherited;
+    kindle.behavior.aftertaste = BEHAVIOR_AFTERTASTE_KINDLE;
+    CHECK(world_apply_tree_lineage_draft(&behavior_world, tree_id, kindle,
+                                         &error) &&
+              world_clear_tree_lineage_patch(&behavior_world, tree_id,
+                                              &error) &&
+              world_tree_lineage(&behavior_world, tree) == NULL,
+          "normal Lineage Knowledge accepts and clears a KINDLE Draft");
+
+    PaliValue current_nutrition;
+    UseBehaviorDraft current_behavior;
+    uint64_t current_nutrition_origin = 0;
+    uint64_t current_behavior_origin = 0;
+    const PatchReach current_nutrition_reach =
+        world_entity_concept_provenance(
+            &behavior_world, current_child, CONCEPT_NUTRITION,
+            &current_nutrition_origin);
+    const PatchReach current_behavior_reach =
+        world_entity_behavior_provenance(
+            &behavior_world, current_child, &current_behavior_origin);
+    CHECK(world_get_entity_concept(&behavior_world, current_child,
+                                   CONCEPT_NUTRITION,
+                                   &current_nutrition) &&
+              current_nutrition.type == PALI_VALUE_NUMBER &&
+              current_nutrition.as.number == 18.0 &&
+              world_get_entity_use_behavior_draft(
+                  &behavior_world, current_child, &current_behavior),
+          "the current child captures its deterministic first-birth meaning");
+
+    const double unrelated_preview = world_tree_next_fruit_nutrition(
+        &behavior_world, unrelated_tree);
+    FruitLineageDraft changed = inherited;
+    changed.nutrition = 31.0;
+    changed.behavior.hunger = BEHAVIOR_HUNGER_SHARPEN;
+    changed.behavior.voice = BEHAVIOR_VOICE_REMEMBER;
+    changed.behavior.fate = BEHAVIOR_FATE_REMAIN;
+    changed.behavior.aftertaste = BEHAVIOR_AFTERTASTE_QUICKEN;
+    const double expected_nutrition = world_tree_preview_fruit_nutrition(
+        &behavior_world, tree, changed);
+    CHECK(expected_nutrition == 29.0 &&
+              world_apply_tree_lineage_draft(
+                  &behavior_world, tree_id, changed, &error),
+          "next-fruit preview and application share one deterministic result");
+    const LineageDefinition *lineage =
+        world_tree_lineage(&behavior_world, tree);
+    CHECK(lineage != NULL && lineage->has_nutrition_patch &&
+              lineage->has_behavior_patch &&
+              lineage->inherited_births == 0u &&
+              world_tree_next_fruit_nutrition(&behavior_world, tree) ==
+                  expected_nutrition &&
+              world_inquiry_progress(&behavior_world,
+                                     INQUIRY_FRUIT_REMEMBERS)
+                      .completed_steps == 2u,
+          "one tree records a sparse future-fruit Scar at Inquiry step two");
+
+    PaliValue unchanged_nutrition;
+    UseBehaviorDraft unchanged_behavior;
+    uint64_t unchanged_nutrition_origin = 0;
+    uint64_t unchanged_behavior_origin = 0;
+    const Entity *same_current =
+        world_tree_current_fruit(&behavior_world, tree);
+    const Entity *same_unrelated =
+        world_tree_current_fruit(&behavior_world, unrelated_tree);
+    CHECK(same_current != NULL && same_current->id == current_child_id &&
+              world_get_entity_concept(&behavior_world, same_current,
+                                       CONCEPT_NUTRITION,
+                                       &unchanged_nutrition) &&
+              unchanged_nutrition.as.number ==
+                  current_nutrition.as.number &&
+              world_get_entity_use_behavior_draft(
+                  &behavior_world, same_current, &unchanged_behavior) &&
+              same_behavior_draft(unchanged_behavior, current_behavior) &&
+              world_entity_concept_provenance(
+                  &behavior_world, same_current, CONCEPT_NUTRITION,
+                  &unchanged_nutrition_origin) ==
+                  current_nutrition_reach &&
+              unchanged_nutrition_origin == current_nutrition_origin &&
+              world_entity_behavior_provenance(
+                  &behavior_world, same_current,
+                  &unchanged_behavior_origin) == current_behavior_reach &&
+              unchanged_behavior_origin == current_behavior_origin &&
+              same_unrelated != NULL &&
+              same_unrelated->id == unrelated_child_id &&
+              world_tree_lineage(&behavior_world, unrelated_tree) == NULL &&
+              world_tree_next_fruit_nutrition(
+                  &behavior_world, unrelated_tree) == unrelated_preview,
+          "Lineage edits leave the current child and unrelated tree unchanged");
+
+    CHECK(current_behavior.fate == BEHAVIOR_FATE_CEASE &&
+              world_use_entity(
+                  &behavior_world,
+                  (int)(same_current - behavior_world.universe.entities),
+                  &error) &&
+              world_tree_current_fruit(&behavior_world, tree) == NULL &&
+              tree->fruit_ticks == WORLD_FRUIT_REGROW_TICKS,
+          "consuming the current child arms the bounded regrow timer");
+    for (int tick = 0; tick < WORLD_FRUIT_REGROW_TICKS - 1; ++tick) {
+        world_step(&behavior_world, idle);
+    }
+    CHECK(world_tree_current_fruit(&behavior_world, tree) == NULL &&
+              tree->fruit_ticks == 1u,
+          "regrowth waits for all 300 deterministic ticks");
+    world_step(&behavior_world, idle);
+
+    Entity *new_child = (Entity *)world_tree_current_fruit(
+        &behavior_world, tree);
+    CHECK(new_child != NULL && new_child->parent_id == tree_id &&
+              new_child->birth_ordinal == 2u &&
+              new_child->id == world_descendant_id(
+                                   &behavior_world, tree_id, 2u,
+                                   PROTOTYPE_APPLE),
+          "the regrown child has the next stable descendant identity");
+    if (new_child == NULL) {
+        return;
+    }
+    const uint64_t new_child_id = new_child->id;
+    PaliValue inherited_nutrition;
+    UseBehaviorDraft inherited_behavior;
+    uint64_t nutrition_origin = 0;
+    uint64_t behavior_origin = 0;
+    uint64_t parentage_origin = 0;
+    uint64_t color_origin = 0;
+    CHECK(world_get_entity_concept(&behavior_world, new_child,
+                                   CONCEPT_NUTRITION,
+                                   &inherited_nutrition) &&
+              inherited_nutrition.type == PALI_VALUE_NUMBER &&
+              inherited_nutrition.as.number == expected_nutrition &&
+              world_get_entity_use_behavior_draft(
+                  &behavior_world, new_child, &inherited_behavior) &&
+              same_behavior_draft(inherited_behavior, changed.behavior) &&
+              world_entity_concept_provenance(
+                  &behavior_world, new_child, CONCEPT_NUTRITION,
+                  &nutrition_origin) == PATCH_REACH_LINEAGE &&
+              nutrition_origin == tree_id &&
+              world_entity_behavior_provenance(
+                  &behavior_world, new_child,
+                  &behavior_origin) == PATCH_REACH_LINEAGE &&
+              behavior_origin == tree_id &&
+              world_entity_concept_provenance(
+                  &behavior_world, new_child, CONCEPT_PARENTAGE,
+                  &parentage_origin) == PATCH_REACH_LINEAGE &&
+              parentage_origin == tree_id &&
+              world_entity_concept_provenance(
+                  &behavior_world, new_child, CONCEPT_COLOR,
+                  &color_origin) == PATCH_REACH_PROTOTYPE &&
+              color_origin == PROTOTYPE_APPLE,
+          "new fruit captures only addressed nodes with Lineage provenance");
+    lineage = world_tree_lineage(&behavior_world, tree);
+    const InquiryProgress inherited_progress = world_inquiry_progress(
+        &behavior_world, INQUIRY_FRUIT_REMEMBERS);
+    CHECK(lineage != NULL && lineage->inherited_births == 1u &&
+              inherited_progress.completed_steps == 3u &&
+              inherited_progress.step_count == 3u &&
+              world_active_inquiry(&behavior_world) == INQUIRY_NONE,
+          "an inherited child completes The Fruit Remembers");
+
+    behavior_world.embodiment.hunger = 10.0f;
+    behavior_world.embodiment.vigor = 5.0f;
+    CHECK(world_use_entity(
+              &behavior_world,
+              (int)(new_child - behavior_world.universe.entities),
+              &error) &&
+              fabsf(behavior_world.embodiment.hunger - 39.0f) < 0.001f &&
+              fabsf(behavior_world.embodiment.vigor - 34.0f) < 0.001f &&
+              new_child->active &&
+              strcmp(behavior_world.message,
+                     "The apple remembers being eaten.") == 0,
+          "inherited SHARPEN and QUICKEN apply exactly while REMAIN preserves fruit");
+
+    FruitLineageDraft revised = changed;
+    revised.nutrition = 47.0;
+    revised.behavior.hunger = BEHAVIOR_HUNGER_SOOTHE;
+    revised.behavior.voice = BEHAVIOR_VOICE_SILENT;
+    revised.behavior.fate = BEHAVIOR_FATE_CEASE;
+    revised.behavior.aftertaste = BEHAVIOR_AFTERTASTE_KINDLE;
+    CHECK(world_apply_tree_lineage_draft(&behavior_world, tree_id, revised,
+                                         &error) &&
+              world_get_entity_concept(&behavior_world, new_child,
+                                       CONCEPT_NUTRITION,
+                                       &inherited_nutrition) &&
+              inherited_nutrition.as.number == expected_nutrition &&
+              world_get_entity_use_behavior_draft(
+                  &behavior_world, new_child, &inherited_behavior) &&
+              same_behavior_draft(inherited_behavior, changed.behavior) &&
+              world_tree_current_fruit(&behavior_world, tree)->id ==
+                  new_child_id,
+          "later tree edits cannot retroactively alter a materialized child");
+
+    unrelated_child =
+        world_tree_current_fruit(&behavior_world, unrelated_tree);
+    CHECK(unrelated_child != NULL &&
+              world_use_entity(
+                  &behavior_world,
+                  (int)(unrelated_child -
+                        behavior_world.universe.entities),
+                  &error) &&
+              unrelated_tree->fruit_ticks == WORLD_FRUIT_REGROW_TICKS,
+          "an unrelated tree exposes a nonzero timer for persistence");
+
+    char save_path[PLATFORM_PATH_CAP];
+    (void)snprintf(save_path, sizeof(save_path),
+                   "%s/milestone-0.5-complete.pal", PAL_TEST_TMP_ROOT);
+    const uint64_t before_save =
+        world_state_fingerprint(&behavior_world);
+    const float saved_vigor = behavior_world.embodiment.vigor;
+    const uint32_t saved_births = tree->descendants_born;
+    const uint16_t saved_timer = unrelated_tree->fruit_ticks;
+    CHECK(save_write_atomic(&behavior_world, save_path, &error) &&
+              save_load(&loaded_world, save_path, PAL_TEST_ASSET_ROOT,
+                        &error) &&
+              world_state_fingerprint(&loaded_world) == before_save,
+          "save v5 restores the complete Lineage world exactly");
+    const Entity *loaded_tree =
+        world_entity_by_id_const(&loaded_world, tree_id);
+    const Entity *loaded_unrelated_tree =
+        world_entity_by_id_const(&loaded_world, unrelated_tree_id);
+    const Entity *loaded_child =
+        world_entity_by_id_const(&loaded_world, new_child_id);
+    const LineageDefinition *loaded_lineage =
+        world_tree_lineage(&loaded_world, loaded_tree);
+    uint64_t loaded_parentage_origin = 0;
+    uint64_t loaded_nutrition_origin = 0;
+    uint64_t loaded_behavior_origin = 0;
+    UseBehaviorDraft loaded_child_behavior;
+    CHECK(loaded_tree != NULL && loaded_unrelated_tree != NULL &&
+              loaded_child != NULL && loaded_child->active &&
+              loaded_child->parent_id == tree_id &&
+              loaded_child->birth_ordinal == 2u &&
+              loaded_tree->descendants_born == saved_births &&
+              loaded_unrelated_tree->fruit_ticks == saved_timer &&
+              loaded_world.embodiment.vigor == saved_vigor &&
+              loaded_lineage != NULL &&
+              loaded_lineage->inherited_births == 1u &&
+              loaded_lineage->has_nutrition_patch &&
+              loaded_lineage->has_behavior_patch &&
+              loaded_lineage->draft.nutrition == revised.nutrition &&
+              same_behavior_draft(loaded_lineage->draft.behavior,
+                                  revised.behavior) &&
+              world_get_entity_use_behavior_draft(
+                  &loaded_world, loaded_child, &loaded_child_behavior) &&
+              same_behavior_draft(loaded_child_behavior,
+                                  changed.behavior) &&
+              world_entity_concept_provenance(
+                  &loaded_world, loaded_child, CONCEPT_PARENTAGE,
+                  &loaded_parentage_origin) == PATCH_REACH_LINEAGE &&
+              loaded_parentage_origin == tree_id &&
+              world_entity_concept_provenance(
+                  &loaded_world, loaded_child, CONCEPT_NUTRITION,
+                  &loaded_nutrition_origin) == PATCH_REACH_LINEAGE &&
+              loaded_nutrition_origin == tree_id &&
+              world_entity_behavior_provenance(
+                  &loaded_world, loaded_child,
+                  &loaded_behavior_origin) == PATCH_REACH_LINEAGE &&
+              loaded_behavior_origin == tree_id,
+          "v5 preserves counters, timers, drafts, provenance, and vigor");
+
+    world_c = loaded_world;
+    Entity *duplicate_tree = world_entity_by_id(&world_c, tree_id);
+    const uint32_t duplicate_ordinal = duplicate_tree->descendants_born + 1u;
+    const uint64_t duplicate_id = world_descendant_id(
+        &world_c, tree_id, duplicate_ordinal, PROTOTYPE_APPLE);
+    CHECK(world_restore_descendant(&world_c, duplicate_id, tree_id,
+                                   duplicate_ordinal, PROTOTYPE_APPLE,
+                                   &error),
+          "test fixture can construct a second valid current child");
+    duplicate_tree = world_entity_by_id(&world_c, tree_id);
+    duplicate_tree->descendants_born = duplicate_ordinal;
+    char invalid_path[PLATFORM_PATH_CAP];
+    (void)snprintf(invalid_path, sizeof(invalid_path),
+                   "%s/milestone-0.5-duplicate-child.pal",
+                   PAL_TEST_TMP_ROOT);
+    CHECK(!save_write_atomic(&world_c, invalid_path, &error),
+          "serializer rejects two active current children transactionally");
+}
+
+static void test_recycled_override_capacity(void) {
+    const LineageDefinition *fixture_lineage = NULL;
+    for (int index = 0; index < WORLD_MAX_LINEAGES; ++index) {
+        if (loaded_world.universe.lineages[index].active) {
+            fixture_lineage = &loaded_world.universe.lineages[index];
+            break;
+        }
+    }
+    CHECK(fixture_lineage != NULL,
+          "capacity regression reuses the saved Lineage fixture");
+    if (fixture_lineage == NULL) {
+        return;
+    }
+
+    world_c = loaded_world;
+    Entity *tree = world_entity_by_id(
+        &world_c, fixture_lineage->progenitor_id);
+    Entity *recycled = tree != NULL
+                           ? (Entity *)world_tree_current_fruit(&world_c, tree)
+                           : NULL;
+    CHECK(tree != NULL && recycled != NULL && recycled->local_override >= 0,
+          "fixture has a bound descendant override to recycle");
+    if (tree == NULL || recycled == NULL || recycled->local_override < 0) {
+        return;
+    }
+    const uint64_t recycled_id = recycled->id;
+    const int recycled_slot = recycled->local_override;
+    const uint32_t next_ordinal = tree->descendants_born + 1u;
+    const uint64_t next_id = world_descendant_id(
+        &world_c, tree->id, next_ordinal, PROTOTYPE_APPLE);
+    const LineageDefinition *lineage = world_tree_lineage(&world_c, tree);
+    const uint32_t inherited_before =
+        lineage != NULL ? lineage->inherited_births : 0u;
+
+    for (uint16_t index = 0; index < world_c.universe.entity_count; ++index) {
+        Entity *entity = &world_c.universe.entities[index];
+        if (entity->parent_id != 0 && entity->id != recycled_id) {
+            entity->active = true;
+        }
+    }
+    recycled->active = false;
+    recycled->dirty = true;
+    tree->fruit_ticks = 1u;
+    tree->dirty = true;
+    for (int index = 0; index < WORLD_MAX_LOCAL_OVERRIDES; ++index) {
+        LocalOverride *override = &world_c.universe.local_overrides[index];
+        if (override->active) {
+            continue;
+        }
+        memset(override, 0, sizeof(*override));
+        override->active = true;
+        override->entity_id = UINT64_C(0xf000000000000000) +
+                              (uint64_t)(unsigned int)index;
+        override->value_count = 1u;
+        override->values[0].concept = CONCEPT_NUTRITION;
+        override->values[0].value = pali_number(20.0);
+        override->values[0].provenance_reach =
+            (uint8_t)PATCH_REACH_ENTITY;
+        override->values[0].provenance_id = override->entity_id;
+    }
+    uint8_t active_overrides = 0;
+    for (int index = 0; index < WORLD_MAX_LOCAL_OVERRIDES; ++index) {
+        if (world_c.universe.local_overrides[index].active) {
+            active_overrides++;
+        }
+    }
+    const LocalOverride *retained =
+        &world_c.universe.local_overrides[recycled_slot];
+    CHECK(active_overrides == WORLD_MAX_LOCAL_OVERRIDES &&
+              retained->active && retained->entity_id == recycled_id &&
+              world_tree_current_fruit(&world_c, tree) == NULL &&
+              tree->fruit_ticks == 1u && lineage != NULL &&
+              (lineage->has_nutrition_patch ||
+               lineage->has_behavior_patch),
+          "full override storage retains one recyclable bound Scar");
+
+    WorldInput idle = {0};
+    world_step(&world_c, idle);
+    const Entity *born = world_tree_current_fruit(&world_c, tree);
+    lineage = world_tree_lineage(&world_c, tree);
+    active_overrides = 0;
+    for (int index = 0; index < WORLD_MAX_LOCAL_OVERRIDES; ++index) {
+        if (world_c.universe.local_overrides[index].active) {
+            active_overrides++;
+        }
+    }
+    CHECK(born != NULL && born->id == next_id && born->active &&
+              born->birth_ordinal == next_ordinal &&
+              born->local_override == recycled_slot &&
+              world_entity_by_id_const(&world_c, recycled_id) == NULL &&
+              world_c.universe.local_overrides[recycled_slot].entity_id ==
+                  next_id &&
+              active_overrides == WORLD_MAX_LOCAL_OVERRIDES &&
+              tree->descendants_born == next_ordinal &&
+              tree->fruit_ticks == 0u && lineage != NULL &&
+              lineage->inherited_births == inherited_before + 1u,
+          "one tick recycles the bound override and materializes next fruit");
+}
+
 int main(void) {
     test_language();
     test_generation();
     test_knowledge_revelation();
     test_patch_gameplay_and_save();
     test_inquiry_and_behavior_grammar();
+    test_lineage_inheritance_and_save();
+    test_recycled_override_capacity();
     if (failures != 0) {
         (void)fprintf(stderr, "%d test failure(s)\n", failures);
         return 1;

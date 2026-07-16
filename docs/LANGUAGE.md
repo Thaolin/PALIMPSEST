@@ -3,12 +3,14 @@
 PALI is a small original language compiled by PALIMPSEST. It is not Lua and does
 not embed or evaluate C.
 
-The current 0.4 build parses PALI into a bounded typed document before compiling
+The current 0.5 build parses PALI into a bounded typed document before compiling
 bytecode. Normal play projects that document through Knowledge into a
 mouse-first structured Lens: State uses typed controls and apple Behavior uses
-typed, patchable Clauses once the relevant Knowledge is held. Deterministically
-normalized source remains the save, diagnostic, explicit developer, and
-possible late root-level representation.
+typed, patchable Clauses once the relevant Knowledge is held. A tree's Lineage
+form builds the same bounded apple Behavior document for future fruit; it does
+not introduce a second scripting language. Deterministically normalized source
+remains the save, diagnostic, explicit developer, and possible late root-level
+representation.
 The interaction contract is specified in [`INTERACTION.md`](INTERACTION.md).
 
 The canonical pipeline is:
@@ -20,10 +22,11 @@ source -> typed document -> semantic validation -> bounded bytecode
 ```
 
 Stable property identity comes from the Lexicon concept ID, never a source line
-or bytecode offset. A local Behavior handler has separate Entity Provenance
-from those property values. The normal Lens can Patch nourishment and the
-known apple handler on one Entity; raw source in `--developer` mode can replace
-a complete Prototype definition.
+or bytecode offset. A local Behavior handler has Provenance separate from its
+property values. The normal Lens can Patch nourishment and the known apple
+handler on one Entity, then can Patch one tree's future fruit after Lineage
+Knowledge opens. Raw source in `--developer` mode can replace a complete
+Prototype definition.
 
 ## Shape
 
@@ -59,6 +62,8 @@ At most one `on use(actor)` handler is allowed. Statements are:
 
 ```pali
 actor.hunger = expression
+actor.warmth = expression
+actor.vigor = expression
 self.some_state = expression
 message(expression)
 destroy(self)
@@ -70,8 +75,8 @@ Arithmetic type errors and division by zero are runtime errors.
 
 Host access is deliberately small:
 
-- actor reads: `hunger`, `warmth`, `x`, `y`
-- actor writes: `hunger`, `warmth` (clamped to 0..100)
+- actor reads: `hunger`, `warmth`, `vigor`, `x`, `y`
+- actor writes: `hunger`, `warmth`, `vigor` (clamped to 0..100)
 - self reads: sparse instance state, concept-addressed local value, then the
   current Prototype property
 - self writes: one of four sparse instance-state slots
@@ -84,14 +89,22 @@ Names outside this list cannot reach the host. A Prototype program has a
 
 Completing The First Scar grants Behavior Access Depth and makes hunger
 readable. After exact mass Notation is learned, the normal Lens can project an
-apple's effective handler into three typed choice Clauses beneath the fixed
-`on use(actor)` trigger:
+apple's effective handler into four typed choice Clauses beneath the fixed
+`on use(actor)` trigger. The fourth socket is present but veiled until The Fruit
+Remembers grants Lineage Depth and readable warmth/vigor consequences:
 
 - **Hunger**: soothe subtracts `self.nutrition` from actor hunger and clamps at
   zero; sharpen adds it and clamps at 100; leave omits the hunger assignment.
+- **Aftertaste**: none emits no assignment; kindle adds `self.nutrition` to
+  actor warmth; quicken adds it to actor vigor. Both additions clamp at 100.
 - **Voice**: fade emits “The apple becomes less real.”; remember emits “The
   apple remembers being eaten.”; silent omits the message.
 - **Fate**: cease calls `destroy(self)`; remain omits that call.
+
+The normalized execution order is hunger, Aftertaste, voice, then fate:
+`DO -> AFTER -> SAY -> THEN`. In particular, an Aftertaste is applied before a
+`CEASE` call. Vigor decays by `0.05` per fixed step while increasing movement
+speed by `0.5%` per remaining point.
 
 The selected Clauses produce a handler-only PALI document. Its normalized form
 uses the ordinary Prototype wrapper but contains no copied properties, for
@@ -101,6 +114,7 @@ example:
 prototype apple
     on use(actor)
         actor.hunger = min(100, actor.hunger + self.nutrition)
+        actor.vigor = min(100, actor.vigor + self.nutrition)
         message("The apple remembers being eaten.")
     end
 end
@@ -113,10 +127,31 @@ same 24-instruction budget. Failed validation leaves the prior effective
 Behavior live.
 
 The normalized handler source is the persisted local Behavior Patch. Its
-Entity Provenance resolves separately from local values: `self.nutrition`, for
-example, still follows sparse instance state, the concept-addressed local value
-Scar, then the current Prototype property. Reverting the handler does not erase
-a nourishment Scar, and changing nourishment does not copy the handler.
+Entity or birth-captured Lineage Provenance resolves separately from local
+values: `self.nutrition`, for example, still follows sparse instance state, the
+concept-addressed local value Scar, then the current Prototype property.
+Reverting an Entity handler does not erase a nourishment Scar, and changing
+nourishment does not copy the handler.
+
+## Structured future-fruit Lineage Patch
+
+After The Fruit Remembers grants Lineage Depth and Reach, opening a tree shows
+**FUTURE FRUIT / THIS LINEAGE**. Its mouse-complete draft contains a bounded
+nutrition base and the same four apple Behavior choices. The Lens previews the
+exact next nourishment and selected Aftertaste before installation.
+
+Nutrition receives a deterministic birth Inflection in `[-2, 2]`, derived from
+the stable tree ID and next birth ordinal and clamped to `0..100`. On birth, the
+child captures a sparse nutrition value when the Lineage addresses nutrition or
+the Inflection differs from broader Prototype meaning, and captures Behavior
+only if the Lineage addresses it. Those nodes carry the tree ID and Lineage
+Reach as Provenance. All untouched properties and Clauses continue resolving
+from the apple Prototype, and later Lineage edits cannot change an already
+materialized child.
+
+This is structured host semantics over the existing typed-document and
+compiler pipeline, not PALI inheritance syntax. The persisted Lineage Behavior
+is normalized PALI and is parsed, validated, and compiled again on load.
 
 ## Errors and limits
 
@@ -130,6 +165,7 @@ Current limits are 4095 source bytes, 16 Prototype properties, 32 constants,
 VM stack values. Normalized formatting preserves finite double values exactly
 and is itself constrained to the 4095-byte parseable source contract.
 
-Not implemented: conditionals, loops, user functions, inheritance syntax,
-archetypes, laws, collections, file/network access, dynamic allocation, or
-general host calls. Those forms are errors, not undocumented features.
+Not implemented: conditionals, loops, user functions, general-purpose PALI
+inheritance syntax, Archetypes, Laws, collections, file/network access, dynamic
+allocation, or general host calls. The implemented structured Lineage form is
+deliberately narrower; these other forms are errors, not undocumented features.

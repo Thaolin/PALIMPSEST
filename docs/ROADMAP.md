@@ -47,7 +47,9 @@ Completing The First Scar now grants Behavior Access Depth and readable hunger;
 learning exact mass Notation then makes an apple's existing `on use(actor)`
 Behavior patchable through typed Clauses. The fixed trigger leads into bounded
 choices for soothing, sharpening, or leaving hunger; fading, remembering, or
-silencing its voice; and ceasing or remaining.
+silencing its voice; and ceasing or remaining. The current grammar also carries
+a fourth `AFTER` socket, deliberately veiled until Lineage Knowledge reveals
+none, kindle-warmth, and quicken-vigor choices.
 
 The resulting local Behavior Scar has sparse Entity Provenance independent of
 local value Scars. Candidates are type-checked and rejected transactionally
@@ -60,10 +62,30 @@ their panel now opens into a compact index rather than storing completion flags.
 
 ### 0.5 — Descendants remember
 
-Add one deterministic tree-to-fruit reproduction loop and stable parentage.
-Introduce Lineage Reach and Provenance. The proof is changing what one tree's
-future apples inherit without retroactively rewriting already materialized
-fruit or unrelated trees.
+**Implemented vertical slice.**
+
+Each tree now owns one bounded deterministic tree-to-fruit cycle and stable
+Parentage. Each tree may have one current fruit; after that fruit ceases, a
+deterministic delay and birth ordinal produce the next. Witnessing materialized
+Parentage reveals Lineage Depth and Reach through **The Fruit Remembers**, with
+explicit Knowledge feedback and readable Parentage plus warmth/vigor consequences.
+
+The tree Lens then exposes **FUTURE FRUIT / THIS LINEAGE** using the known apple
+nourishment and four-row Behavior grammar. Its preview computes the exact next
+nutrition Inflection and selected plain, kindle, or quicken Aftertaste. A
+Lineage Patch is captured sparsely at each birth: already materialized fruit
+and unrelated trees remain unchanged, while the next apple carries its
+progenitor, birth ordinal, inherited nodes, and Lineage Provenance. `KINDLE`
+adds warmth; `QUICKEN` grants decaying vigor that temporarily increases
+movement.
+
+Save v5 restores post-Genesis descendants, Parentage, birth order, tree timers,
+Lineage definitions, sparse inherited nodes, vigor, and the facts from which
+Inquiry progress is derived; v2-v4 saves migrate without invented descendants.
+Entity, Local Override, Lineage, compiler, execution, and save-image capacities
+remain fixed. The observable proof is teaching one tree a different sentence,
+letting its current fruit cease, and receiving the altered descendant predicted
+exactly by the Lens.
 
 ### 0.6 — Every apple
 
