@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Chronicle.VisualPack/Chronicle.VisualPack.csproj" />
+    <ProjectReference Include="../Chronicle.VisualCompiler/Chronicle.VisualCompiler.csproj" />
+    <EmbeddedResource
+      Include="../../catalogues/e3.json"
+      Link="Fixtures/e3.json"
+      LogicalName="Chronicle.Visuals.Conformance.e3.json" />
+  </ItemGroup>
+</Project>

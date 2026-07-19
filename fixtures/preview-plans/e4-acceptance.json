@@ -1,0 +1,51 @@
+{
+  "id": "chronicle.e4.acceptance",
+  "width": 640,
+  "height": 480,
+  "background": "10131aff",
+  "paletteId": "surface",
+  "entries": [
+    {"visualId": "actor.incarnation", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 8, "y": 8, "scale": 1},
+    {"visualId": "subject.loose-stone", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 32, "y": 8, "scale": 1},
+    {"visualId": "landmark.bell-that-fell-up", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 56, "y": 8, "scale": 1},
+    {"visualId": "object.material.wood", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 80, "y": 8, "scale": 1},
+    {"visualId": "object.material.iron", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 104, "y": 8, "scale": 1},
+    {"visualId": "object.material.glass", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 128, "y": 8, "scale": 1},
+    {"visualId": "glyph.codex", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 152, "y": 8, "scale": 1},
+    {"visualId": "emphasis.target", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 176, "y": 8, "scale": 1},
+    {"visualId": "actor.incarnation", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 208, "y": 8, "scale": 1},
+    {"visualId": "landmark.bell-that-fell-up", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 236, "y": 8, "scale": 1},
+    {"visualId": "terrain.surface.water", "nativeSize": 20, "variant": 0, "adjacencyMask": 15, "x": 264, "y": 8, "scale": 1},
+
+    {"visualId": "actor.incarnation", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 16, "y": 48, "scale": 4},
+    {"visualId": "actor.incarnation", "nativeSize": 16, "variant": 1, "adjacencyMask": null, "x": 80, "y": 48, "scale": 4},
+    {"visualId": "actor.incarnation.corpse", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 144, "y": 48, "scale": 4},
+    {"visualId": "subject.loose-stone", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 208, "y": 48, "scale": 4},
+    {"visualId": "landmark.bell-that-fell-up", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 272, "y": 48, "scale": 4},
+    {"visualId": "baseline.actor.incarnation", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 352, "y": 48, "scale": 4},
+    {"visualId": "baseline.subject.loose-stone", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 416, "y": 48, "scale": 4},
+    {"visualId": "baseline.landmark.bell-that-fell-up", "nativeSize": 16, "variant": 0, "adjacencyMask": null, "x": 480, "y": 48, "scale": 4},
+
+    {"visualId": "object.material.wood", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 16, "y": 144, "scale": 4},
+    {"visualId": "object.material.iron", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 112, "y": 144, "scale": 4},
+    {"visualId": "object.material.glass", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 208, "y": 144, "scale": 4},
+    {"visualId": "glyph.codex", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 304, "y": 144, "scale": 4},
+    {"visualId": "glyph.loadout", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 384, "y": 144, "scale": 4},
+    {"visualId": "glyph.map", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 464, "y": 144, "scale": 4},
+    {"visualId": "glyph.status", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 544, "y": 144, "scale": 4},
+
+    {"visualId": "terrain.surface.water", "nativeSize": 16, "variant": 0, "adjacencyMask": 0, "x": 16, "y": 256, "scale": 4},
+    {"visualId": "terrain.surface.water", "nativeSize": 16, "variant": 0, "adjacencyMask": 1, "x": 80, "y": 256, "scale": 4},
+    {"visualId": "terrain.surface.water", "nativeSize": 16, "variant": 0, "adjacencyMask": 3, "x": 144, "y": 256, "scale": 4},
+    {"visualId": "terrain.surface.water", "nativeSize": 16, "variant": 0, "adjacencyMask": 7, "x": 208, "y": 256, "scale": 4},
+    {"visualId": "terrain.surface.water", "nativeSize": 16, "variant": 0, "adjacencyMask": 15, "x": 272, "y": 256, "scale": 4},
+    {"visualId": "terrain.sky.cloud", "nativeSize": 16, "variant": 1, "adjacencyMask": 5, "x": 352, "y": 256, "scale": 4},
+    {"visualId": "structure.wall.stone", "nativeSize": 16, "variant": 0, "adjacencyMask": 10, "x": 416, "y": 256, "scale": 4},
+    {"visualId": "terrain.path.border", "nativeSize": 16, "variant": 0, "adjacencyMask": 12, "x": 480, "y": 256, "scale": 4},
+
+    {"visualId": "emphasis.target", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 16, "y": 352, "scale": 4},
+    {"visualId": "emphasis.selection", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 112, "y": 352, "scale": 4},
+    {"visualId": "feature.surface.grove", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 208, "y": 352, "scale": 4},
+    {"visualId": "feature.surface.ridge", "nativeSize": 20, "variant": 0, "adjacencyMask": null, "x": 304, "y": 352, "scale": 4}
+  ]
+}

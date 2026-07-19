@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Chronicle.VisualPack/Chronicle.VisualPack.csproj" />
+  </ItemGroup>
+</Project>

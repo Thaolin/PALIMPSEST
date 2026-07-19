@@ -1,0 +1,7 @@
+artifacts/
+**/bin/
+**/obj/
+.godot/
+.mono/
+.cache/
+.dotnet-cli-home/
