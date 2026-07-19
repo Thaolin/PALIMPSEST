@@ -53,11 +53,7 @@ public sealed class SkyStratum
                     StratumName,
                     state.Address.X + x,
                     state.Address.Y + y);
-                var terrain = address == LandmarkAddress
-                    ? SkyTerrain.Landmark
-                    : CloudAt(state.Seed, address.X, address.Y)
-                        ? SkyTerrain.Cloud
-                        : SkyTerrain.OpenSky;
+                var terrain = TerrainAt(state.Seed, address.X, address.Y);
                 tiles[index++] = new SkyTile(address, terrain);
             }
         }
@@ -87,6 +83,16 @@ public sealed class SkyStratum
         address.X <= Center.X + Width / 2 &&
         address.Y >= Center.Y - Height / 2 &&
         address.Y <= Center.Y + Height / 2;
+
+    internal static SkyTerrain TerrainAt(long seed, long x, long y)
+    {
+        var address = new WorldAddress(StratumName, x, y);
+        return address == LandmarkAddress
+            ? SkyTerrain.Landmark
+            : CloudAt(seed, x, y)
+                ? SkyTerrain.Cloud
+                : SkyTerrain.OpenSky;
+    }
 
     private static bool CloudAt(long seed, long x, long y) =>
         DeterministicHash.Coordinates(seed, x, y, 0x51ED270Bu) % 5u == 0;

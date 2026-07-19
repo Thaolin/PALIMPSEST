@@ -57,10 +57,12 @@ public sealed record ChronicleState(
     LoadoutState? Loadout = null,
     WorldAddress? LooseStoneAddress = null,
     long IncarnationId = 1,
-    IncarnationLifeState IncarnationLife = IncarnationLifeState.Alive)
+    IncarnationLifeState IncarnationLife = IncarnationLifeState.Alive,
+    int WorldGrammarVersion = 0)
 {
     public static readonly WorldAddress InitialLooseStoneAddress =
         new(SurfacePatch.SurfaceStratum, 1, 0);
+    public const string LooseStoneIdentity = "Loose Stone";
 
     [JsonIgnore]
     public LoadoutState ActiveLoadout => Loadout ?? LoadoutState.InitialFor(Codex);
@@ -84,7 +86,8 @@ public sealed record ChronicleState(
         Loadout: LoadoutState.Empty,
         LooseStoneAddress: InitialLooseStoneAddress,
         IncarnationId: 1,
-        IncarnationLife: IncarnationLifeState.Alive);
+        IncarnationLife: IncarnationLifeState.Alive,
+        WorldGrammarVersion: 1);
 
     public ChronicleState AdvanceTick()
     {
@@ -179,6 +182,11 @@ public sealed record ChronicleState(
 
     internal ChronicleState MigrateAndValidate()
     {
+        if (WorldGrammarVersion != 0 && WorldGrammarVersion != 1)
+        {
+            throw new InvalidOperationException($"Unsupported World Grammar version '{WorldGrammarVersion}'.");
+        }
+
         if (Study.StoneUnderstanding is < 0 or > StudyState.StoneUnderstandingRequired)
         {
             throw new InvalidOperationException(

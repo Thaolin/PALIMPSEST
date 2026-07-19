@@ -1,5 +1,8 @@
 using Chronicle.Core;
+using Chronicle.VisualPack;
+using Chronicle.Visuals;
 using Godot;
+using System.Text.Json;
 
 [GlobalClass]
 public partial class ChronicleApp : Node
@@ -7,6 +10,8 @@ public partial class ChronicleApp : Node
     private const string SavePath = "user://slice0_chronicle.json";
     private const long InitialSeed = 41_337;
     private const double ClockPulseSeconds = 0.25;
+    private const int MapPixelWidth = 660;
+    private const int MapPixelHeight = 464;
 
     private static readonly StringName MoveNorthAction = "chronicle_move_north";
     private static readonly StringName MoveSouthAction = "chronicle_move_south";
@@ -20,8 +25,9 @@ public partial class ChronicleApp : Node
     private static readonly StringName LoadAction = "chronicle_load";
 
     private ChronicleSimulation _simulation = new(ChronicleState.Begin(InitialSeed));
-    private SurfacePatchView _surfacePatchView = null!;
-    private SkyStratumView _skyStratumView = null!;
+    private WorldVisualView _surfacePatchView = null!;
+    private WorldVisualView _skyStratumView = null!;
+    private Label _worldViewReadout = null!;
     private Label _readout = null!;
     private Label _codexReadout = null!;
     private Label _loadoutReadout = null!;
@@ -48,11 +54,24 @@ public partial class ChronicleApp : Node
     private Button _replacementLoadButton = null!;
     private readonly List<Button> _directionButtons = [];
     private readonly List<Button> _hotbarSlots = [];
-    private SkyStratum? _sky;
+    private CompiledVisualPack _visualPack = null!;
+    private ImageTexture _visualAtlasTexture = null!;
+    private Texture2D _flyGlyph = null!;
+    private Texture2D _stoneGlyph = null!;
+    private Texture2D _codexGlyph = null!;
+    private Texture2D _loadoutGlyph = null!;
+    private WorldArea? _worldArea;
+    private WorldRectangle _visibleWorldBounds;
+    private WorldAddress[] _renderedTargets = [];
+    private int _visualCellSize;
     private double _pulseAccumulator;
     private long _renderedSeed;
     private WorldAddress _renderedAddress;
+    private WorldAddress? _renderedLooseStoneAddress;
+    private int _renderedWorldGrammarVersion;
+    private bool _renderedHasLivingIncarnation;
     private bool _hasRenderedWorld;
+    private bool _verifyGate3BPlayer;
     private string _lastSaveLoadStatus = "Starting Chronicle.";
     private string _lastAnswerStatus = string.Empty;
     private string _lastCommandStatus = string.Empty;
@@ -61,6 +80,23 @@ public partial class ChronicleApp : Node
 
     public override void _Ready()
     {
+        var arguments = OS.GetCmdlineUserArgs();
+        _verifyGate3BPlayer = arguments.Contains("--verify-gate3b-player", StringComparer.Ordinal);
+        _visualCellSize = RequestedVisualCellSize(arguments);
+        _visualPack = ManualVisualPack.CreateGate3B(_visualCellSize);
+        _visualAtlasTexture = VisualPackGodotAdapter.CreateAtlasTexture(_visualPack);
+        _flyGlyph = VisualPackGodotAdapter.CreateRegionTexture(
+            _visualAtlasTexture,
+            _visualPack.Resolve("glyph.codex.fly"));
+        _stoneGlyph = VisualPackGodotAdapter.CreateRegionTexture(
+            _visualAtlasTexture,
+            _visualPack.Resolve("glyph.codex.stone"));
+        _codexGlyph = VisualPackGodotAdapter.CreateRegionTexture(
+            _visualAtlasTexture,
+            _visualPack.Resolve("glyph.codex"));
+        _loadoutGlyph = VisualPackGodotAdapter.CreateRegionTexture(
+            _visualAtlasTexture,
+            _visualPack.Resolve("glyph.loadout"));
         BuildWorldViews();
         BuildHotbar();
         BuildWorldGuidance();
@@ -72,7 +108,8 @@ public partial class ChronicleApp : Node
         RefreshPresentation();
         LogState("SLICE2C READY");
 
-        if (OS.GetCmdlineUserArgs().Contains("--verify-slice2c", StringComparer.Ordinal))
+        if (_verifyGate3BPlayer ||
+            arguments.Contains("--verify-slice2c", StringComparer.Ordinal))
         {
             Callable.From(RunSlice2CAcceptance).CallDeferred();
         }
@@ -174,14 +211,24 @@ public partial class ChronicleApp : Node
 
     private void BuildWorldViews()
     {
-        _surfacePatchView = new SurfacePatchView
+        _worldViewReadout = new Label
+        {
+            Name = "WorldViewReadout",
+            Position = new Vector2(32, 28),
+            Size = new Vector2(MapPixelWidth, 22),
+        };
+        _worldViewReadout.AddThemeFontSizeOverride("font_size", 13);
+        _worldViewReadout.AddThemeColorOverride("font_color", new Color(0.92f, 0.83f, 0.44f));
+        AddChild(_worldViewReadout);
+
+        _surfacePatchView = new WorldVisualView
         {
             Name = "SurfacePatchView",
             Position = new Vector2(32, 56),
         };
         AddChild(_surfacePatchView);
 
-        _skyStratumView = new SkyStratumView
+        _skyStratumView = new WorldVisualView
         {
             Name = "SkyStratumView",
             Position = new Vector2(32, 56),
@@ -205,13 +252,14 @@ public partial class ChronicleApp : Node
             var button = new Button
             {
                 Name = $"HotbarSlot{slot + 1}",
-                Position = new Vector2(4 + slot * 81, 4),
-                Size = new Vector2(77, 56),
+                Position = new Vector2(4 + slot * 82, 4),
+                Size = new Vector2(80, 56),
                 Text = "—",
                 Disabled = true,
                 FocusMode = Control.FocusModeEnum.None,
+                IconAlignment = HorizontalAlignment.Left,
             };
-            button.AddThemeFontSizeOverride("font_size", 14);
+            button.AddThemeFontSizeOverride("font_size", 12);
             var slotIndex = slot;
             button.Pressed += () =>
             {
@@ -289,21 +337,41 @@ public partial class ChronicleApp : Node
         };
         panel.AddChild(codexPanel);
 
+        codexPanel.AddChild(new TextureRect
+        {
+            Name = "CodexGlyph",
+            Position = new Vector2(16, 13),
+            Size = new Vector2(_visualCellSize, _visualCellSize),
+            Texture = _codexGlyph,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepCentered,
+        });
         _codexReadout = new Label
         {
             Name = "CodexReadout",
-            Position = new Vector2(16, 11),
-            Size = new Vector2(456, 101),
+            Position = new Vector2(44, 11),
+            Size = new Vector2(428, 101),
         };
         _codexReadout.AddThemeFontSizeOverride("font_size", 16);
         _codexReadout.AddThemeColorOverride("font_color", new Color(0.92f, 0.83f, 0.44f));
         codexPanel.AddChild(_codexReadout);
 
+        codexPanel.AddChild(new TextureRect
+        {
+            Name = "LoadoutGlyph",
+            Position = new Vector2(16, 118),
+            Size = new Vector2(_visualCellSize, _visualCellSize),
+            Texture = _loadoutGlyph,
+            TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepCentered,
+        });
         _loadoutReadout = new Label
         {
             Name = "LoadoutReadout",
-            Position = new Vector2(16, 116),
-            Size = new Vector2(456, 24),
+            Position = new Vector2(44, 116),
+            Size = new Vector2(428, 24),
         };
         _loadoutReadout.AddThemeFontSizeOverride("font_size", 15);
         _loadoutReadout.AddThemeColorOverride("font_color", new Color(0.84f, 0.91f, 0.97f));
@@ -743,42 +811,85 @@ public partial class ChronicleApp : Node
             _deathConfirmationArmed = false;
         }
 
-        var worldChanged = !_hasRenderedWorld || state.Seed != _renderedSeed || state.Address != _renderedAddress;
+        var worldChanged =
+            !_hasRenderedWorld ||
+            state.Seed != _renderedSeed ||
+            state.Address != _renderedAddress ||
+            state.LooseStoneAddress != _renderedLooseStoneAddress ||
+            state.WorldGrammarVersion != _renderedWorldGrammarVersion ||
+            hasLivingIncarnation != _renderedHasLivingIncarnation;
         IReadOnlyList<WorldAddress> highlightedTargets = _targetingSlot is { } targetingSlot
             ? _simulation.ValidTargetsForSlot(targetingSlot)
             : [];
+        var targetsChanged = !_renderedTargets.SequenceEqual(highlightedTargets);
 
+        if (worldChanged)
+        {
+            var visibleColumns = VisibleCellCount(MapPixelWidth, _visualCellSize);
+            var visibleRows = VisibleCellCount(MapPixelHeight, _visualCellSize);
+            _visibleWorldBounds = VisualViewportBounds.Centered(
+                state.Address.X,
+                state.Address.Y,
+                visibleColumns,
+                visibleRows);
+            _worldArea = WorldArea.Generate(
+                state,
+                state.Address.Stratum,
+                VisualViewportBounds.WithOneCellSemanticHalo(_visibleWorldBounds));
+        }
+
+        WorldVisualView activeWorldView;
         if (string.Equals(state.Address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal))
         {
             _surfacePatchView.Visible = true;
             _skyStratumView.Visible = false;
-
-            if (worldChanged)
-            {
-                _surfacePatchView.SetPatch(SurfacePatch.Generate(state));
-            }
+            activeWorldView = _surfacePatchView;
         }
         else if (string.Equals(state.Address.Stratum, SkyStratum.StratumName, StringComparison.Ordinal))
         {
             _surfacePatchView.Visible = false;
             _skyStratumView.Visible = true;
+            activeWorldView = _skyStratumView;
+        }
+        else
+        {
+            throw new InvalidOperationException($"No visual view maps Stratum '{state.Address.Stratum}'.");
+        }
 
-            if (worldChanged)
-            {
-                _sky = SkyStratum.Generate(state);
-                _skyStratumView.SetSky(_sky, state.Address);
-            }
+        if (worldChanged || targetsChanged)
+        {
+            var plan = VisualGrammar.Compose(
+                new VisualCompositionInput(
+                    _worldArea!,
+                    _visibleWorldBounds,
+                    state.Seed,
+                    _visualPack,
+                    _visualPack.StyleVersion,
+                    hasLivingIncarnation ? state.Address : null,
+                    highlightedTargets,
+                    SelectedAddresses: []));
+            activeWorldView.SetPlan(_visualPack, plan);
         }
 
         if (worldChanged)
         {
             _renderedSeed = state.Seed;
             _renderedAddress = state.Address;
+            _renderedLooseStoneAddress = state.LooseStoneAddress;
+            _renderedWorldGrammarVersion = state.WorldGrammarVersion;
+            _renderedHasLivingIncarnation = hasLivingIncarnation;
             _hasRenderedWorld = true;
         }
 
-        _surfacePatchView.SetSubjects(state.LooseStoneAddress, highlightedTargets);
-        _skyStratumView.SetSubjects(state.LooseStoneAddress, highlightedTargets);
+        if (worldChanged || targetsChanged)
+        {
+            _renderedTargets = highlightedTargets.ToArray();
+        }
+
+        _worldViewReadout.Text =
+            $"{state.Address.Stratum.ToUpperInvariant()} · {_visualCellSize} PX · " +
+            $"{_visibleWorldBounds.Width} × {_visibleWorldBounds.Height} CELLS · " +
+            $"PACK STYLE {_visualPack.StyleVersion}";
 
         _openingPanel.Visible = hasLivingIncarnation && state.Intent == OpeningIntent.Unchosen;
         _replacementPanel.Visible = !hasLivingIncarnation;
@@ -807,6 +918,13 @@ public partial class ChronicleApp : Node
                     : slot.IsFlyStone
                         ? "FLY\n[STONE]"
                         : slot.DisplayName;
+            button.Icon = slot.IsEmpty
+                ? null
+                : slot.IsFlyStone
+                    ? _stoneGlyph
+                    : slot.IsIntrinsicFly
+                        ? _flyGlyph
+                        : null;
         }
 
         var firstSlot = state.ActiveLoadout[0];
@@ -879,12 +997,15 @@ public partial class ChronicleApp : Node
 
     private string CurrentLandmarkText(ChronicleState state)
     {
-        if (_sky is null || !_sky.Contains(state.Address))
-        {
-            return string.Empty;
-        }
-
-        return _sky.TileAt(state.Address).Terrain == SkyTerrain.Landmark
+        var atBell = _worldArea is not null &&
+            _worldArea.Cells.Any(cell =>
+                cell.Address == state.Address &&
+                cell.Feature == WorldFeature.Landmark &&
+                string.Equals(
+                    cell.DurableIdentity,
+                    SkyStratum.LandmarkName,
+                    StringComparison.Ordinal));
+        return atBell
             ? $"{SkyStratum.LandmarkName}\n{SkyStratum.LandmarkArrivalLine}\nSky-stone clapper: STUDY to understand."
             : string.Empty;
     }
@@ -938,6 +1059,77 @@ public partial class ChronicleApp : Node
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 
+    private static int VisibleCellCount(int pixelExtent, int cellSize)
+    {
+        var count = pixelExtent / cellSize;
+        return count % 2 == 0 ? count - 1 : count;
+    }
+
+    private static int RequestedVisualCellSize(IReadOnlyList<string> arguments)
+    {
+        const string prefix = "--visual-cell-size=";
+        var argument = arguments.FirstOrDefault(
+            value => value.StartsWith(prefix, StringComparison.Ordinal));
+        if (argument is null)
+        {
+            return 20;
+        }
+
+        return int.TryParse(argument[prefix.Length..], out var requested) &&
+            requested is 16 or 20
+                ? requested
+                : throw new ArgumentException(
+                    "Gate 3B visual cell size must be either 16 or 20.");
+    }
+
+    private VisualRenderPlan RequireActiveVisualPlan()
+    {
+        var plan = (_surfacePatchView.Visible ? _surfacePatchView : _skyStratumView).CurrentPlan;
+        return plan ?? throw new InvalidOperationException(
+            "The active World view has no shared Visual Grammar plan.");
+    }
+
+    private void CaptureGate3BPlayerReview(VisualRenderPlan plan)
+    {
+        var directory = Path.GetFullPath(
+            Path.Combine(
+                ProjectSettings.GlobalizePath("res://"),
+                "..",
+                "..",
+                ".tools",
+                "gate3b-review"));
+        Directory.CreateDirectory(directory);
+        var stem = $"player_s{_simulation.State.Seed}_sky_bell_stone_{_visualCellSize}px";
+        var pngPath = Path.Combine(directory, $"{stem}.png");
+        var metadataPath = Path.Combine(directory, $"{stem}.json");
+        var image = VisualPackGodotAdapter.RasterizeNative(_visualPack, plan);
+        var result = image.SavePng(pngPath);
+        if (result != Error.Ok)
+        {
+            throw new InvalidOperationException($"Gate 3B player review capture failed with {result}.");
+        }
+
+        File.WriteAllText(
+            metadataPath,
+            JsonSerializer.Serialize(
+                new
+                {
+                    _simulation.State.Seed,
+                    Stratum = _simulation.State.Address.Stratum,
+                    plan.Bounds,
+                    plan.CellSize,
+                    plan.PackId,
+                    plan.PackDigest,
+                    RenderPlanDigest = plan.Digest,
+                    Incarnation = _simulation.State.Address,
+                    LooseStone = _simulation.State.LooseStoneAddress,
+                    Bell = SkyStratum.LandmarkAddress,
+                    ReadsImmediately = new[] { "Incarnation", "The Bell That Fell Up", "Loose Stone" },
+                    Review = "Player UAT: mark noise, broken joins, and hierarchy directly on this capture.",
+                },
+                new JsonSerializerOptions { WriteIndented = true }));
+    }
+
     private static string LifeDisplayName(IncarnationLifeState life) => life switch
     {
         IncarnationLifeState.Alive => "ALIVE",
@@ -949,6 +1141,38 @@ public partial class ChronicleApp : Node
     {
         try
         {
+            if (_verifyGate3BPlayer)
+            {
+                var openingPlan = RequireActiveVisualPlan();
+                VerifyAcceptance(
+                    openingPlan.PackId == _visualPack.PackId &&
+                    openingPlan.PackDigest == _visualPack.Digest &&
+                    openingPlan.CellSize == _visualCellSize,
+                    "The player view must consume the selected compiled visual pack exactly.");
+                VerifyAcceptance(
+                    openingPlan.Bounds.Width >= 33 &&
+                    openingPlan.Bounds.Height >= 23 &&
+                    openingPlan.Bounds.Width * _visualCellSize <= MapPixelWidth &&
+                    openingPlan.Bounds.Height * _visualCellSize <= MapPixelHeight,
+                    "The Gate 3B player view must show at least 33 × 23 native logical cells.");
+                VerifyAcceptance(
+                    openingPlan.Marks.Count(mark => mark.Layer == VisualLayerClass.GroundField) ==
+                    openingPlan.Bounds.Width * openingPlan.Bounds.Height,
+                    "Every player-view cell must render through the shared ground mapping.");
+                foreach (var glyph in new[]
+                         {
+                             "glyph.codex",
+                             "glyph.loadout",
+                             "glyph.codex.fly",
+                             "glyph.codex.stone",
+                         })
+                {
+                    VerifyAcceptance(
+                        _visualPack.Resolve(glyph).VisualId == glyph,
+                        $"The runtime pack must retain the '{glyph}' UI mapping.");
+                }
+            }
+
             VerifyAcceptance(
                 _simulation.State.Intent == OpeningIntent.Unchosen && _openingPanel.Visible,
                 "A fresh Chronicle must present the modal UP Intent.");
@@ -967,6 +1191,10 @@ public partial class ChronicleApp : Node
             VerifyAcceptance(
                 !_flyButton.Disabled && _flyButton.Text == "FLY\nUP",
                 "The first hotbar slot must present FLY UP.");
+            if (_verifyGate3BPlayer)
+            {
+                VerifyControlFits(_flyButton, "20/16-pixel Fly hotbar slot");
+            }
             VerifyAcceptance(
                 _studyButton.Visible &&
                 _studyButton.Disabled &&
@@ -999,6 +1227,16 @@ public partial class ChronicleApp : Node
             VerifyAcceptance(
                 _simulation.State.Address == SkyStratum.LandmarkAddress,
                 "Four north button presses must reach the Bell.");
+            if (_verifyGate3BPlayer)
+            {
+                VerifyAcceptance(
+                    RequireActiveVisualPlan().Marks.Any(mark =>
+                        mark.Address == SkyStratum.LandmarkAddress &&
+                        mark.VisualId == "landmark.bell-that-fell-up" &&
+                        mark.Layer == VisualLayerClass.LandmarkOrSubject),
+                    "The player must be able to identify the Bell from its Landmark silhouette.");
+            }
+
             VerifyAcceptance(
                 _statusReadout.Text.Contains(SkyStratum.LandmarkName, StringComparison.Ordinal) &&
                 _statusReadout.Text.Contains(SkyStratum.LandmarkArrivalLine, StringComparison.Ordinal),
@@ -1043,6 +1281,9 @@ public partial class ChronicleApp : Node
 
             Press(_saveButton);
             var savedState = _simulation.State;
+            var savedVisualDigest = _verifyGate3BPlayer
+                ? RequireActiveVisualPlan().Digest
+                : string.Empty;
             Press(_directionButtons[2]);
             VerifyAcceptance(
                 !_simulation.State.Study.IsStudyingBell &&
@@ -1050,6 +1291,12 @@ public partial class ChronicleApp : Node
                 "Leaving the Bell must stop Study without losing understanding.");
             Press(_loadButton);
             VerifyAcceptance(_simulation.State == savedState, "Load must restore exact partial Study state.");
+            if (_verifyGate3BPlayer)
+            {
+                VerifyAcceptance(
+                    RequireActiveVisualPlan().Digest == savedVisualDigest,
+                    "Save/load must reproduce the exact controlled visual variants.");
+            }
 
             for (var pulse = 0; pulse < 7; pulse++)
             {
@@ -1136,6 +1383,10 @@ public partial class ChronicleApp : Node
                 !_simulation.State.CanFly &&
                 _flyButton.Text == "FLY\n[STONE]",
                 "Fitting Stone must replace intrinsic Fly with the visible FLY[STONE] Expression.");
+            if (_verifyGate3BPlayer)
+            {
+                VerifyControlFits(_flyButton, "20/16-pixel Fly[Stone] hotbar slot");
+            }
 
             Press(_directionButtons[1]);
             VerifyAcceptance(
@@ -1150,6 +1401,16 @@ public partial class ChronicleApp : Node
                 _flyButton.Text == "CANCEL\nTARGET" &&
                 _guidanceReadout.Text.Contains("highlighted loose Stone", StringComparison.Ordinal),
                 "Selecting FLY[STONE] must enter cardinal targeting and highlight only Core-valid targets.");
+            if (_verifyGate3BPlayer)
+            {
+                VerifyAcceptance(
+                    RequireActiveVisualPlan().Marks.Any(mark =>
+                        mark.Address == ChronicleState.InitialLooseStoneAddress &&
+                        mark.VisualId == "emphasis.target.valid" &&
+                        mark.Layer == VisualLayerClass.TemporaryAction),
+                    "A Core-valid loose Stone must receive the shared visual target emphasis.");
+            }
+
             Press(_directionButtons[3]);
             VerifyAcceptance(
                 _targetingSlot is null &&
@@ -1164,6 +1425,15 @@ public partial class ChronicleApp : Node
                 _simulation.State.LooseStoneAddress == new WorldAddress(SkyStratum.StratumName, 1, 0) &&
                 _skyStratumView.Visible,
                 "Intrinsic Fly must let the Incarnation see the same moved Stone in the sky.");
+            if (_verifyGate3BPlayer)
+            {
+                VerifyAcceptance(
+                    RequireActiveVisualPlan().Marks.Any(mark =>
+                        mark.Address == new WorldAddress(SkyStratum.StratumName, 1, 0) &&
+                        mark.VisualId == "subject.loose-stone" &&
+                        mark.Layer == VisualLayerClass.LandmarkOrSubject),
+                    "The moved loose Stone must retain its durable-subject silhouette in the sky.");
+            }
 
             Press(_fitStoneButton);
             Press(_flyButton);
@@ -1211,6 +1481,36 @@ public partial class ChronicleApp : Node
                 !_ringBellButton.Disabled &&
                 _ringBellButton.Text == "END THIS BODY",
                 "The first Incarnation must reach the Bell with Fly[Stone] and its changed world intact.");
+            if (_verifyGate3BPlayer)
+            {
+                var bellAndStonePlan = RequireActiveVisualPlan();
+                VerifyAcceptance(
+                    bellAndStonePlan.Marks.Any(mark =>
+                        mark.VisualId == "landmark.bell-that-fell-up") &&
+                    bellAndStonePlan.Marks.Any(mark =>
+                        mark.VisualId == "subject.loose-stone") &&
+                    bellAndStonePlan.Marks.Any(mark =>
+                        mark.VisualId == "actor.incarnation"),
+                    "The Bell, moved Stone, and first Incarnation must remain legible together.");
+
+                Press(_directionButtons[2]);
+                var reviewPlan = RequireActiveVisualPlan();
+                VerifyAcceptance(
+                    _simulation.State.Address ==
+                    new WorldAddress(SkyStratum.StratumName, 0, -3) &&
+                    reviewPlan.Marks.Any(mark =>
+                        mark.Address == SkyStratum.LandmarkAddress &&
+                        mark.VisualId == "landmark.bell-that-fell-up") &&
+                    reviewPlan.Marks.Any(mark =>
+                        mark.Address == _simulation.State.Address &&
+                        mark.VisualId == "actor.incarnation"),
+                    "The visual review fixture must show the Bell and Incarnation as separate readable silhouettes.");
+                CaptureGate3BPlayerReview(reviewPlan);
+                Press(_directionButtons[0]);
+                VerifyAcceptance(
+                    _simulation.State.Address == SkyStratum.LandmarkAddress,
+                    "The visual review fixture must return to the Bell before its consequential action.");
+            }
 
             var beforeConfirmation = _simulation.State;
             Press(_ringBellButton);
@@ -1302,6 +1602,14 @@ public partial class ChronicleApp : Node
                 "Save/load must restore the replacement identity, Loadout, and complete Chronicle.");
 
             Press(_saveButton);
+            if (_verifyGate3BPlayer)
+            {
+                GD.Print(
+                    $"GATE3B PLAYER VISUAL ACCEPTANCE PASS size={_visualCellSize} " +
+                    $"density={_visibleWorldBounds.Width}x{_visibleWorldBounds.Height} " +
+                    $"pack={_visualPack.PackId}");
+            }
+
             GD.Print("SLICE2C ACCEPTANCE PASS");
             GetTree().Quit();
         }
@@ -1327,10 +1635,16 @@ public partial class ChronicleApp : Node
 
     private static void VerifyLabelFits(Label label, string name)
     {
-        var minimum = label.GetMinimumSize();
+        VerifyControlFits(label, name);
+    }
+
+    private static void VerifyControlFits(Control control, string name)
+    {
+        var minimum = control.GetMinimumSize();
         VerifyAcceptance(
-            minimum.X <= label.Size.X && minimum.Y <= label.Size.Y,
-            $"{name} content must fit its assigned bounds.");
+            minimum.X <= control.Size.X && minimum.Y <= control.Size.Y,
+            $"{name} content minimum {minimum.X}×{minimum.Y} must fit " +
+            $"assigned {control.Size.X}×{control.Size.Y} bounds.");
     }
 
     private static void VerifyNoVerticalOverlap(

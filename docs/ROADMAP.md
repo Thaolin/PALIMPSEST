@@ -26,8 +26,7 @@ Implementation contract: [Slice 1 — First Horizon](SLICE-1-FIRST-HORIZON.md).
 ## Goal 2 — A Word Kept After Death
 
 **Status:** Complete on 2026-07-19. Slices 2A, 2B, and 2C passed automated
-proof and separate player UAT. Slice 3 remains the next gated work and has not
-begun.
+proof and separate player UAT.
 
 Deliver three sequential UAT slices:
 
@@ -45,13 +44,33 @@ Implementation contract: [Goal 2 — A Word Kept After Death](GOAL-2-A-WORD-KEPT
 
 ## Slice 3 — A World With Shape
 
-Add one deterministic World Grammar and a coherent Visual Grammar. Replace
-independent coloured-tile noise with connected terrain, controlled symbolic
-variation, and readable Landmarks across several fixture seeds.
+**Status:** Complete on 2026-07-19. Gate 3A passed automated proof and player
+UAT as a deliberately semantic/debug alpha. Gate 3B passed automated proof and
+player visual UAT with `20 px / 33 × 23` selected as the local-view baseline.
+The 16 px candidate remains comparison evidence only. A procedural asset
+compiler prototype may be evaluated separately; it was not a Gate 3B
+dependency. Underlying semantic refinement must not be disguised as visual
+polish. The Inspector's default large overview remains semantic; Visual
+Grammar preview remains limited to local 64 × 64 or 32 × 32 requests.
 
-**Accept when:** generated places look structured rather than random, remain
-stable across movement and reload, and clearly communicate actors, materials,
-and Landmarks without labels.
+First build one deterministic World Grammar and expose it through a
+developer-only interactive World Atlas Inspector. Then map the accepted
+semantic truth through a coherent Visual Grammar in the denser local player
+view. Keep its compiled-pack seam independent of the authoring method so a
+later procedural compiler can be compared against or replace the initial
+manual adapter without changing runtime meaning.
+
+The parallel candidate compiler is specified in the
+[Chronicle Visual Engine drop-in contract](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md).
+It is pure C# at authoring time with a Godot preview adapter, remains absent
+from the shipped runtime, and does not block Gate 3B. Its separate E0–E4
+[build handoff](CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md) stops before
+Palimpsest integration.
+
+**Accept when:** the inspector makes generated places visibly structured rather
+than random across large bounded requests and query edges; the local player
+view remains stable across movement and reload; and actors, materials, and
+Landmarks read clearly without labels.
 
 Implementation contract: [Slice 3 — A World With Shape](SLICE-3-WORLD-VISUAL-GRAMMAR.md).
 

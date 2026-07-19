@@ -49,6 +49,14 @@ how it appears without changing simulation meaning.
 _Avoid_: Random cosmetic noise, gameplay rules hidden in the renderer, one-off
 art direction per location
 
+**World Atlas**:
+A symbolic overview of a World's generated geography, Strata, Landmarks, known
+routes, and material history at a broader scale than the Incarnation's local
+view. A player-facing Atlas represents what the Chronicle has made knowable,
+not omniscient world truth.
+_Avoid_: Miniature tactical scene, eagerly generated finite map, free
+fast-travel menu
+
 **Landmark**:
 A persistent, memorable place created by the World Grammar, such as a ruin,
 faction seat, impossible organism, deep passage, or potential World Claim.

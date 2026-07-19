@@ -1,6 +1,7 @@
 using Chronicle.Core;
 
 VerifyLegacySaveCompatibility();
+VerifyWorldGrammarVersionMigrationAndPinning();
 VerifySlice1SaveMigratesCodex();
 VerifySerializedIntent();
 VerifyMovementRequiresIntent();
@@ -20,6 +21,14 @@ VerifyPause();
 VerifyClockSpeeds();
 VerifyCardinalSurfaceMovement();
 VerifySurfaceGeneration();
+VerifySurfaceAreaSnapshotBoundsOrderAndDeterminism();
+VerifyLegacyAreaSemanticsAndReadOnly();
+VerifyVersion1SurfaceGrammarFixtures();
+VerifyVersion1SurfaceQueryInvariance();
+VerifyVersion1SkyGrammarAndDurableSubjects();
+VerifyVersion1CardinalAdjacencyContext();
+VerifyVersion1CoordinateLimitsDoNotWrap();
+VerifyAreaQueriesStayOutOfPersistenceAndReplay();
 VerifySaveLoad();
 VerifySkySaveLoad();
 VerifyStudyReplay();
@@ -46,7 +55,7 @@ VerifyLifecycleSaveEnvelopeAndMigration();
 VerifyLifecycleReplay();
 
 Console.WriteLine(
-    "PASS: Slice 0 through Slice 2C deterministic generation, Codex, Study, Loadout, Expressions, Incarnation replacement, replay, and save compatibility verified.");
+    "PASS: Gate 3A Core World Grammar plus Slice 0 through Slice 2C regression and save compatibility verified.");
 
 static void VerifyLegacySaveCompatibility()
 {
@@ -79,6 +88,42 @@ static void VerifyLegacySaveCompatibility()
     Assert(
         restored.LooseStoneAddress == ChronicleState.InitialLooseStoneAddress,
         "A Slice 0 save must gain the fixed loose Stone without serializing terrain.");
+}
+
+static void VerifyWorldGrammarVersionMigrationAndPinning()
+{
+    const string predecessorJson =
+        """
+        {
+          "Seed": 41337,
+          "Tick": 17,
+          "Address": {
+            "Stratum": "surface",
+            "X": 4,
+            "Y": -3
+          },
+          "Speed": 4
+        }
+        """;
+
+    var predecessor = ChronicleSaveCodec.Deserialize(predecessorJson);
+    Assert(
+        predecessor.WorldGrammarVersion == 0,
+        "A predecessor save without a World Grammar version must retain legacy version 0.");
+
+    var newChronicle = ChronicleState.Begin(41_337);
+    Assert(
+        newChronicle.WorldGrammarVersion == 1,
+        "A newly created Chronicle must pin World Grammar version 1.");
+
+    var json = ChronicleSaveCodec.Serialize(newChronicle);
+    var restored = ChronicleSaveCodec.Deserialize(json);
+    Assert(
+        json.Contains("\"WorldGrammarVersion\"", StringComparison.Ordinal),
+        "A new Chronicle save must include its pinned World Grammar version.");
+    Assert(
+        restored.WorldGrammarVersion == 1,
+        "Save/load must retain a new Chronicle's pinned World Grammar version.");
 }
 
 static void VerifySlice1SaveMigratesCodex()
@@ -445,6 +490,521 @@ static void VerifySurfaceGeneration()
         first.Tiles.Zip(otherSeed.Tiles).Any(pair => pair.First != pair.Second),
         "Changing the seed must change at least one generated surface tile.");
 }
+
+static void VerifySurfaceAreaSnapshotBoundsOrderAndDeterminism()
+{
+    var state = ChronicleState.Begin(41_337);
+    var bounds = new WorldRectangle(MinX: -2, MinY: -3, Width: 3, Height: 2);
+
+    var first = WorldArea.Generate(state, SurfacePatch.SurfaceStratum, bounds);
+    var second = WorldArea.Generate(state, SurfacePatch.SurfaceStratum, bounds);
+
+    Assert(first.Cells.Count == 6, "A bounded Surface snapshot must contain exactly its requested absolute rectangle.");
+    Assert(
+        first.Cells[0].Address == new WorldAddress("surface", -2, -3),
+        "A bounded Surface snapshot must begin at the rectangle's literal minimum address.");
+    Assert(
+        first.Cells[1].Address == new WorldAddress("surface", -1, -3),
+        "A bounded Surface snapshot must order the next literal address across its first row.");
+    Assert(
+        first.Cells[^1].Address == new WorldAddress("surface", 0, -2),
+        "A bounded Surface snapshot must end at the rectangle's literal final row-major address.");
+    Assert(
+        first.Cells.SequenceEqual(second.Cells),
+        "The same Chronicle, Surface stratum, and absolute rectangle must return equal ordered cells.");
+}
+
+static void VerifyLegacyAreaSemanticsAndReadOnly()
+{
+    var surfaceState = ChronicleState.Begin(41_337) with { WorldGrammarVersion = 0 };
+    var skyState = surfaceState with { Address = SkyStratum.LandmarkAddress };
+    var surfaceBounds = new WorldRectangle(MinX: -2, MinY: -1, Width: 3, Height: 2);
+    var skyBounds = new WorldRectangle(MinX: -1, MinY: -5, Width: 3, Height: 3);
+    var surfaceBefore = ChronicleSaveCodec.Serialize(surfaceState);
+    var skyBefore = ChronicleSaveCodec.Serialize(skyState);
+
+    var surface = WorldArea.Generate(surfaceState, SurfacePatch.SurfaceStratum, surfaceBounds);
+    var sky = WorldArea.Generate(skyState, SkyStratum.StratumName, skyBounds);
+    var legacySurface = SurfacePatch.Generate(surfaceState);
+    var legacySky = SkyStratum.Generate(skyState);
+
+    foreach (var cell in surface.Cells)
+    {
+        var legacy = legacySurface.Tiles.Single(tile => tile.Address == cell.Address);
+        var expected = LegacySurfaceSemantics(legacy.Terrain);
+
+        Assert(cell.Ground == expected.Ground, "Version 0 Surface ground must reproduce legacy terrain semantics.");
+        Assert(cell.Feature == expected.Feature, "Version 0 Surface features must reproduce legacy terrain semantics.");
+        Assert(cell.DurableIdentity is null, "Version 0 Surface cells must not invent durable identities.");
+        Assert(
+            cell.SameFormAdjacency == LegacySurfaceAdjacency(legacySurface, legacy),
+            "Version 0 Surface adjacency must match its legacy ground-and-feature form.");
+    }
+
+    foreach (var cell in sky.Cells)
+    {
+        var legacy = legacySky.TileAt(cell.Address);
+        var expected = LegacySkySemantics(legacy.Terrain);
+
+        Assert(cell.Ground == expected.Ground, "Version 0 Sky ground must reproduce legacy terrain semantics.");
+        Assert(cell.Feature == expected.Feature, "Version 0 Sky features must reproduce legacy terrain semantics.");
+        Assert(
+            cell.DurableIdentity == expected.DurableIdentity,
+            "Version 0 Sky durable identity must reproduce legacy Landmark semantics.");
+        Assert(
+            cell.SameFormAdjacency == LegacySkyAdjacency(legacySky, legacy),
+            "Version 0 Sky adjacency must match its legacy ground-and-feature form.");
+    }
+
+    var bell = sky.Cells.Single(cell => cell.Address == SkyStratum.LandmarkAddress);
+    Assert(bell.Feature == WorldFeature.Landmark, "The legacy Bell must remain a Landmark feature.");
+    Assert(
+        bell.DurableIdentity == SkyStratum.LandmarkName,
+        "The legacy Bell must retain its durable identity through a version 0 area snapshot.");
+    Assert(
+        ChronicleSaveCodec.Serialize(surfaceState) == surfaceBefore &&
+        ChronicleSaveCodec.Serialize(skyState) == skyBefore,
+        "Read-only version 0 area requests must not mutate Chronicle state.");
+}
+
+static void VerifyVersion1SurfaceGrammarFixtures()
+{
+    var bounds = new WorldRectangle(MinX: -128, MinY: -128, Width: 256, Height: 256);
+    var fixtures = new[]
+    {
+        (Seed: 41_337L, Area: WorldArea.Generate(ChronicleState.Begin(41_337), SurfacePatch.SurfaceStratum, bounds)),
+        (Seed: 41_338L, Area: WorldArea.Generate(ChronicleState.Begin(41_338), SurfacePatch.SurfaceStratum, bounds)),
+        (Seed: 90_421L, Area: WorldArea.Generate(ChronicleState.Begin(90_421), SurfacePatch.SurfaceStratum, bounds)),
+    };
+
+    foreach (var fixture in fixtures)
+    {
+        var cells = fixture.Area.Cells;
+        Assert(cells.Any(cell => cell.Ground == WorldGround.Water), $"Fixture {fixture.Seed} must contain water semantics.");
+        Assert(
+            cells.Any(cell =>
+                cell.Feature is null &&
+                cell.Ground is WorldGround.Grass or WorldGround.Soil),
+            $"Fixture {fixture.Seed} must contain a Grass or Soil clearing.");
+        Assert(cells.Any(cell => cell.Feature == WorldFeature.Vegetation), $"Fixture {fixture.Seed} must contain vegetation.");
+        Assert(cells.Any(cell => cell.Feature == WorldFeature.Stone), $"Fixture {fixture.Seed} must contain stone.");
+        Assert(
+            HasVersion1SurfaceInteraction(fixture.Area),
+            $"Fixture {fixture.Seed} must expose a named water/ridge or clearing/vegetation interaction.");
+        Assert(
+            HasNamedMotifSpanningAtLeast45Cells(cells),
+            $"Fixture {fixture.Seed} must retain a named motif across at least three 15-cell viewport widths.");
+    }
+
+    Assert(
+        !fixtures[0].Area.Cells.SequenceEqual(fixtures[1].Area.Cells) &&
+        !fixtures[0].Area.Cells.SequenceEqual(fixtures[2].Area.Cells) &&
+        !fixtures[1].Area.Cells.SequenceEqual(fixtures[2].Area.Cells),
+        "Fixture seeds must differ in ordered Surface semantics, not only Chronicle seed metadata.");
+}
+
+static void VerifyVersion1SurfaceQueryInvariance()
+{
+    var state = ChronicleState.Begin(41_337);
+    var largeBounds = new WorldRectangle(MinX: -40, MinY: -30, Width: 24, Height: 16);
+    var overlapBounds = new WorldRectangle(MinX: -35, MinY: -25, Width: 18, Height: 10);
+    var before = ChronicleSaveCodec.Serialize(state);
+
+    var large = WorldArea.Generate(state, SurfacePatch.SurfaceStratum, largeBounds);
+    var overlap = WorldArea.Generate(state, SurfacePatch.SurfaceStratum, overlapBounds);
+    var assembled = new[]
+        {
+            WorldArea.Generate(state, SurfacePatch.SurfaceStratum, new WorldRectangle(-40, -30, 12, 8)),
+            WorldArea.Generate(state, SurfacePatch.SurfaceStratum, new WorldRectangle(-28, -30, 12, 8)),
+            WorldArea.Generate(state, SurfacePatch.SurfaceStratum, new WorldRectangle(-40, -22, 12, 8)),
+            WorldArea.Generate(state, SurfacePatch.SurfaceStratum, new WorldRectangle(-28, -22, 12, 8)),
+        }
+        .SelectMany(area => area.Cells)
+        .OrderBy(cell => cell.Address.Y)
+        .ThenBy(cell => cell.Address.X)
+        .ToArray();
+    var reversedOverlap = WorldArea.Generate(state, SurfacePatch.SurfaceStratum, overlapBounds);
+    var reversedLarge = WorldArea.Generate(state, SurfacePatch.SurfaceStratum, largeBounds);
+    var largeByAddress = large.Cells.ToDictionary(cell => cell.Address);
+
+    Assert(
+        large.Cells.SequenceEqual(assembled),
+        "A version 1 Surface rectangle must equal the exact row-major assembly of its four bounded subrequests.");
+    Assert(
+        overlap.Cells.All(cell => largeByAddress[cell.Address] == cell),
+        "Overlapping version 1 Surface requests must agree exactly at every shared World Address.");
+    Assert(
+        reversedOverlap.Cells.SequenceEqual(overlap.Cells) && reversedLarge.Cells.SequenceEqual(large.Cells),
+        "Version 1 Surface semantics must not depend on bounded-query order.");
+    Assert(
+        ChronicleSaveCodec.Serialize(state) == before,
+        "Version 1 Surface area requests must leave Chronicle state byte-for-byte unchanged.");
+}
+
+static void VerifyVersion1SkyGrammarAndDurableSubjects()
+{
+    var bounds = new WorldRectangle(MinX: -64, MinY: -64, Width: 128, Height: 128);
+    var overlapBounds = new WorldRectangle(MinX: -32, MinY: -28, Width: 48, Height: 48);
+    var fixtures = new[]
+    {
+        (Seed: 41_337L, Area: WorldArea.Generate(ChronicleState.Begin(41_337), SkyStratum.StratumName, bounds), Overlap: WorldArea.Generate(ChronicleState.Begin(41_337), SkyStratum.StratumName, overlapBounds)),
+        (Seed: 41_338L, Area: WorldArea.Generate(ChronicleState.Begin(41_338), SkyStratum.StratumName, bounds), Overlap: WorldArea.Generate(ChronicleState.Begin(41_338), SkyStratum.StratumName, overlapBounds)),
+        (Seed: 90_421L, Area: WorldArea.Generate(ChronicleState.Begin(90_421), SkyStratum.StratumName, bounds), Overlap: WorldArea.Generate(ChronicleState.Begin(90_421), SkyStratum.StratumName, overlapBounds)),
+    };
+
+    foreach (var fixture in fixtures)
+    {
+        var cells = fixture.Area.Cells;
+        var byAddress = cells.ToDictionary(cell => cell.Address);
+        var bell = cells.Single(cell => cell.Address == SkyStratum.LandmarkAddress);
+
+        Assert(cells.Any(cell => cell.Feature == WorldFeature.Cloud), $"Sky fixture {fixture.Seed} must contain cloud-bank cells.");
+        Assert(
+            cells.Any(cell => cell.Ground == WorldGround.OpenSky && cell.Feature is null),
+            $"Sky fixture {fixture.Seed} must contain open-lane cells.");
+        Assert(
+            HasNamedCloudBankSpanningAtLeast45Cells(cells),
+            $"Sky fixture {fixture.Seed} must retain a named cloud bank across at least three 15-cell viewport widths.");
+        Assert(
+            cells
+                .Where(cell =>
+                    Math.Abs(cell.Address.X - SkyStratum.LandmarkAddress.X) <= 2 &&
+                    Math.Abs(cell.Address.Y - SkyStratum.LandmarkAddress.Y) <= 2 &&
+                    cell.Address != SkyStratum.LandmarkAddress)
+                .All(cell => cell.Feature != WorldFeature.Cloud),
+            $"Sky fixture {fixture.Seed} must keep a cloud-free two-cell approach around the Bell.");
+        Assert(
+            bell.Address == SkyStratum.LandmarkAddress &&
+            bell.Feature == WorldFeature.Landmark &&
+            bell.DurableIdentity == SkyStratum.LandmarkName,
+            "The Bell must remain the established Landmark at its exact durable address.");
+        Assert(
+            fixture.Overlap.Cells.All(cell => byAddress[cell.Address] == cell),
+            $"Overlapping Sky requests for fixture {fixture.Seed} must agree at every shared World Address.");
+    }
+
+    Assert(
+        !fixtures[0].Area.Cells.SequenceEqual(fixtures[1].Area.Cells) &&
+        !fixtures[0].Area.Cells.SequenceEqual(fixtures[2].Area.Cells) &&
+        !fixtures[1].Area.Cells.SequenceEqual(fixtures[2].Area.Cells),
+        "Sky fixture seeds must differ in ordered spatial semantics, not only Chronicle seed metadata.");
+
+    var stoneSimulation = new ChronicleSimulation(LearnedAtSurface());
+    Assert(
+        stoneSimulation.Apply(new ConfigureLoadoutSlot(0, ChronicleVerb.Fly, ChronicleNoun.Stone)).Applied,
+        "The durable-subject fixture must equip Fly[Stone].");
+    Assert(
+        stoneSimulation.Apply(new UseLoadoutSlot(0, ChronicleState.InitialLooseStoneAddress)).Applied,
+        "The durable-subject fixture must move the loose Stone into the sky.");
+    var restoredStoneState = ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(stoneSimulation.State));
+    var durableArea = WorldArea.Generate(
+        restoredStoneState,
+        SkyStratum.StratumName,
+        new WorldRectangle(MinX: -2, MinY: -6, Width: 5, Height: 8));
+    var stone = durableArea.Cells.Single(cell => cell.Address == new WorldAddress(SkyStratum.StratumName, 1, 0));
+    var durableBell = durableArea.Cells.Single(cell => cell.Address == SkyStratum.LandmarkAddress);
+
+    Assert(ChronicleState.LooseStoneIdentity == "Loose Stone", "The loose Stone must have one stable durable identity.");
+    Assert(
+        stone.Ground == WorldGround.OpenSky &&
+        stone.Feature == WorldFeature.Stone &&
+        stone.DurableIdentity == ChronicleState.LooseStoneIdentity,
+        "The moved loose Stone must overlay generated Sky semantics after save/load.");
+    Assert(
+        durableBell.Feature == WorldFeature.Landmark &&
+        durableBell.DurableIdentity == SkyStratum.LandmarkName,
+        "Overlaying the loose Stone must not displace the Bell's durable identity.");
+}
+
+static void VerifyVersion1CardinalAdjacencyContext()
+{
+    var state = ChronicleState.Begin(41_337);
+    var surface = WorldArea.Generate(
+        state,
+        SurfacePatch.SurfaceStratum,
+        new WorldRectangle(MinX: -16, MinY: -16, Width: 33, Height: 33));
+    var sky = WorldArea.Generate(
+        state,
+        SkyStratum.StratumName,
+        new WorldRectangle(MinX: -16, MinY: -20, Width: 33, Height: 33));
+
+    Assert(surface.Cells.Any(cell => cell.Ground == WorldGround.Water), "The adjacency fixture must include water.");
+    Assert(sky.Cells.Any(cell => cell.Feature == WorldFeature.Cloud), "The adjacency fixture must include cloud.");
+    AssertVersion1AdjacencyContext(surface, "Surface");
+    AssertVersion1AdjacencyContext(sky, "Sky");
+}
+
+static void VerifyVersion1CoordinateLimitsDoNotWrap()
+{
+    var state = ChronicleState.Begin(41_338);
+
+    foreach (var stratum in new[] { SurfacePatch.SurfaceStratum, SkyStratum.StratumName })
+    {
+        var maximum = WorldArea.Generate(
+            state,
+            stratum,
+            new WorldRectangle(long.MaxValue, 0, 1, 1)).Cells.Single();
+        var minimum = WorldArea.Generate(
+            state,
+            stratum,
+            new WorldRectangle(long.MinValue, 0, 1, 1)).Cells.Single();
+
+        Assert(
+            !maximum.SameFormAdjacency.East,
+            $"The {stratum} cell at long.MaxValue must not wrap its east adjacency to long.MinValue.");
+        Assert(
+            !minimum.SameFormAdjacency.West,
+            $"The {stratum} cell at long.MinValue must not wrap its west adjacency to long.MaxValue.");
+        Assert(
+            WorldArea.Generate(
+                state,
+                stratum,
+                new WorldRectangle(long.MaxValue, 0, 1, 1)).Cells.Single() == maximum,
+            $"The {stratum} grammar must remain deterministic at the maximum representable address.");
+    }
+}
+
+static void VerifyAreaQueriesStayOutOfPersistenceAndReplay()
+{
+    var movedStone = new ChronicleSimulation(LearnedAtSurface());
+    movedStone.Apply(new ConfigureLoadoutSlot(0, ChronicleVerb.Fly, ChronicleNoun.Stone));
+    movedStone.Apply(new UseLoadoutSlot(0, ChronicleState.InitialLooseStoneAddress));
+    var json = ChronicleSaveCodec.Serialize(movedStone.State);
+
+    Assert(json.Contains("\"WorldGrammarVersion\"", StringComparison.Ordinal), "A v1 save must preserve its World Grammar version.");
+    Assert(json.Contains("\"LooseStoneAddress\"", StringComparison.Ordinal), "A v1 save must preserve the moved loose Stone's durable address.");
+
+    foreach (var generatedOrPresentationConcept in new[]
+    {
+        "Cells",
+        "Tiles",
+        "Motif",
+        "Adjacency",
+        "Inspector",
+        "Overlay",
+        "Zoom",
+        "Render",
+        "Capture",
+    })
+    {
+        Assert(
+            !json.Contains(generatedOrPresentationConcept, StringComparison.OrdinalIgnoreCase),
+            $"A Chronicle save must not persist generated or presentation concept '{generatedOrPresentationConcept}'.");
+    }
+
+    Assert(
+        ReplayWithOptionalAreaQueries(interleaveAreaQueries: false) ==
+        ReplayWithOptionalAreaQueries(interleaveAreaQueries: true),
+        "Interleaved Surface and Sky area queries must not affect an otherwise identical Chronicle replay.");
+}
+
+static ChronicleState ReplayWithOptionalAreaQueries(bool interleaveAreaQueries)
+{
+    var simulation = new ChronicleSimulation(ChronicleState.Begin(41_337));
+    simulation.Apply(new ChooseUpIntent());
+
+    if (interleaveAreaQueries)
+    {
+        WorldArea.Generate(simulation.State, SkyStratum.StratumName, new WorldRectangle(-3, -7, 7, 7));
+        WorldArea.Generate(simulation.State, SurfacePatch.SurfaceStratum, new WorldRectangle(-3, -3, 7, 7));
+    }
+
+    simulation.Apply(new SetChronicleSpeed(ChronicleSpeed.Fast));
+    simulation.AdvanceClockPulse();
+    simulation.Apply(new UseLoadoutSlot(0));
+
+    if (interleaveAreaQueries)
+    {
+        WorldArea.Generate(simulation.State, SurfacePatch.SurfaceStratum, new WorldRectangle(-6, -4, 9, 5));
+        WorldArea.Generate(simulation.State, SkyStratum.StratumName, new WorldRectangle(-6, -8, 9, 9));
+    }
+
+    simulation.Apply(new MoveIncarnation(1, 0));
+    simulation.AdvanceClockPulse();
+    return simulation.State;
+}
+
+static void AssertVersion1AdjacencyContext(WorldArea area, string stratumName)
+{
+    var cells = area.Cells.ToDictionary(cell => cell.Address);
+
+    foreach (var cell in area.Cells.Where(cell =>
+                 cell.Address.X > area.Bounds.MinX &&
+                 cell.Address.X < area.Bounds.MinX + area.Bounds.Width - 1 &&
+                 cell.Address.Y > area.Bounds.MinY &&
+                 cell.Address.Y < area.Bounds.MinY + area.Bounds.Height - 1))
+    {
+        Assert(
+            cell.SameFormAdjacency.North == HasSameGroundAndFeature(cells, cell, 0, -1),
+            $"{stratumName} North adjacency must match the neighboring semantic form.");
+        Assert(
+            cell.SameFormAdjacency.East == HasSameGroundAndFeature(cells, cell, 1, 0),
+            $"{stratumName} East adjacency must match the neighboring semantic form.");
+        Assert(
+            cell.SameFormAdjacency.South == HasSameGroundAndFeature(cells, cell, 0, 1),
+            $"{stratumName} South adjacency must match the neighboring semantic form.");
+        Assert(
+            cell.SameFormAdjacency.West == HasSameGroundAndFeature(cells, cell, -1, 0),
+            $"{stratumName} West adjacency must match the neighboring semantic form.");
+    }
+}
+
+static bool HasSameGroundAndFeature(
+    IReadOnlyDictionary<WorldAddress, WorldCell> cells,
+    WorldCell cell,
+    int deltaX,
+    int deltaY)
+{
+    var neighbor = cells[cell.Address with
+    {
+        X = cell.Address.X + deltaX,
+        Y = cell.Address.Y + deltaY,
+    }];
+    return cell.Ground == neighbor.Ground && cell.Feature == neighbor.Feature;
+}
+
+static bool HasNamedCloudBankSpanningAtLeast45Cells(IReadOnlyList<WorldCell> cells) =>
+    HasConnectedNamedFormSpanning(
+        cells,
+        cell => cell.Feature == WorldFeature.Cloud,
+        minimumSpan: 45);
+
+static bool HasVersion1SurfaceInteraction(WorldArea area)
+{
+    var cells = area.Cells.ToDictionary(cell => cell.Address);
+
+    return cells.Values.Any(cell =>
+        IsVersion1SurfaceInteraction(cells, cell, 1, 0) ||
+        IsVersion1SurfaceInteraction(cells, cell, 0, 1));
+}
+
+static bool IsVersion1SurfaceInteraction(
+    IReadOnlyDictionary<WorldAddress, WorldCell> cells,
+    WorldCell cell,
+    int deltaX,
+    int deltaY) =>
+    cells.TryGetValue(
+        cell.Address with { X = cell.Address.X + deltaX, Y = cell.Address.Y + deltaY },
+        out var neighbor) &&
+    !string.IsNullOrWhiteSpace(cell.MotifIdentity) &&
+    !string.IsNullOrWhiteSpace(neighbor.MotifIdentity) &&
+    !string.Equals(cell.MotifIdentity, neighbor.MotifIdentity, StringComparison.Ordinal) &&
+    ((cell.Ground == WorldGround.Water && neighbor.Feature == WorldFeature.Stone) ||
+     (neighbor.Ground == WorldGround.Water && cell.Feature == WorldFeature.Stone) ||
+     (IsClearing(cell) && neighbor.Feature == WorldFeature.Vegetation) ||
+     (IsClearing(neighbor) && cell.Feature == WorldFeature.Vegetation));
+
+static bool HasNamedMotifSpanningAtLeast45Cells(IReadOnlyList<WorldCell> cells) =>
+    HasConnectedNamedFormSpanning(cells, _ => true, minimumSpan: 45);
+
+static bool HasConnectedNamedFormSpanning(
+    IReadOnlyList<WorldCell> cells,
+    Func<WorldCell, bool> include,
+    long minimumSpan)
+{
+    var candidates = cells
+        .Where(cell => include(cell) && !string.IsNullOrWhiteSpace(cell.MotifIdentity))
+        .ToDictionary(cell => cell.Address);
+    var visited = new HashSet<WorldAddress>();
+
+    foreach (var start in candidates.Values)
+    {
+        if (!visited.Add(start.Address))
+        {
+            continue;
+        }
+
+        var motif = start.MotifIdentity;
+        var queue = new Queue<WorldCell>();
+        queue.Enqueue(start);
+        var minX = start.Address.X;
+        var maxX = start.Address.X;
+        var minY = start.Address.Y;
+        var maxY = start.Address.Y;
+
+        while (queue.TryDequeue(out var cell))
+        {
+            minX = Math.Min(minX, cell.Address.X);
+            maxX = Math.Max(maxX, cell.Address.X);
+            minY = Math.Min(minY, cell.Address.Y);
+            maxY = Math.Max(maxY, cell.Address.Y);
+            if (maxX - minX >= minimumSpan || maxY - minY >= minimumSpan)
+            {
+                return true;
+            }
+
+            EnqueueConnected(candidates, visited, queue, motif, cell.Address with { Y = cell.Address.Y - 1 });
+            EnqueueConnected(candidates, visited, queue, motif, cell.Address with { X = cell.Address.X + 1 });
+            EnqueueConnected(candidates, visited, queue, motif, cell.Address with { Y = cell.Address.Y + 1 });
+            EnqueueConnected(candidates, visited, queue, motif, cell.Address with { X = cell.Address.X - 1 });
+        }
+    }
+
+    return false;
+}
+
+static void EnqueueConnected(
+    IReadOnlyDictionary<WorldAddress, WorldCell> candidates,
+    ISet<WorldAddress> visited,
+    Queue<WorldCell> queue,
+    string? motif,
+    WorldAddress neighbor)
+{
+    if (candidates.TryGetValue(neighbor, out var next) &&
+        string.Equals(next.MotifIdentity, motif, StringComparison.Ordinal) &&
+        visited.Add(neighbor))
+    {
+        queue.Enqueue(next);
+    }
+}
+
+static bool IsClearing(WorldCell cell) =>
+    cell.Feature is null && cell.Ground is WorldGround.Grass or WorldGround.Soil;
+
+static (WorldGround Ground, WorldFeature? Feature) LegacySurfaceSemantics(SurfaceTerrain terrain) => terrain switch
+{
+    SurfaceTerrain.Grass => (WorldGround.Grass, null),
+    SurfaceTerrain.Forest => (WorldGround.Grass, WorldFeature.Vegetation),
+    SurfaceTerrain.Stone => (WorldGround.Soil, WorldFeature.Stone),
+    SurfaceTerrain.Water => (WorldGround.Water, null),
+    _ => throw new ArgumentOutOfRangeException(nameof(terrain)),
+};
+
+static (WorldGround Ground, WorldFeature? Feature, string? DurableIdentity) LegacySkySemantics(SkyTerrain terrain) => terrain switch
+{
+    SkyTerrain.OpenSky => (WorldGround.OpenSky, null, null),
+    SkyTerrain.Cloud => (WorldGround.OpenSky, WorldFeature.Cloud, null),
+    SkyTerrain.Landmark => (WorldGround.OpenSky, WorldFeature.Landmark, SkyStratum.LandmarkName),
+    _ => throw new ArgumentOutOfRangeException(nameof(terrain)),
+};
+
+static WorldCardinalAdjacency LegacySurfaceAdjacency(SurfacePatch patch, SurfaceTile cell) =>
+    new(
+        North: LegacySurfaceFormMatches(patch, cell, 0, -1),
+        East: LegacySurfaceFormMatches(patch, cell, 1, 0),
+        South: LegacySurfaceFormMatches(patch, cell, 0, 1),
+        West: LegacySurfaceFormMatches(patch, cell, -1, 0));
+
+static WorldCardinalAdjacency LegacySkyAdjacency(SkyStratum sky, SkyTile cell) =>
+    new(
+        North: LegacySkyFormMatches(sky, cell, 0, -1),
+        East: LegacySkyFormMatches(sky, cell, 1, 0),
+        South: LegacySkyFormMatches(sky, cell, 0, 1),
+        West: LegacySkyFormMatches(sky, cell, -1, 0));
+
+static bool LegacySurfaceFormMatches(SurfacePatch patch, SurfaceTile cell, int deltaX, int deltaY) =>
+    LegacySurfaceSemantics(cell.Terrain) == LegacySurfaceSemantics(
+        patch.Tiles.Single(tile => tile.Address == new WorldAddress(
+            SurfacePatch.SurfaceStratum,
+            cell.Address.X + deltaX,
+            cell.Address.Y + deltaY)).Terrain);
+
+static bool LegacySkyFormMatches(SkyStratum sky, SkyTile cell, int deltaX, int deltaY) =>
+    LegacySkySemantics(cell.Terrain) == LegacySkySemantics(
+        sky.TileAt(new WorldAddress(
+            SkyStratum.StratumName,
+            cell.Address.X + deltaX,
+            cell.Address.Y + deltaY)).Terrain);
 
 static void VerifySaveLoad()
 {

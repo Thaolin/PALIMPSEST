@@ -264,6 +264,12 @@ Generated but untouched territory waits deterministically. Known distant
 places accumulate causal history at an appropriate resolution, while the area
 around the current Incarnation receives full attention.
 
+A World Atlas may eventually let the player read this larger shape through the
+same symbolic visual language as the local world. It reveals geography,
+Landmarks, routes, and history that the Chronicle has made knowable; it is not
+an omniscient miniature tactical scene, a declaration of a finite world edge,
+or automatic fast travel.
+
 ## Palimpsests
 
 Palimpsests are discovered, world-scale artifacts associated with the

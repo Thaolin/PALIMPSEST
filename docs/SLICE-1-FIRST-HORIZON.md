@@ -7,6 +7,10 @@ from any surface or sky address. The revision also adds the minimal eight-slot
 hotbar established for an Incarnation, without beginning Loadout management or
 Slice 2.
 
+The implementation paths below are historical. Slice 3 Gate 3B later replaced
+the two concrete Godot views with the shared `WorldVisualView`; current
+ownership is canonical in the [Codemap](CODEMAP.md).
+
 ## Outcome
 
 A new player deliberately chooses `UP`, receives `Fly`, enters the sky at the
