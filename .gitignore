@@ -1,0 +1,17 @@
+# Godot generated state
+.godot/
+.import/
+
+# .NET build products
+**/bin/
+**/obj/
+
+# Local engine and SDK downloads
+.tools/
+tools/godot/
+
+# IDE state
+.vs/
+.idea/
+*.user
+*.suo
