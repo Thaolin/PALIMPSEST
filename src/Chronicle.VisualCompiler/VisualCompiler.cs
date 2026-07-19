@@ -17,7 +17,7 @@ public sealed record CompilerDiagnostic(
     string Message);
 public sealed record ReviewFile(string Path, ImmutableArray<byte> Bytes);
 
-public sealed record CompilationResult(
+internal sealed record CompilationResult(
     CompiledVisualPack? Pack,
     ImmutableArray<CompilerDiagnostic> Diagnostics,
     string NormalizedSourceDigest,
@@ -32,13 +32,54 @@ public sealed record CompilationResult(
 
 public static class VisualCompiler
 {
-    public static CompilationResult Compile(
+    public static Palimpsest20CompilationResult CompilePalimpsest20(
+        VisualCatalogue catalogue,
+        CompilationOptions options)
+    {
+        var authoring = Compile(catalogue, options);
+        if (!authoring.Succeeded || authoring.Pack is null)
+        {
+            return new Palimpsest20CompilationResult(
+                null,
+                null,
+                authoring.Diagnostics,
+                authoring.NormalizedSourceDigest,
+                authoring.ReviewFiles);
+        }
+
+        try
+        {
+            var exported = Palimpsest20Exporter.Export(authoring.Pack, catalogue);
+            return new Palimpsest20CompilationResult(
+                exported.Pack,
+                exported.Validation,
+                authoring.Diagnostics,
+                authoring.NormalizedSourceDigest,
+                authoring.ReviewFiles);
+        }
+        catch (Exception exception) when (
+            exception is FormatException or ArgumentException or InvalidOperationException)
+        {
+            return new Palimpsest20CompilationResult(
+                null,
+                null,
+                authoring.Diagnostics.Add(new CompilerDiagnostic(
+                    "CVC-PAL20-001",
+                    DiagnosticSeverity.Error,
+                    catalogue.PackId,
+                    exception.Message)),
+                authoring.NormalizedSourceDigest,
+                ImmutableArray<ReviewFile>.Empty);
+        }
+    }
+
+    internal static CompilationResult Compile(
         VisualCatalogue catalogue,
         CompilationOptions options)
     {
         var diagnostics = new List<CompilerDiagnostic>();
         var sourceDigest = PackDigests.Bytes(catalogue.NormalizedBytes.AsSpan());
-        if (catalogue.SchemaVersion != 1)
+        if (catalogue.SchemaVersion is not (1 or 2))
         {
             diagnostics.Add(new CompilerDiagnostic(
                 "CVC-CAT-003",
@@ -128,12 +169,12 @@ public static class VisualCompiler
                 var items = targetGroup.OrderBy(static item => item.family.Id, StringComparer.Ordinal)
                     .ToArray();
                 var dimensions = items
-                    .Select(static item => Dimensions(item.family, item.target))
+                    .Select(static item => Dimensions(item.target))
                     .ToArray();
                 if (items.Any(item =>
-                        Dimensions(item.family, item.target).Width >
+                        Dimensions(item.target).Width >
                             item.target.NativeSize ||
-                        Dimensions(item.family, item.target).Height >
+                        Dimensions(item.target).Height >
                             item.target.NativeSize))
                 {
                     throw new FormatException(
@@ -152,10 +193,6 @@ public static class VisualCompiler
                     var targetHeight = dimensions[itemIndex].Height;
                     var x = itemIndex % shelfColumns * target.NativeSize;
                     var y = itemIndex / shelfColumns * target.NativeSize;
-                    var colour = target.PaletteRoles.IsEmpty
-                        ? (byte)1
-                        : packPalette.Roles.First(role =>
-                            role.Name == target.PaletteRoles[0]).Index;
                     Raster(
                         family,
                         target,
@@ -165,7 +202,7 @@ public static class VisualCompiler
                         y,
                         family.Seed,
                         variant,
-                        colour);
+                        primaryRoles);
                     var rectangle = new PixelRect(
                         x,
                         y,
@@ -178,7 +215,7 @@ public static class VisualCompiler
                         target.NativeSize,
                         null,
                         TransformFlags.None,
-                        true,
+                        target.RequireConnected,
                         pixels,
                         width);
                     var geometrySet = generatedGeometry.GetValueOrDefault((
@@ -210,7 +247,7 @@ public static class VisualCompiler
                         null,
                         TransformFlags.None,
                         target.PaletteRoles,
-                        true,
+                        target.RequireConnected,
                         geometry,
                         ImmutableArray.Create("authored")));
                 }
@@ -233,13 +270,18 @@ public static class VisualCompiler
             {
                 var paletteIndex = packPalette.Roles
                     .FirstOrDefault(role => role.Name == family.PaletteRole);
-                if (paletteIndex is null)
+                var treatmentColours = family.PaletteRoles
+                    .Select(role => packPalette.Roles
+                        .FirstOrDefault(candidate => candidate.Name == role))
+                    .ToArray();
+                if (paletteIndex is null ||
+                    treatmentColours.Any(static role => role is null))
                 {
                     diagnostics.Add(new CompilerDiagnostic(
                         "CVC-PAL-003",
                         DiagnosticSeverity.Error,
                         family.Id,
-                        $"Missing palette role '{family.PaletteRole}'."));
+                        "Connected family references a missing palette role."));
                     continue;
                 }
 
@@ -269,7 +311,10 @@ public static class VisualCompiler
                                 y,
                                 nativeSize,
                                 mask,
-                                paletteIndex.Index,
+                                treatmentColours
+                                    .Select(static role => role!.Index)
+                                    .ToArray(),
+                                family.MaterialTreatment,
                                 family.Seed,
                                 variant);
                             var rectangle = new PixelRect(
@@ -284,7 +329,7 @@ public static class VisualCompiler
                                 nativeSize,
                                 mask,
                                 TransformFlags.None,
-                                true,
+                                family.MaterialTreatment != MaterialTreatment.Transition,
                                 pixels,
                                 width);
                             if (!maskGeometry.Add(geometry))
@@ -307,15 +352,15 @@ public static class VisualCompiler
                                 nativeSize,
                                 mask,
                                 TransformFlags.None,
-                                ImmutableArray.Create(family.PaletteRole),
-                                true,
+                                family.PaletteRoles,
+                                family.MaterialTreatment != MaterialTreatment.Transition,
                                 geometry,
-                                family.TransitionOwnership is null
+                                family.TransitionOwnership == TransitionOwnership.None
                                     ? ImmutableArray.Create("connected")
                                     : ImmutableArray.Create(
                                         "connected",
                                         "transition",
-                                        $"ownership:{family.TransitionOwnership}")));
+                                        "ownership:primary-ground-plus-one-transition")));
                         }
                     }
                     atlases.Add(new AtlasRecord(
@@ -339,14 +384,19 @@ public static class VisualCompiler
 
             var motifs = catalogue.Motifs.Select(static motif => new MotifRecord(
                 motif.FamilyId,
+                motif.Seed,
+                motif.VariantCount,
                 motif.Footprint,
                 motif.AnchorCell,
                 motif.Marks.Select(static mark => new MotifMark(
                     mark.VisualId,
                     mark.Cell,
-                    mark.PixelOffset)).ToImmutableArray(),
+                    mark.PixelOffset,
+                    mark.VariantOrdinal)).ToImmutableArray(),
                 motif.OccupancyTags,
-                motif.ClippingBehavior)).ToImmutableArray();
+                motif.ClippingBehavior == ClippingBehavior.Clip
+                    ? MotifClippingBehavior.Clip
+                    : MotifClippingBehavior.Reject)).ToImmutableArray();
             var definition = new CompiledVisualPack(
                 catalogue.PackId,
                 new CompatibilityRecord(
@@ -373,7 +423,7 @@ public static class VisualCompiler
                 catalogue.Families.Select(static family =>
                     new ProvenanceRecord(
                         family.Id,
-                        family.Generation == "class-specific"
+                        family.Generation == GenerationStrategy.RoleMask
                             ? "procedural"
                             : family.Id.StartsWith(
                                 "baseline.",
@@ -382,7 +432,7 @@ public static class VisualCompiler
                                 : "authored",
                         family.Id,
                         "project",
-                        family.Generation == "class-specific"
+                        family.Generation == GenerationStrategy.RoleMask
                             ? $"{family.Targets.Length} target parameter sets; " +
                               "0 authored pixel rows"
                             : family.Id.StartsWith(
@@ -457,26 +507,8 @@ public static class VisualCompiler
             ImmutableArray<ReviewFile>.Empty);
     }
 
-    private static PixelSize Dimensions(
-        CatalogueFamily family,
-        CatalogueTarget target)
+    private static PixelSize Dimensions(CatalogueTarget target)
     {
-        if (family.Generation == "class-specific")
-        {
-            return (family.Id, target.NativeSize) switch
-            {
-                ("actor.incarnation", 16) => new PixelSize(7, 6),
-                ("actor.incarnation", 20) => new PixelSize(9, 7),
-                ("subject.loose-stone", 16) => new PixelSize(5, 5),
-                ("subject.loose-stone", 20) => new PixelSize(7, 6),
-                ("landmark.bell-that-fell-up", 16) => new PixelSize(7, 7),
-                ("landmark.bell-that-fell-up", 20) => new PixelSize(9, 8),
-                _ => throw new FormatException(
-                    $"CVC-RASTER-005: no class-specific rule for '{family.Id}' " +
-                    $"at {target.NativeSize}px.")
-            };
-        }
-
         if (target.Rows.IsEmpty || target.Rows[0].Length == 0 ||
             target.Rows.Any(row => row.Length != target.Rows[0].Length))
         {
@@ -495,36 +527,23 @@ public static class VisualCompiler
         int offsetY,
         ulong seed,
         int variant,
-        byte colour)
+        IReadOnlyDictionary<string, byte> paletteRoles)
     {
-        var dimensions = Dimensions(family, target);
-        if (family.Generation == "class-specific")
+        var dimensions = Dimensions(target);
+        for (var y = 0; y < dimensions.Height; y++)
         {
-            RasterClassSpecific(
-                family.Id,
-                destination,
-                atlasWidth,
-                offsetX,
-                offsetY,
-                dimensions.Width,
-                dimensions.Height,
-                colour);
-        }
-        else
-        {
-            for (var y = 0; y < dimensions.Height; y++)
+            for (var x = 0; x < dimensions.Width; x++)
             {
-                for (var x = 0; x < dimensions.Width; x++)
+                var value = target.Rows[y][x] - '0';
+                if ((uint)value > 9)
                 {
-                    var value = target.Rows[y][x] - '0';
-                    if ((uint)value > 9)
-                    {
-                        throw new FormatException(
-                            "CVC-RASTER-003: rows use decimal palette indexes.");
-                    }
-                    destination[(offsetY + y) * atlasWidth + offsetX + x] =
-                        (byte)value;
+                    throw new FormatException(
+                        "CVC-RASTER-003: rows use decimal palette indexes.");
                 }
+                destination[(offsetY + y) * atlasWidth + offsetX + x] =
+                    family.Generation == GenerationStrategy.RoleMask && value != 0
+                        ? paletteRoles[target.PaletteRoles[value - 1]]
+                        : (byte)value;
             }
         }
 
@@ -540,71 +559,6 @@ public static class VisualCompiler
                 dimensions.Width,
                 dimensions.Height);
         }
-    }
-
-    private static void RasterClassSpecific(
-        string familyId,
-        byte[] destination,
-        int atlasWidth,
-        int offsetX,
-        int offsetY,
-        int width,
-        int height,
-        byte colour)
-    {
-        var center = width / 2;
-        switch (familyId)
-        {
-            case "actor.incarnation":
-                Set(center, 0);
-                Fill(center - 1, center + 1, 1);
-                Fill(center - 2, center + 2, 2);
-                for (var y = 3; y < height - 1; y++)
-                {
-                    Fill(center - 1, center + 1, y);
-                }
-                Fill(center - 2, center - 1, height - 1);
-                Fill(center + 1, center + 2, height - 1);
-                break;
-            case "subject.loose-stone":
-                for (var y = 0; y < height; y++)
-                {
-                    var half = y switch
-                    {
-                        0 => 1,
-                        1 => Math.Min(2, width / 2),
-                        _ when y == height - 1 => Math.Min(2, width / 2),
-                        _ => width / 2
-                    };
-                    Fill(center - half, center + half, y);
-                }
-                break;
-            case "landmark.bell-that-fell-up":
-                Set(center, 0);
-                Fill(center - 1, center + 1, 1);
-                for (var y = 2; y < height - 2; y++)
-                {
-                    var half = Math.Min(width / 2, 1 + y / 2);
-                    Fill(center - half, center + half, y);
-                }
-                Fill(0, width - 1, height - 2);
-                Fill(1, width - 2, height - 1);
-                break;
-            default:
-                throw new FormatException(
-                    $"CVC-RASTER-005: no class-specific rule for '{familyId}'.");
-        }
-
-        void Fill(int from, int to, int y)
-        {
-            for (var x = Math.Max(0, from); x <= Math.Min(width - 1, to); x++)
-            {
-                Set(x, y);
-            }
-        }
-
-        void Set(int x, int y) =>
-            destination[(offsetY + y) * atlasWidth + offsetX + x] = colour;
     }
 
     private static void ApplyVariant(
@@ -646,13 +600,10 @@ public static class VisualCompiler
                     candidate.X;
                 var old = destination[index];
                 destination[index] = 0;
-                if (Connected(
+                if (PixelConnectivity.IsFourConnected(
                     destination,
                     atlasWidth,
-                    offsetX,
-                    offsetY,
-                    width,
-                    height))
+                    new PixelRect(offsetX, offsetY, width, height)))
                 {
                     return;
                 }
@@ -667,56 +618,25 @@ public static class VisualCompiler
                 Math.Abs(point.X - candidate.X) + Math.Abs(point.Y - candidate.Y) == 1);
             if (adjacent)
             {
+                byte colour = 0;
+                foreach (var point in occupied)
+                {
+                    colour = destination[
+                        (offsetY + point.Y) * atlasWidth + offsetX + point.X];
+                    if (colour != 0)
+                    {
+                        break;
+                    }
+                }
                 destination[
                     (offsetY + candidate.Y) * atlasWidth +
                     offsetX +
-                    candidate.X] = 1;
+                    candidate.X] = colour;
                 return;
             }
         }
 
         throw new FormatException("CVC-VAR-001: requested variant cannot differ safely.");
-    }
-
-    private static bool Connected(
-        ReadOnlySpan<byte> pixels,
-        int atlasWidth,
-        int offsetX,
-        int offsetY,
-        int width,
-        int height)
-    {
-        var occupied = new HashSet<(int X, int Y)>();
-        for (var y = 0; y < height; y++)
-        {
-            for (var x = 0; x < width; x++)
-            {
-                if (pixels[(offsetY + y) * atlasWidth + offsetX + x] != 0)
-                {
-                    occupied.Add((x, y));
-                }
-            }
-        }
-        if (occupied.Count == 0)
-        {
-            return false;
-        }
-
-        var pending = new Queue<(int X, int Y)>();
-        var reached = new HashSet<(int X, int Y)>();
-        pending.Enqueue(occupied.First());
-        while (pending.TryDequeue(out var point))
-        {
-            if (!occupied.Contains(point) || !reached.Add(point))
-            {
-                continue;
-            }
-            pending.Enqueue((point.X + 1, point.Y));
-            pending.Enqueue((point.X - 1, point.Y));
-            pending.Enqueue((point.X, point.Y + 1));
-            pending.Enqueue((point.X, point.Y - 1));
-        }
-        return reached.Count == occupied.Count;
     }
 
     private static ulong Mix(ulong value)
@@ -734,48 +654,199 @@ public static class VisualCompiler
         int offsetY,
         int size,
         int mask,
-        byte colour,
+        IReadOnlyList<byte> colours,
+        MaterialTreatment treatment,
         ulong seed,
         int variant)
     {
         var center = size / 2;
-        for (var y = center - 1; y <= center + 1; y++)
+        switch (treatment)
         {
-            for (var x = center - 1; x <= center + 1; x++)
-            {
-                Set(x, y);
-            }
-        }
-        if ((mask & 1) != 0)
-        {
-            for (var y = 0; y < center; y++) Set(center, y);
-        }
-        if ((mask & 2) != 0)
-        {
-            for (var x = center + 1; x < size; x++) Set(x, center);
-        }
-        if ((mask & 4) != 0)
-        {
-            for (var y = center + 1; y < size; y++) Set(center, y);
-        }
-        if ((mask & 8) != 0)
-        {
-            for (var x = 0; x < center; x++) Set(x, center);
-        }
-        if (variant > 0)
-        {
-            var mixed = Mix(seed ^ (ulong)(mask * 31 + variant));
-            var candidates = new (int X, int Y)[]
-            {
-                (2, 1), (1, 2), (-1, 2), (-2, 1),
-                (-2, -1), (-1, -2), (1, -2), (2, -1)
-            };
-            var candidate = candidates[
-                (int)(mixed % (ulong)candidates.Length)];
-            Set(center + candidate.X, center + candidate.Y);
+            case MaterialTreatment.Water:
+                Connections(2, Colour(1));
+                FillBox(center - 4, center - 4, 9, 9, Colour(1));
+                Horizontal(center - 3, center + 3, center - 2, Colour(2));
+                Shore(Colour(0));
+                break;
+            case MaterialTreatment.Cloud:
+                Connections(2, Colour(1));
+                FillBox(center - 4, center - 3, 9, 7, Colour(1));
+                FillBox(center - 2, center - 5, 5, 11, Colour(1));
+                Horizontal(center - 4, center + 4, center + 3, Colour(0));
+                Set(center - 4, center - 3, Colour(0));
+                Set(center + 4, center - 2, Colour(0));
+                break;
+            case MaterialTreatment.Grove:
+                Connections(1, Colour(0));
+                FillBox(center - 4, center - 3, 9, 6, Colour(1));
+                FillBox(center - 2, center - 5, 5, 10, Colour(1));
+                Horizontal(center - 3, center + 3, center - 3, Colour(2));
+                Vertical(center, center + 1, center + 5, Colour(3));
+                break;
+            case MaterialTreatment.Ridge:
+                Connections(3, Colour(1));
+                FillBox(center - 5, center - 4, 11, 9, Colour(1));
+                Horizontal(center - 4, center + 4, center - 3, Colour(2));
+                Horizontal(center - 5, center + 5, center + 3, Colour(0));
+                break;
+            case MaterialTreatment.Crossing:
+                Connections(3, Colour(1));
+                FillBox(center - 5, center - 4, 11, 9, Colour(1));
+                if ((variant & 1) == 0)
+                {
+                    Vertical(center - 1, center - 5, center + 5, Colour(3));
+                    Vertical(center, center - 5, center + 5, Colour(4));
+                }
+                else
+                {
+                    Horizontal(center - 5, center + 5, center - 1, Colour(3));
+                    Horizontal(center - 5, center + 5, center, Colour(4));
+                }
+                break;
+            case MaterialTreatment.Wall:
+                Connections(3, Colour(1));
+                FillBox(center - 5, center - 5, 11, 11, Colour(1));
+                Horizontal(center - 5, center + 5, center - 2, Colour(0));
+                Horizontal(center - 5, center + 5, center + 2, Colour(2));
+                break;
+            case MaterialTreatment.Path:
+                Connections(0, Colour(1));
+                FillBox(center - 1, center - 1, 3, 3, Colour(1));
+                Set(center - 1, center - 1, Colour(0));
+                break;
+            case MaterialTreatment.Transition:
+                Connections(1, Colour(1));
+                FillBox(center - 2, center - 2, 5, 5, Colour(1));
+                Shore(Colour(0));
+                Horizontal(center - 2, center + 2, center, Colour(2));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(treatment),
+                    treatment,
+                    "Unknown material treatment.");
         }
 
-        void Set(int x, int y) =>
-            destination[(offsetY + y) * atlasWidth + offsetX + x] = colour;
+        ApplyVariantGeometry();
+
+        void Connections(int halfWidth, byte colour)
+        {
+            FillBox(
+                center - halfWidth,
+                center - halfWidth,
+                halfWidth * 2 + 1,
+                halfWidth * 2 + 1,
+                colour);
+            if ((mask & 1) != 0)
+            {
+                FillBox(center - halfWidth, 0, halfWidth * 2 + 1, center + 1, colour);
+            }
+            if ((mask & 2) != 0)
+            {
+                FillBox(
+                    center,
+                    center - halfWidth,
+                    size - center,
+                    halfWidth * 2 + 1,
+                    colour);
+            }
+            if ((mask & 4) != 0)
+            {
+                FillBox(
+                    center - halfWidth,
+                    center,
+                    halfWidth * 2 + 1,
+                    size - center,
+                    colour);
+            }
+            if ((mask & 8) != 0)
+            {
+                FillBox(0, center - halfWidth, center + 1, halfWidth * 2 + 1, colour);
+            }
+        }
+
+        void Shore(byte colour)
+        {
+            if ((mask & 1) == 0) Horizontal(center - 4, center + 4, center - 5, colour);
+            if ((mask & 2) == 0) Vertical(center + 5, center - 4, center + 4, colour);
+            if ((mask & 4) == 0) Horizontal(center - 4, center + 4, center + 5, colour);
+            if ((mask & 8) == 0) Vertical(center - 5, center - 4, center + 4, colour);
+        }
+
+        void ApplyVariantGeometry()
+        {
+            if (variant == 0)
+            {
+                return;
+            }
+
+            if (treatment == MaterialTreatment.Path)
+            {
+                var side = (Mix(seed ^ (ulong)(mask * 31 + variant)) & 1) == 0
+                    ? -2
+                    : 2;
+                Set(center + side, center + 1, Colour(0));
+                return;
+            }
+
+            var holes = new[]
+            {
+                (X: center - 3, Y: center - 2),
+                (X: center + 3, Y: center - 2),
+                (X: center - 3, Y: center + 2)
+            };
+            for (var index = 0; index < variant && index < holes.Length; index++)
+            {
+                Clear(holes[index].X, holes[index].Y);
+            }
+        }
+
+        byte Colour(int index) =>
+            colours.Count == 0
+                ? throw new FormatException("CVC-PAL-003: treatment has no colours.")
+                : colours[Math.Min(index, colours.Count - 1)];
+
+        void FillBox(int x, int y, int width, int height, byte colour)
+        {
+            for (var row = y; row < y + height; row++)
+            {
+                for (var column = x; column < x + width; column++)
+                {
+                    Set(column, row, colour);
+                }
+            }
+        }
+
+        void Horizontal(int fromX, int toX, int y, byte colour)
+        {
+            for (var x = fromX; x <= toX; x++)
+            {
+                Set(x, y, colour);
+            }
+        }
+
+        void Vertical(int x, int fromY, int toY, byte colour)
+        {
+            for (var y = fromY; y <= toY; y++)
+            {
+                Set(x, y, colour);
+            }
+        }
+
+        void Clear(int x, int y)
+        {
+            if ((uint)x < (uint)size && (uint)y < (uint)size)
+            {
+                destination[(offsetY + y) * atlasWidth + offsetX + x] = 0;
+            }
+        }
+
+        void Set(int x, int y, byte colour)
+        {
+            if ((uint)x < (uint)size && (uint)y < (uint)size)
+            {
+                destination[(offsetY + y) * atlasWidth + offsetX + x] = colour;
+            }
+        }
     }
 }

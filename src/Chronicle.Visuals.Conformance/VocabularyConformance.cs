@@ -25,10 +25,10 @@ static class VocabularyConformance
               "id": "actor.incarnation",
               "seed": 703,
               "variantCount": 2,
-              "generation": "class-specific",
               "targets": [
                 {
                   "nativeSize": 16,
+                  "rows": ["010", "111", "010", "111"],
                   "anchor": [1, 3],
                   "layer": "actor",
                   "paletteRoles": ["figure.ink"]
@@ -84,17 +84,14 @@ static class VocabularyConformance
             static item => item.FamilyId == "actor.incarnation");
         var baselineProvenance = result.Pack.Provenance.Single(
             static item => item.FamilyId == "baseline.actor.incarnation");
-        if (candidateProvenance.Origin != "procedural" ||
-            candidateProvenance.ReviewNote?.Contains(
-                "0 authored pixel rows",
-                StringComparison.Ordinal) != true ||
+        if (candidateProvenance.Origin != "authored" ||
             baselineProvenance.Origin != "manual-baseline" ||
             baselineProvenance.ReviewNote?.Contains(
                 "authored pixel rows",
                 StringComparison.Ordinal) != true)
         {
             Console.Error.WriteLine(
-                "CVC-E3-PROVENANCE: procedural/manual authoring cost is unclear.");
+                "CVC-E3-PROVENANCE: authored/manual-baseline ownership is unclear.");
             return false;
         }
 

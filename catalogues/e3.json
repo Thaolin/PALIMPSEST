@@ -41,10 +41,9 @@
       "id": "actor.incarnation",
       "seed": 703,
       "variantCount": 3,
-      "generation": "class-specific",
       "targets": [
-        {"nativeSize": 16, "anchor": [3, 5], "layer": "actor", "paletteRoles": ["figure.ink"]},
-        {"nativeSize": 20, "anchor": [4, 6], "layer": "actor", "paletteRoles": ["figure.ink"]}
+        {"nativeSize": 16, "rows": ["0007000", "0077700", "0777770", "0077700", "0077700", "0770770"], "anchor": [3, 5], "layer": "actor", "paletteRoles": ["figure.ink"]},
+        {"nativeSize": 20, "rows": ["000070000", "000777000", "007777700", "000777000", "000777000", "000777000", "007707700"], "anchor": [4, 6], "layer": "actor", "paletteRoles": ["figure.ink"]}
       ]
     },
     {
@@ -159,10 +158,9 @@
       "id": "landmark.bell-that-fell-up",
       "seed": 901,
       "variantCount": 3,
-      "generation": "class-specific",
       "targets": [
-        {"nativeSize": 16, "anchor": [3, 6], "layer": "landmark", "paletteRoles": ["figure.ink"]},
-        {"nativeSize": 20, "anchor": [4, 7], "layer": "landmark", "paletteRoles": ["figure.ink"]}
+        {"nativeSize": 16, "rows": ["0007000", "0077700", "0777770", "0777770", "7777777", "7777777", "0777770"], "anchor": [3, 6], "layer": "landmark", "paletteRoles": ["figure.ink"]},
+        {"nativeSize": 20, "rows": ["000070000", "000777000", "007777700", "007777700", "077777770", "077777770", "777777777", "077777770"], "anchor": [4, 7], "layer": "landmark", "paletteRoles": ["figure.ink"]}
       ]
     },
     {
@@ -196,10 +194,9 @@
       "id": "subject.loose-stone",
       "seed": 811,
       "variantCount": 3,
-      "generation": "class-specific",
       "targets": [
-        {"nativeSize": 16, "anchor": [2, 4], "layer": "feature", "paletteRoles": ["object.ink"]},
-        {"nativeSize": 20, "anchor": [3, 5], "layer": "feature", "paletteRoles": ["object.ink"]}
+        {"nativeSize": 16, "rows": ["08880", "88888", "88888", "88888", "88888"], "anchor": [2, 4], "layer": "feature", "paletteRoles": ["object.ink"]},
+        {"nativeSize": 20, "rows": ["0088800", "0888880", "8888888", "8888888", "8888888", "0888880"], "anchor": [3, 5], "layer": "feature", "paletteRoles": ["object.ink"]}
       ]
     }
   ],

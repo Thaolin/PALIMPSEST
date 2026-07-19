@@ -169,6 +169,26 @@ static class ReferencePackConformance
             return 1;
         }
 
+        if (!Palimpsest20PackConformance.Run())
+        {
+            return 1;
+        }
+
+        if (!Palimpsest20CompilerConformance.Run())
+        {
+            return 1;
+        }
+
+        if (!Palimpsest20BundleConformance.Run())
+        {
+            return 1;
+        }
+
+        if (!MotifDeterminismConformance.Run())
+        {
+            return 1;
+        }
+
         Console.WriteLine(first.AggregateDigest);
         return 0;
     }

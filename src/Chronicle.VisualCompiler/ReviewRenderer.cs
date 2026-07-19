@@ -1,11 +1,13 @@
-using System.Buffers.Binary;
 using System.Collections.Immutable;
-using System.IO.Compression;
-using System.Text;
 using System.Text.Json;
 using Chronicle.VisualPack;
 
 namespace Chronicle.VisualCompiler;
+
+internal static class ReviewLimits
+{
+    public const long MaximumCanvasPixels = 16_777_216;
+}
 
 internal static class ReviewRenderer
 {
@@ -20,7 +22,7 @@ internal static class ReviewRenderer
             var atlases = group.OrderBy(static item => item.Id, StringComparer.Ordinal).ToArray();
             var width = atlases.Max(static item => item.Width);
             var height = atlases.Sum(static item => item.Height);
-            var rgba = new byte[width * height * 4];
+            var rgba = CreateCanvas(width, height);
             var offsetY = 0;
             foreach (var atlas in atlases)
             {
@@ -35,13 +37,13 @@ internal static class ReviewRenderer
                 offsetY += atlas.Height;
             }
 
-            var nativePng = ImmutableArray.Create(Png(width, height, rgba));
+            var nativePng = ImmutableArray.Create(PngEncoder.Encode(width, height, rgba));
             native.Add(new ReviewFile($"review/native-{group.Key}.png", nativePng));
             nearest.Add(new ReviewFile(
                 $"review/nearest-{group.Key}.png",
-                ImmutableArray.Create(Png(
-                    width * 4,
-                    height * 4,
+                ImmutableArray.Create(PngEncoder.Encode(
+                    ReviewDimension((long)width * 4),
+                    ReviewDimension((long)height * 4),
                     Scale4(width, height, rgba)))));
             if (pack.Adjacencies.Any(adjacency => pack.Visuals.Any(visual =>
                     visual.FamilyId == adjacency.FamilyId &&
@@ -95,14 +97,16 @@ internal static class ReviewRenderer
                     ImmutableArray.Create(ManualBaselineSheet(pack, group.Key))));
             }
         }
-        if (pack.Provenance.Any(static item => item.Origin == "procedural") &&
+        if (pack.Provenance.Any(static item =>
+                item.Origin is "authored" or "procedural") &&
             pack.Provenance.Any(static item => item.Origin == "manual-baseline"))
         {
             var evidence = JsonSerializer.SerializeToUtf8Bytes(
                 new
                 {
-                    procedural = pack.Provenance
-                        .Where(static item => item.Origin == "procedural")
+                    candidates = pack.Provenance
+                        .Where(static item =>
+                            item.Origin is "authored" or "procedural")
                         .OrderBy(static item => item.FamilyId, StringComparer.Ordinal)
                         .Select(static item => new
                         {
@@ -145,7 +149,7 @@ internal static class ReviewRenderer
         var height = Math.Max(
             nativeSize,
             ((visuals.Length + columns - 1) / columns) * nativeSize);
-        var rgba = new byte[width * height * 4];
+        var rgba = CreateCanvas(width, height);
         for (var index = 0; index < visuals.Length; index++)
         {
             Draw(
@@ -157,7 +161,7 @@ internal static class ReviewRenderer
                 height,
                 rgba);
         }
-        return Png(width, height, rgba);
+        return PngEncoder.Encode(width, height, rgba);
     }
 
     private static byte[] ShiftedOverlapSheet(
@@ -173,7 +177,7 @@ internal static class ReviewRenderer
         var width = nativeSize * 4;
         var familyHeight = nativeSize * 2;
         var height = Math.Max(nativeSize, families.Length * familyHeight);
-        var rgba = new byte[width * height * 4];
+        var rgba = CreateCanvas(width, height);
         for (var index = 0; index < families.Length; index++)
         {
             var adjacency = families[index];
@@ -194,7 +198,7 @@ internal static class ReviewRenderer
                 height,
                 rgba);
         }
-        return Png(width, height, rgba);
+        return PngEncoder.Encode(width, height, rgba);
     }
 
     private static byte[] MotifSheet(CompiledVisualPack pack, int nativeSize)
@@ -205,40 +209,51 @@ internal static class ReviewRenderer
                 visual.NativeSize == nativeSize)))
             .OrderBy(static motif => motif.FamilyId, StringComparer.Ordinal)
             .ToArray();
-        var width = Math.Max(
-            nativeSize,
-            motifs.Select(motif => motif.Footprint.Width * nativeSize)
+        var width = ReviewDimension(Math.Max(
+            (long)nativeSize,
+            motifs.Select(motif => (long)motif.Footprint.Width * nativeSize)
                 .DefaultIfEmpty(nativeSize)
-                .Max());
-        var height = Math.Max(
-            nativeSize,
-            motifs.Sum(motif => motif.Footprint.Height * nativeSize));
-        var rgba = new byte[width * height * 4];
+                .Max()));
+        var height = ReviewDimension(Math.Max(
+            (long)nativeSize,
+            motifs.Sum(motif =>
+                (long)motif.Footprint.Height * nativeSize * motif.VariantCount)));
+        var rgba = CreateCanvas(width, height);
         var offsetY = 0;
         foreach (var motif in motifs)
         {
-            foreach (var mark in motif.Marks)
+            for (var variant = 0; variant < motif.VariantCount; variant++)
             {
-                var visual = pack.Visuals.FirstOrDefault(item =>
-                    item.Id == mark.VisualId &&
-                    item.NativeSize == nativeSize &&
-                    item.VariantOrdinal == 0 &&
-                    item.AdjacencyMask is null);
-                if (visual is not null)
+                foreach (var mark in motif.Marks.Where(mark =>
+                             mark.VariantOrdinal == variant))
                 {
-                    Draw(
-                        pack,
-                        visual,
-                        mark.Cell.X * nativeSize + mark.PixelOffset.X,
-                        offsetY + mark.Cell.Y * nativeSize + mark.PixelOffset.Y,
-                        width,
-                        height,
-                        rgba);
+                    var visual = pack.Visuals
+                        .Where(item =>
+                            item.Id == mark.VisualId &&
+                            item.NativeSize == nativeSize &&
+                            item.VariantOrdinal == variant &&
+                            item.AdjacencyMask is null or 0)
+                        .OrderBy(static item => item.AdjacencyMask.HasValue)
+                        .FirstOrDefault();
+                    if (visual is not null)
+                    {
+                        Draw(
+                            pack,
+                            visual,
+                            (long)mark.Cell.X * nativeSize + mark.PixelOffset.X,
+                            (long)offsetY +
+                                (long)mark.Cell.Y * nativeSize +
+                                mark.PixelOffset.Y,
+                            width,
+                            height,
+                            rgba);
+                    }
                 }
+                offsetY += ReviewDimension(
+                    (long)motif.Footprint.Height * nativeSize);
             }
-            offsetY += motif.Footprint.Height * nativeSize;
         }
-        return Png(width, height, rgba);
+        return PngEncoder.Encode(width, height, rgba);
     }
 
     private static byte[] LayerSheet(CompiledVisualPack pack, int nativeSize)
@@ -266,7 +281,7 @@ internal static class ReviewRenderer
         }
         var width = columns * nativeSize;
         var height = Math.Max(nativeSize, rows.Count * nativeSize);
-        var rgba = new byte[width * height * 4];
+        var rgba = CreateCanvas(width, height);
         for (var row = 0; row < rows.Count; row++)
         {
             for (var column = 0; column < rows[row].Length; column++)
@@ -281,7 +296,7 @@ internal static class ReviewRenderer
                     rgba);
             }
         }
-        return Png(width, height, rgba);
+        return PngEncoder.Encode(width, height, rgba);
     }
 
     private static byte[] PaletteSheet(
@@ -336,7 +351,7 @@ internal static class ReviewRenderer
             .ToArray();
         var width = nativeSize * 2;
         var height = Math.Max(nativeSize, pairs.Length * nativeSize);
-        var rgba = new byte[width * height * 4];
+        var rgba = CreateCanvas(width, height);
         for (var index = 0; index < pairs.Length; index++)
         {
             Draw(
@@ -356,7 +371,7 @@ internal static class ReviewRenderer
                 height,
                 rgba);
         }
-        return Png(width, height, rgba);
+        return PngEncoder.Encode(width, height, rgba);
     }
 
     private static byte[] VisualGrid(
@@ -371,7 +386,7 @@ internal static class ReviewRenderer
         var height = Math.Max(
             nativeSize,
             ((visuals.Length + columns - 1) / columns) * nativeSize);
-        var rgba = new byte[width * height * 4];
+        var rgba = CreateCanvas(width, height);
         for (var index = 0; index < visuals.Length; index++)
         {
             Draw(
@@ -384,7 +399,7 @@ internal static class ReviewRenderer
                 rgba,
                 palette);
         }
-        return Png(width, height, rgba);
+        return PngEncoder.Encode(width, height, rgba);
     }
 
     private static VisualRecord ResolveForReview(
@@ -413,8 +428,8 @@ internal static class ReviewRenderer
     private static void Draw(
         CompiledVisualPack pack,
         VisualRecord visual,
-        int destinationX,
-        int destinationY,
+        long destinationX,
+        long destinationY,
         int destinationWidth,
         int destinationHeight,
         byte[] destination,
@@ -430,8 +445,8 @@ internal static class ReviewRenderer
             {
                 var outputX = destinationX + x;
                 var outputY = destinationY + y;
-                if ((uint)outputX >= (uint)destinationWidth ||
-                    (uint)outputY >= (uint)destinationHeight)
+                if ((ulong)outputX >= (ulong)destinationWidth ||
+                    (ulong)outputY >= (ulong)destinationHeight)
                 {
                     continue;
                 }
@@ -444,7 +459,8 @@ internal static class ReviewRenderer
                     continue;
                 }
                 var colour = palette.Entries[paletteIndex];
-                var output = (outputY * destinationWidth + outputX) * 4;
+                var output = checked((int)(
+                    (outputY * destinationWidth + outputX) * 4));
                 destination[output] = colour.R;
                 destination[output + 1] = colour.G;
                 destination[output + 2] = colour.B;
@@ -470,9 +486,10 @@ internal static class ReviewRenderer
 
     private static byte[] Scale4(int width, int height, ReadOnlySpan<byte> source)
     {
-        var scaledWidth = width * 4;
-        var result = new byte[scaledWidth * height * 4 * 4];
-        for (var y = 0; y < height * 4; y++)
+        var scaledWidth = ReviewDimension((long)width * 4);
+        var scaledHeight = ReviewDimension((long)height * 4);
+        var result = CreateCanvas(scaledWidth, scaledHeight);
+        for (var y = 0; y < scaledHeight; y++)
         {
             for (var x = 0; x < scaledWidth; x++)
             {
@@ -484,66 +501,27 @@ internal static class ReviewRenderer
         return result;
     }
 
-    private static byte[] Png(int width, int height, ReadOnlySpan<byte> rgba)
+    private static int ReviewDimension(long value)
     {
-        using var output = new MemoryStream();
-        output.Write([137, 80, 78, 71, 13, 10, 26, 10]);
-        Span<byte> header = stackalloc byte[13];
-        BinaryPrimitives.WriteInt32BigEndian(header, width);
-        BinaryPrimitives.WriteInt32BigEndian(header[4..], height);
-        header[8] = 8;
-        header[9] = 6;
-        WriteChunk(output, "IHDR", header);
-
-        using var compressed = new MemoryStream();
-        using (var zlib = new ZLibStream(
-                   compressed,
-                   CompressionLevel.SmallestSize,
-                   leaveOpen: true))
+        if (value <= 0 || value > int.MaxValue)
         {
-            for (var y = 0; y < height; y++)
-            {
-                zlib.WriteByte(0);
-                zlib.Write(rgba.Slice(y * width * 4, width * 4));
-            }
+            throw new FormatException(
+                "CVC-REVIEW-001: review dimensions exceed supported bounds.");
         }
-        WriteChunk(output, "IDAT", compressed.ToArray());
-        WriteChunk(output, "IEND", ReadOnlySpan<byte>.Empty);
-        return output.ToArray();
+        return (int)value;
     }
 
-    private static void WriteChunk(
-        Stream stream,
-        string type,
-        ReadOnlySpan<byte> data)
+    private static byte[] CreateCanvas(int width, int height)
     {
-        Span<byte> number = stackalloc byte[4];
-        BinaryPrimitives.WriteInt32BigEndian(number, data.Length);
-        stream.Write(number);
-        var typeBytes = Encoding.ASCII.GetBytes(type);
-        stream.Write(typeBytes);
-        stream.Write(data);
-
-        var crc = 0xffffffffu;
-        foreach (var value in typeBytes)
+        var pixelCount = (long)width * height;
+        if (width <= 0 ||
+            height <= 0 ||
+            pixelCount > ReviewLimits.MaximumCanvasPixels)
         {
-            crc = UpdateCrc(crc, value);
+            throw new FormatException(
+                "CVC-REVIEW-001: review canvas exceeds supported bounds.");
         }
-        foreach (var value in data)
-        {
-            crc = UpdateCrc(crc, value);
-        }
-        BinaryPrimitives.WriteUInt32BigEndian(number, ~crc);
-        stream.Write(number);
+        return new byte[checked((int)(pixelCount * 4))];
     }
 
-    private static uint UpdateCrc(uint crc, byte value)
-    {
-        crc ^= value;
-        for (var bit = 0; bit < 8; bit++)
-        {
-            crc = (crc >> 1) ^ (0xedb88320u & (uint)-(int)(crc & 1));
-        }
-        return crc;
-    }
 }

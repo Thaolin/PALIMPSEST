@@ -1,0 +1,2500 @@
+{
+  "cellSize": 20,
+  "atlasWidth": 160,
+  "atlasHeight": 460,
+  "definitionCount": 181,
+  "definitions": [
+    {
+      "id": "actor.incarnation",
+      "familyId": "actor.incarnation",
+      "variantOrdinal": 0,
+      "layer": "actor",
+      "mask": null,
+      "overviewPaletteIndex": 23,
+      "paletteRoleIndexes": [
+        22,
+        23,
+        24
+      ]
+    },
+    {
+      "id": "emphasis.selection",
+      "familyId": "emphasis.selection",
+      "variantOrdinal": 0,
+      "layer": "targetOrSelection",
+      "mask": null,
+      "overviewPaletteIndex": 21,
+      "paletteRoleIndexes": [
+        21
+      ]
+    },
+    {
+      "id": "emphasis.target.valid",
+      "familyId": "emphasis.target.valid",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [
+        25
+      ]
+    },
+    {
+      "id": "feature.surface.grove",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.01",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.01.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.02",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.02.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.03",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.03.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.04",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.04.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.05",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.05.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.06",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.06.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.07",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.07.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.08",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.08.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.09",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.09.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.10",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.10.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.11",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.11.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.12",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.12.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.13",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.13.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.14",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.14.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.15",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.15.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.v1",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.ridge",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.01",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.01.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.01.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.01.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.02",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.02.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.02.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.02.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.03",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.03.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.03.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.03.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.04",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.04.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.04.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.04.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.05",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.05.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.05.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.05.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.06",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.06.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.06.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.06.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.07",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.07.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.07.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.07.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.08",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.08.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.08.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.08.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.09",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.09.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.09.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.09.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.10",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.10.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.10.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.10.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.11",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.11.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.11.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.11.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.12",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.12.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.12.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.12.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.13",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.13.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.13.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.13.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.14",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.14.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.14.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.14.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.15",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.15.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.15.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.mask.15.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.v1",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.v2",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing.v3",
+      "familyId": "feature.surface.ridge-water-crossing",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.01",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.01.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.02",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.02.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.03",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.03.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.04",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.04.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.05",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.05.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.06",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.06.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.07",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.07.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.08",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.08.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.09",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.09.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.10",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.10.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.11",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.11.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.12",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.12.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.13",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.13.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.14",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.14.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.15",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 0,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.15.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.v1",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "glyph.codex",
+      "familyId": "glyph.codex",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 27,
+      "paletteRoleIndexes": [
+        26,
+        27,
+        20
+      ]
+    },
+    {
+      "id": "glyph.codex.fly",
+      "familyId": "glyph.codex.fly",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [
+        26,
+        25,
+        27
+      ]
+    },
+    {
+      "id": "glyph.codex.stone",
+      "familyId": "glyph.codex.stone",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "glyph.loadout",
+      "familyId": "glyph.loadout",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 27,
+      "paletteRoleIndexes": [
+        26,
+        27,
+        25
+      ]
+    },
+    {
+      "id": "landmark.bell-that-fell-up",
+      "familyId": "landmark.bell-that-fell-up",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [
+        19,
+        20,
+        21,
+        26
+      ]
+    },
+    {
+      "id": "subject.loose-stone",
+      "familyId": "subject.loose-stone",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        24
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 0,
+      "layer": "adjacency",
+      "mask": 0,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.01",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 1,
+      "layer": "adjacency",
+      "mask": 1,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.02",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 2,
+      "layer": "adjacency",
+      "mask": 2,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.03",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 3,
+      "layer": "adjacency",
+      "mask": 3,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.04",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 4,
+      "layer": "adjacency",
+      "mask": 4,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.05",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 5,
+      "layer": "adjacency",
+      "mask": 5,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.06",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 6,
+      "layer": "adjacency",
+      "mask": 6,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.07",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 7,
+      "layer": "adjacency",
+      "mask": 7,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.08",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 8,
+      "layer": "adjacency",
+      "mask": 8,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.09",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 9,
+      "layer": "adjacency",
+      "mask": 9,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.10",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 10,
+      "layer": "adjacency",
+      "mask": 10,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.11",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 11,
+      "layer": "adjacency",
+      "mask": 11,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.12",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 12,
+      "layer": "adjacency",
+      "mask": 12,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.13",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 13,
+      "layer": "adjacency",
+      "mask": 13,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.14",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 14,
+      "layer": "adjacency",
+      "mask": 14,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.cloud.mask.15",
+      "familyId": "terrain.sky.cloud",
+      "variantOrdinal": 15,
+      "layer": "adjacency",
+      "mask": 15,
+      "overviewPaletteIndex": 18,
+      "paletteRoleIndexes": [
+        17,
+        18
+      ]
+    },
+    {
+      "id": "terrain.sky.open",
+      "familyId": "terrain.sky.open",
+      "variantOrdinal": 0,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 16,
+      "paletteRoleIndexes": [
+        15,
+        16
+      ]
+    },
+    {
+      "id": "terrain.sky.open.v1",
+      "familyId": "terrain.sky.open",
+      "variantOrdinal": 1,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 16,
+      "paletteRoleIndexes": [
+        15,
+        16
+      ]
+    },
+    {
+      "id": "terrain.sky.open.v2",
+      "familyId": "terrain.sky.open",
+      "variantOrdinal": 2,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 16,
+      "paletteRoleIndexes": [
+        15,
+        16
+      ]
+    },
+    {
+      "id": "terrain.surface.grass",
+      "familyId": "terrain.surface.grass",
+      "variantOrdinal": 0,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 2,
+      "paletteRoleIndexes": [
+        2,
+        3,
+        1
+      ]
+    },
+    {
+      "id": "terrain.surface.grass.v1",
+      "familyId": "terrain.surface.grass",
+      "variantOrdinal": 1,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 2,
+      "paletteRoleIndexes": [
+        2,
+        3,
+        1
+      ]
+    },
+    {
+      "id": "terrain.surface.grass.v2",
+      "familyId": "terrain.surface.grass",
+      "variantOrdinal": 2,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 2,
+      "paletteRoleIndexes": [
+        2,
+        3,
+        1
+      ]
+    },
+    {
+      "id": "terrain.surface.grass.v3",
+      "familyId": "terrain.surface.grass",
+      "variantOrdinal": 3,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 2,
+      "paletteRoleIndexes": [
+        2,
+        3,
+        1
+      ]
+    },
+    {
+      "id": "terrain.surface.soil",
+      "familyId": "terrain.surface.soil",
+      "variantOrdinal": 0,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 5,
+      "paletteRoleIndexes": [
+        5,
+        4,
+        13
+      ]
+    },
+    {
+      "id": "terrain.surface.soil.v1",
+      "familyId": "terrain.surface.soil",
+      "variantOrdinal": 1,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 5,
+      "paletteRoleIndexes": [
+        5,
+        4,
+        13
+      ]
+    },
+    {
+      "id": "terrain.surface.soil.v2",
+      "familyId": "terrain.surface.soil",
+      "variantOrdinal": 2,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 5,
+      "paletteRoleIndexes": [
+        5,
+        4,
+        13
+      ]
+    },
+    {
+      "id": "terrain.surface.soil.v3",
+      "familyId": "terrain.surface.soil",
+      "variantOrdinal": 3,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 5,
+      "paletteRoleIndexes": [
+        5,
+        4,
+        13
+      ]
+    },
+    {
+      "id": "terrain.surface.water",
+      "familyId": "terrain.surface.water",
+      "variantOrdinal": 0,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.00",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 0,
+      "layer": "adjacency",
+      "mask": 0,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.01",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 1,
+      "layer": "adjacency",
+      "mask": 1,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.02",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 2,
+      "layer": "adjacency",
+      "mask": 2,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.03",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 3,
+      "layer": "adjacency",
+      "mask": 3,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.04",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 4,
+      "layer": "adjacency",
+      "mask": 4,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.05",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 5,
+      "layer": "adjacency",
+      "mask": 5,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.06",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 6,
+      "layer": "adjacency",
+      "mask": 6,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.07",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 7,
+      "layer": "adjacency",
+      "mask": 7,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.08",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 8,
+      "layer": "adjacency",
+      "mask": 8,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.09",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 9,
+      "layer": "adjacency",
+      "mask": 9,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.10",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 10,
+      "layer": "adjacency",
+      "mask": 10,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.11",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 11,
+      "layer": "adjacency",
+      "mask": 11,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.12",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 12,
+      "layer": "adjacency",
+      "mask": 12,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.13",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 13,
+      "layer": "adjacency",
+      "mask": 13,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.14",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 14,
+      "layer": "adjacency",
+      "mask": 14,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "id": "terrain.surface.water.edge.15",
+      "familyId": "terrain.surface.water.edge",
+      "variantOrdinal": 15,
+      "layer": "adjacency",
+      "mask": 15,
+      "overviewPaletteIndex": 7,
+      "paletteRoleIndexes": [
+        4,
+        6,
+        8
+      ]
+    }
+  ]
+}

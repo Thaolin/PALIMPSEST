@@ -1,12 +1,11 @@
 using System.Text.Json;
+using Chronicle.VisualPack;
 
 namespace Chronicle.VisualPreview;
 
 internal sealed record FixtureEntry(
     string VisualId,
     int NativeSize,
-    int Variant,
-    int? AdjacencyMask,
     int X,
     int Y,
     int Scale);
@@ -39,9 +38,8 @@ internal sealed record FixturePlan(
             plan.Entries.Any(static entry =>
                 entry is null ||
                 string.IsNullOrWhiteSpace(entry.VisualId) ||
-                entry.NativeSize <= 0 ||
-                entry.Variant < 0 ||
-                entry.Scale is not (1 or 2 or 4 or 8)))
+                entry.NativeSize != Palimpsest20Pack.NativeCellSize ||
+                entry.Scale is < 1 or > 64))
         {
             throw new FormatException("CVG-PLAN-002: fixture plan is invalid.");
         }

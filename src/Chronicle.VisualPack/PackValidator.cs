@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace Chronicle.VisualPack;
 
-public static partial class PackValidator
+internal static partial class PackValidator
 {
     public static ImmutableArray<PackDiagnostic> Validate(CompiledVisualPack pack)
     {
@@ -149,7 +149,12 @@ public static partial class PackValidator
                 Error("CVP-VIS-002", visual.Id, "Visual declares an unsupported transform.");
             }
 
-            if (visual.RequireConnected && atlas is not null && !IsConnected(pack, atlas, visual))
+            if (visual.RequireConnected &&
+                atlas is not null &&
+                !PixelConnectivity.IsFourConnected(
+                    pack.GetAtlasIndices(atlas.Id).Span,
+                    atlas.Width,
+                    visual.Rectangle))
             {
                 Error("CVP-OCC-001", visual.Id, "Occupied pixels are disconnected.");
             }
@@ -225,6 +230,8 @@ public static partial class PackValidator
         {
             if (motif.Footprint.Width <= 0 ||
                 motif.Footprint.Height <= 0 ||
+                motif.VariantCount <= 0 ||
+                !Enum.IsDefined(motif.ClippingBehavior) ||
                 motif.AnchorCell.X < 0 ||
                 motif.AnchorCell.Y < 0 ||
                 motif.AnchorCell.X >= motif.Footprint.Width ||
@@ -235,10 +242,21 @@ public static partial class PackValidator
 
             foreach (var mark in motif.Marks)
             {
-                if (!pack.Visuals.Any(visual => visual.Id == mark.VisualId))
+                if (mark.VariantOrdinal < 0 ||
+                    mark.VariantOrdinal >= motif.VariantCount)
+                {
+                    Error(
+                        "CVP-MOT-004",
+                        motif.FamilyId,
+                        "Motif mark variant is outside the declared range.");
+                }
+
+                if (!pack.Visuals.Any(visual =>
+                        visual.Id == mark.VisualId &&
+                        visual.VariantOrdinal == mark.VariantOrdinal))
                 {
                     Error("CVP-MOT-002", $"{motif.FamilyId}:{mark.VisualId}",
-                        "Motif mark references a missing visual.");
+                        "Motif mark references a missing visual variant.");
                 }
 
                 if (mark.Cell.X < 0 ||
@@ -248,6 +266,17 @@ public static partial class PackValidator
                 {
                     Error("CVP-MOT-003", motif.FamilyId,
                         "Motif mark cell is outside the footprint.");
+                }
+            }
+
+            for (var variant = 0; variant < motif.VariantCount; variant++)
+            {
+                if (!motif.Marks.Any(mark => mark.VariantOrdinal == variant))
+                {
+                    Error(
+                        "CVP-MOT-004",
+                        motif.FamilyId,
+                        $"Motif variant {variant} has no ordered marks.");
                 }
             }
         }
@@ -360,51 +389,6 @@ public static partial class PackValidator
             right.X < left.X + left.Width &&
             left.Y < right.Y + right.Height &&
             right.Y < left.Y + left.Height;
-
-        static bool IsConnected(
-            CompiledVisualPack pack,
-            AtlasRecord atlas,
-            VisualRecord visual)
-        {
-            var pixels = pack.GetAtlasIndices(atlas.Id).Span;
-            var occupied = new HashSet<(int X, int Y)>();
-            for (var y = 0; y < visual.Rectangle.Height; y++)
-            {
-                for (var x = 0; x < visual.Rectangle.Width; x++)
-                {
-                    var index =
-                        (visual.Rectangle.Y + y) * atlas.Width +
-                        visual.Rectangle.X + x;
-                    if ((uint)index < (uint)pixels.Length && pixels[index] != 0)
-                    {
-                        occupied.Add((x, y));
-                    }
-                }
-            }
-
-            if (occupied.Count == 0)
-            {
-                return false;
-            }
-
-            var reached = new HashSet<(int X, int Y)>();
-            var pending = new Queue<(int X, int Y)>();
-            pending.Enqueue(occupied.First());
-            while (pending.TryDequeue(out var point))
-            {
-                if (!occupied.Contains(point) || !reached.Add(point))
-                {
-                    continue;
-                }
-
-                pending.Enqueue((point.X, point.Y - 1));
-                pending.Enqueue((point.X + 1, point.Y));
-                pending.Enqueue((point.X, point.Y + 1));
-                pending.Enqueue((point.X - 1, point.Y));
-            }
-
-            return reached.Count == occupied.Count;
-        }
 
         static bool HasContinuousEdges(CompiledVisualPack pack, string familyId)
         {

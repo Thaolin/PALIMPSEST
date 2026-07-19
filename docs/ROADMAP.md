@@ -1,40 +1,41 @@
 # Roadmap
 
-| Stage | Scope | Acceptance |
+| Stage | Scope | Status |
 | --- | --- | --- |
-| E0 | Compiled-pack contract | Reference pack round-trips; invalid categories fail; two canonical writes match |
-| E1 | Small deterministic compiler | 16/20 targets, palettes, variants, packing, review sheets, local edits |
-| E2 | Connected forms and motifs | Cardinal masks, continuity, connected families, grove/ridge motifs |
-| E3 | Palimpsest-shaped specimen breadth | Required specimens, seeds, family lineage, manual baselines |
-| E4 | Godot 4.7.1 .NET preview | Pack-only native preview, deterministic captures, headless acceptance |
-| E5 | Palimpsest integration | Forbidden until separately authorized |
+| E0 | Immutable authoring-pack contract | Complete |
+| E1 | Deterministic compiler, packing, review sheets | Complete |
+| E2 | Connected forms and motifs | Complete |
+| E3 | PALIMPSEST-shaped specimen breadth | Complete |
+| E4 | Godot 4.7.1 .NET pack-only preview | Complete |
+| E4.5 | Canonical PALIMPSEST-compatible 20px authoring compiler | Complete |
+| E5 | PALIMPSEST runtime loading or swapping | Forbidden without separate authorization |
 
-Every implemented stage stops for Handoff reconciliation before work on the next
-stage begins.
+## E4.5 reconciled gate
 
-## Reconciled gates
+`tools/verify.ps1` is the sole clean-checkout acceptance entry point. It proves:
 
-- E0: `tools/verify.ps1` passed with zero warnings and aggregate
-  `sha256:42ec768423d3318b5c7c6ccea0b02c77ea2b429ec8cad569823db6730b12179a`;
-  independent E0 verification and review passed.
-- E1: the same command passed two isolated byte-identical CLI builds with
-  aggregate
-  `sha256:261d0cf0d21b094347ba817faf8ecd09aadffe5a6480be12d612dcc757c22f26`;
-  independent E1 review passed.
-- E2: the same command passed complete connected-family, transition fallback,
-  motif, topology, continuity, per-size/per-variant coverage, and specialized
-  review-evidence conformance. Two isolated CLI builds matched at
-  `sha256:3ba831eb7f7ee468e8ac85cce59b68674af7978a51d93afbd087e7a36b116347`;
-  independent E2 review passed.
-- E3: the same command passed the bounded Palimpsest-shaped vocabulary,
-  two-palette geometry stability, controlled-variant lineage, independent
-  manual-baseline comparison, and authoring-cost provenance. Two isolated CLI
-  builds matched at
-  `sha256:1fff3cb03aad5bae0013eef507ec5fb7346efe74b600cf771f9cc311fddb0987`;
-  independent E3 review passed.
-- E4: the same command passed the pack-only Godot dependency audit, headless
-  scene launch, native/integer-scale fixture plan, real viewport/CPU-oracle
-  equality, reproducible capture metadata, clean logs, bounded load/compile, and
-  background-process shutdown. Raw capture digest:
-  `sha256:c3bfabe9ca9e40f64e05b739fa7ec2c0784142150831c238c62ae769bbe2a7a6`;
-  independent E4 review passed. Work is stopped before E5.
+- the exact 181-definition PALIMPSEST vocabulary and layer mapping;
+- one 160×460 indexed 20px atlas, one palette, centered anchors, and direct
+  concrete-ID resolution;
+- required `validation.json` and every compatibility boundary;
+- byte-identical repeated canonical output;
+- committed file, pack, and aggregate hashes;
+- deterministic signed/large-coordinate, seed, variant, mask, and motif
+  clipping vectors;
+- separate material grammars and nearest-neighbour 20px review sheets;
+- a Godot preview that reads only the exported canonical artifact; and
+- safe output ownership plus bounded Godot process cleanup.
+
+Pinned canonical values:
+
+- indexed atlas:
+  `sha256:052bcfe6bd97274905198decaf7f13c7c0770df097180c74a9808b0ebd18313b`
+- manifest:
+  `sha256:9436b487408b7c715beadb19ec5bb9178a6e3e0bf391b1f9a573c444beb086d8`
+- PALIMPSEST-shaped pack:
+  `sha256:4fa9fdf590310cc81f136668d1e656945f5dd04b6fddaa7ad847509385214c64`
+- canonical aggregate:
+  `sha256:f41d1e4e4f76b5e6e57921cda35050582368486e87e932d5f1273ff4c2be9bd8`
+
+The next stage cannot begin in this repository alone. PALIMPSEST exposes no
+authorized filesystem loader or live-swap seam; changing that consumer is E5.

@@ -1,0 +1,23 @@
+{
+  "profile": "Palimpsest20",
+  "files": [
+    {
+      "path": "atlases/palimpsest20.indices",
+      "digest": "sha256:052bcfe6bd97274905198decaf7f13c7c0770df097180c74a9808b0ebd18313b"
+    },
+    {
+      "path": "hashes.json",
+      "digest": "sha256:c539560c559f2e6a936653ea0f623892f84ce90a63444ea624d5d832562eab4f"
+    },
+    {
+      "path": "manifest.json",
+      "digest": "sha256:9436b487408b7c715beadb19ec5bb9178a6e3e0bf391b1f9a573c444beb086d8"
+    },
+    {
+      "path": "validation.json",
+      "digest": "sha256:8f0d0d8b47e2b76f3821ac35b7dc58c8a1978f2dadb80f0954e8f7136d276594"
+    }
+  ],
+  "palimpsestDigest": "sha256:4fa9fdf590310cc81f136668d1e656945f5dd04b6fddaa7ad847509385214c64",
+  "aggregateDigest": "sha256:f41d1e4e4f76b5e6e57921cda35050582368486e87e932d5f1273ff4c2be9bd8"
+}

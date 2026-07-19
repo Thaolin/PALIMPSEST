@@ -1,0 +1,20 @@
+{
+  "cases": [
+    { "id": "missing-file", "mutation": "missing", "expectedCode": "PAL20-FMT-002" },
+    { "id": "extra-file", "mutation": "extra", "expectedCode": "PAL20-FMT-002" },
+    { "id": "duplicate-file", "mutation": "duplicate", "expectedCode": "PAL20-FMT-001" },
+    { "id": "unmapped-json", "mutation": "unmapped-json", "expectedCode": "PAL20-JSON-001" },
+    { "id": "duplicate-json", "mutation": "duplicate-json", "expectedCode": "PAL20-JSON-002" },
+    { "id": "missing-validation-member", "mutation": "missing-validation-member", "expectedCode": "PAL20-JSON-001" },
+    { "id": "null-manifest-atlas", "mutation": "null-manifest-atlas", "expectedCode": "PAL20-JSON-003" },
+    { "id": "null-manifest-definition", "mutation": "null-manifest-definition", "expectedCode": "PAL20-JSON-003" },
+    { "id": "null-hash-files", "mutation": "null-hash-files", "expectedCode": "PAL20-JSON-001" },
+    { "id": "null-minimum-reader", "mutation": "null-minimum-reader", "expectedCode": "PAL20-JSON-003" },
+    { "id": "oversized-atlas-dimensions", "mutation": "oversized-atlas-dimensions", "expectedCode": "PAL20-FMT-005" },
+    { "id": "hash-mismatch", "mutation": "hash-mismatch", "expectedCode": "PAL20-HASH-001" },
+    { "id": "format-boundary", "mutation": "format-boundary", "expectedCode": "PAL20-COMPAT-001" },
+    { "id": "composer-boundary", "mutation": "composer-boundary", "expectedCode": "PAL20-COMPAT-001" },
+    { "id": "style-boundary", "mutation": "style-boundary", "expectedCode": "PAL20-COMPAT-001" },
+    { "id": "minimum-reader-boundary", "mutation": "minimum-reader-boundary", "expectedCode": "PAL20-COMPAT-002" }
+  ]
+}

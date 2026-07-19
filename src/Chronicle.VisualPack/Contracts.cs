@@ -83,15 +83,24 @@ public sealed record VisualRecord(
 public sealed record MotifMark(
     string VisualId,
     PixelPoint Cell,
-    PixelPoint PixelOffset);
+    PixelPoint PixelOffset,
+    int VariantOrdinal = 0);
+
+public enum MotifClippingBehavior
+{
+    Clip,
+    Reject
+}
 
 public sealed record MotifRecord(
     string FamilyId,
+    ulong Seed,
+    int VariantCount,
     PixelSize Footprint,
     PixelPoint AnchorCell,
     ImmutableArray<MotifMark> Marks,
     ImmutableArray<string> OccupancyTags,
-    string ClippingBehavior);
+    MotifClippingBehavior ClippingBehavior);
 
 public sealed record AdjacencyRecord(
     string FamilyId,
@@ -113,7 +122,9 @@ public readonly record struct VisualKey(
     int VariantOrdinal,
     int? AdjacencyMask);
 
-public sealed class CompiledVisualPack
+// Rich authoring state is intentionally internal. Palimpsest20Pack is the only
+// public compiled-pack integration contract.
+internal sealed class CompiledVisualPack
 {
     private readonly ImmutableDictionary<string, ImmutableArray<byte>> _atlasBuffers;
     private readonly ImmutableDictionary<VisualKey, int> _visualOrdinals;
@@ -298,14 +309,17 @@ public sealed class CompiledVisualPack
                 ImmutableArray.Create("manual", "reference"))),
             ImmutableArray.Create(new MotifRecord(
                 "motif.reference",
+                0,
+                1,
                 new PixelSize(1, 1),
                 new PixelPoint(0, 0),
                 ImmutableArray.Create(new MotifMark(
                     "landmark.reference",
                     new PixelPoint(0, 0),
-                    new PixelPoint(0, 0))),
+                    new PixelPoint(0, 0),
+                    0)),
                 ImmutableArray.Create("occupied"),
-                "clip")),
+                MotifClippingBehavior.Clip)),
             ImmutableArray<AdjacencyRecord>.Empty,
             ImmutableArray.Create("landmark.reference"),
             ImmutableArray.Create(16),

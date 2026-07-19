@@ -36,6 +36,141 @@ if (-not $env:NUGET_PACKAGES) {
     }
 }
 
+function Get-RelativeFiles {
+    param([Parameter(Mandatory)][string]$Directory)
+
+    if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
+        throw "Expected directory '$Directory' was not produced."
+    }
+
+    return @(
+        Get-ChildItem -LiteralPath $Directory -File -Recurse |
+            ForEach-Object {
+                $_.FullName.Substring($Directory.Length + 1).Replace('\', '/')
+            } |
+            Sort-Object
+    )
+}
+
+function Test-ByteEquality {
+    param(
+        [Parameter(Mandatory)][string]$Left,
+        [Parameter(Mandatory)][string]$Right
+    )
+
+    [byte[]]$leftBytes = [System.IO.File]::ReadAllBytes($Left)
+    [byte[]]$rightBytes = [System.IO.File]::ReadAllBytes($Right)
+    if ($leftBytes.Length -ne $rightBytes.Length) {
+        return $false
+    }
+
+    for ($index = 0; $index -lt $leftBytes.Length; $index++) {
+        if ($leftBytes[$index] -ne $rightBytes[$index]) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Get-Sha256Digest {
+    param([Parameter(Mandatory)][string]$Path)
+
+    return 'sha256:' + ((Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant())
+}
+
+$canonicalPackPaths = @(
+    'atlases/palimpsest20.indices',
+    'hashes.json',
+    'manifest.json',
+    'validation.json'
+)
+$hashedPackPaths = @(
+    'atlases/palimpsest20.indices',
+    'manifest.json',
+    'validation.json'
+)
+
+function Assert-CanonicalPackFiles {
+    param(
+        [Parameter(Mandatory)][string]$PackDirectory,
+        [Parameter(Mandatory)][string]$Label
+    )
+
+    $actualFiles = @(Get-RelativeFiles $PackDirectory)
+    if ($actualFiles.Count -ne $canonicalPackPaths.Count -or
+        (Compare-Object $canonicalPackPaths $actualFiles)) {
+        throw "$Label contains an incomplete or unexpected Palimpsest20 pack file set."
+    }
+
+    $actualDirectories = @(
+        Get-ChildItem -LiteralPath $PackDirectory -Directory -Recurse |
+            ForEach-Object {
+                $_.FullName.Substring($PackDirectory.Length + 1).Replace('\', '/')
+            } |
+            Sort-Object
+    )
+    if ($actualDirectories.Count -ne 1 -or $actualDirectories[0] -cne 'atlases') {
+        throw "$Label contains an unexpected Palimpsest20 pack directory layout."
+    }
+}
+
+function Assert-PinnedPalimpsest20Pack {
+    param(
+        [Parameter(Mandatory)][string]$PackDirectory,
+        [Parameter(Mandatory)][hashtable]$ExpectedByPath,
+        [Parameter(Mandatory)]$Expected,
+        [Parameter(Mandatory)][string]$Label
+    )
+
+    Assert-CanonicalPackFiles $PackDirectory $Label
+    foreach ($relativePath in $canonicalPackPaths) {
+        $actualDigest = Get-Sha256Digest (Join-Path $PackDirectory $relativePath)
+        if ($actualDigest -cne $ExpectedByPath[$relativePath]) {
+            throw "$Label digest drift at '$relativePath': expected '$($ExpectedByPath[$relativePath])', got '$actualDigest'."
+        }
+    }
+
+    $manifest = Get-Content -Raw -LiteralPath (Join-Path $PackDirectory 'manifest.json') |
+        ConvertFrom-Json
+    if ($manifest.palimpsestDigest -cne $Expected.palimpsestDigest) {
+        throw "$Label manifest palimpsestDigest does not match the committed E4.5 pin."
+    }
+
+    $hashDocument = Get-Content -Raw -LiteralPath (Join-Path $PackDirectory 'hashes.json') |
+        ConvertFrom-Json
+    if ($hashDocument.algorithm -cne 'sha256' -or
+        $hashDocument.palimpsestDigest -cne $Expected.palimpsestDigest -or
+        $hashDocument.aggregateDigest -cne $Expected.aggregateDigest) {
+        throw "$Label hashes.json does not match the committed E4.5 Palimpsest20 digests."
+    }
+
+    $actualHashEntries = @($hashDocument.files)
+    if ($actualHashEntries.Count -ne $hashedPackPaths.Count) {
+        throw "$Label hashes.json has an unexpected canonical file digest count."
+    }
+
+    $actualHashByPath = @{}
+    foreach ($entry in $actualHashEntries) {
+        $path = [string]$entry.path
+        if ([string]::IsNullOrWhiteSpace($path) -or
+            $actualHashByPath.ContainsKey($path)) {
+            throw "$Label hashes.json contains an invalid or duplicate canonical digest path."
+        }
+        $actualHashByPath[$path] = [string]$entry.digest
+    }
+    if ($actualHashByPath.Count -ne $hashedPackPaths.Count -or
+        (Compare-Object $hashedPackPaths @($actualHashByPath.Keys | Sort-Object))) {
+        throw "$Label hashes.json has an incomplete or unexpected canonical digest set."
+    }
+    foreach ($relativePath in $hashedPackPaths) {
+        $actualDigest = Get-Sha256Digest (Join-Path $PackDirectory $relativePath)
+        if ($actualHashByPath[$relativePath] -cne $actualDigest -or
+            $actualHashByPath[$relativePath] -cne $ExpectedByPath[$relativePath]) {
+            throw "$Label hashes.json digest mismatch at '$relativePath'."
+        }
+    }
+}
+
 $conformance = Join-Path $root 'src\Chronicle.Visuals.Conformance\Chronicle.Visuals.Conformance.csproj'
 & $dotnet restore $conformance --ignore-failed-sources
 if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
@@ -45,80 +180,168 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'Conformance failed.' }
 
 $cli = Join-Path $root 'src\Chronicle.VisualCompiler.Cli\Chronicle.VisualCompiler.Cli.csproj'
-$catalogue = Join-Path $root 'catalogues\e3.json'
-$outputA = Join-Path $root 'artifacts\e4\build-a'
-$outputB = Join-Path $root 'artifacts\e4\build-b'
-$proofRoot = [System.IO.Path]::GetFullPath((Join-Path $root 'artifacts\e4'))
-foreach ($output in @($outputA, $outputB)) {
-    $resolved = [System.IO.Path]::GetFullPath($output)
+$catalogue = Join-Path $root 'catalogues\e45-palimpsest20.json'
+$expectedHashesPath = Join-Path $root 'fixtures\palimpsest20\expected-hashes.json'
+if (-not (Test-Path -LiteralPath $catalogue -PathType Leaf)) {
+    throw "Missing E4.5 catalogue '$catalogue'."
+}
+if (-not (Test-Path -LiteralPath $expectedHashesPath -PathType Leaf)) {
+    throw "Missing E4.5 expected hashes '$expectedHashesPath'."
+}
+
+$expectedHashes = Get-Content -Raw -LiteralPath $expectedHashesPath | ConvertFrom-Json
+if ($expectedHashes.profile -cne 'Palimpsest20' -or
+    [string]::IsNullOrWhiteSpace([string]$expectedHashes.palimpsestDigest) -or
+    [string]::IsNullOrWhiteSpace([string]$expectedHashes.aggregateDigest)) {
+    throw 'The committed E4.5 expected-hashes fixture is malformed.'
+}
+$expectedByPath = @{}
+foreach ($entry in @($expectedHashes.files)) {
+    $path = [string]$entry.path
+    $digest = [string]$entry.digest
+    if ([string]::IsNullOrWhiteSpace($path) -or
+        [string]::IsNullOrWhiteSpace($digest) -or
+        $expectedByPath.ContainsKey($path)) {
+        throw 'The committed E4.5 expected-hashes fixture has an invalid or duplicate file entry.'
+    }
+    $expectedByPath[$path] = $digest
+}
+if ($expectedByPath.Count -ne $canonicalPackPaths.Count -or
+    (Compare-Object $canonicalPackPaths @($expectedByPath.Keys | Sort-Object))) {
+    throw 'The committed E4.5 expected-hashes fixture has an incomplete or unexpected canonical file set.'
+}
+
+$proofRoot = [System.IO.Path]::GetFullPath((Join-Path $root 'artifacts\e45'))
+function Resolve-ProofOutputPath {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $resolved = [System.IO.Path]::GetFullPath($Path)
     if (-not $resolved.StartsWith(
             $proofRoot + [System.IO.Path]::DirectorySeparatorChar,
             [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "Unsafe proof output path '$resolved'."
     }
+    return $resolved
+}
+
+function Remove-ProofDirectory {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $resolved = Resolve-ProofOutputPath $Path
     if (Test-Path -LiteralPath $resolved) {
         Remove-Item -LiteralPath $resolved -Recurse -Force
     }
+    return $resolved
 }
+
+$outputA = Resolve-ProofOutputPath (Join-Path $proofRoot 'build-a')
+$outputB = Resolve-ProofOutputPath (Join-Path $proofRoot 'build-b')
+foreach ($output in @($outputA, $outputB)) {
+    Remove-ProofDirectory $output | Out-Null
+}
+
 & $dotnet build $cli --configuration Release -nodeReuse:false
 if ($LASTEXITCODE -ne 0) { throw 'CLI build failed.' }
+$unsupportedProfileOutput = Resolve-ProofOutputPath (
+    Join-Path $proofRoot 'unsupported-profile')
+Remove-ProofDirectory $unsupportedProfileOutput | Out-Null
+& $dotnet run --project $cli --configuration Release --no-build -- `
+    build --profile RichPack --catalogue $catalogue --output $unsupportedProfileOutput
+if ($LASTEXITCODE -eq 0 -or (Test-Path -LiteralPath $unsupportedProfileOutput)) {
+    throw 'CLI accepted an unsupported integration profile.'
+}
 $compileTimer = [System.Diagnostics.Stopwatch]::StartNew()
 & $dotnet run --project $cli --configuration Release --no-build -- `
-    build --catalogue $catalogue --output $outputA
+    build --profile Palimpsest20 --catalogue $catalogue --output $outputA
 $compileTimer.Stop()
 if ($LASTEXITCODE -ne 0) { throw 'First CLI compile failed.' }
 if ($compileTimer.Elapsed.TotalSeconds -ge 10) {
-    throw "E4 compile exceeded ten seconds: $($compileTimer.Elapsed.TotalSeconds)."
+    throw "E4.5 compile exceeded ten seconds: $($compileTimer.Elapsed.TotalSeconds)."
 }
 & $dotnet run --project $cli --configuration Release --no-build -- `
-    build --catalogue $catalogue --output $outputB
+    build --profile Palimpsest20 --catalogue $catalogue --output $outputB
 if ($LASTEXITCODE -ne 0) { throw 'Second CLI compile failed.' }
 
-$filesA = Get-ChildItem -LiteralPath $outputA -File -Recurse |
-    ForEach-Object { $_.FullName.Substring($outputA.Length + 1) } |
-    Sort-Object
-$filesB = Get-ChildItem -LiteralPath $outputB -File -Recurse |
-    ForEach-Object { $_.FullName.Substring($outputB.Length + 1) } |
-    Sort-Object
-if (Compare-Object $filesA $filesB) {
-    throw 'CLI builds emitted different file sets.'
+$filesA = @(Get-RelativeFiles $outputA)
+$filesB = @(Get-RelativeFiles $outputB)
+if ($filesA.Count -ne $filesB.Count -or (Compare-Object $filesA $filesB)) {
+    throw 'E4.5 CLI builds emitted different complete output file sets.'
 }
 foreach ($relativePath in $filesA) {
-    $hashA = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $outputA $relativePath)).Hash
-    $hashB = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $outputB $relativePath)).Hash
-    if ($hashA -ne $hashB) {
-        throw "CLI builds differ at '$relativePath'."
+    if (-not (Test-ByteEquality (Join-Path $outputA $relativePath) (Join-Path $outputB $relativePath))) {
+        throw "E4.5 CLI builds differ byte-for-byte at '$relativePath'."
     }
 }
 
-$unowned = Join-Path $root 'artifacts\e4\unowned'
-if (Test-Path -LiteralPath $unowned) {
-    Remove-Item -LiteralPath $unowned -Recurse -Force
+$packA = Join-Path $outputA 'pack'
+$packB = Join-Path $outputB 'pack'
+Assert-PinnedPalimpsest20Pack $packA $expectedByPath $expectedHashes 'First E4.5 output pack'
+Assert-PinnedPalimpsest20Pack $packB $expectedByPath $expectedHashes 'Second E4.5 output pack'
+
+$replacementBackup = Resolve-ProofOutputPath ($outputA + '.backup')
+Remove-ProofDirectory $replacementBackup | Out-Null
+New-Item -ItemType Directory -Path $replacementBackup | Out-Null
+$backupSentinel = Join-Path $replacementBackup 'keep.txt'
+Set-Content -LiteralPath $backupSentinel -Value 'keep' -NoNewline
+$manifestBeforeFailedReplacement = Get-Sha256Digest (
+    Join-Path $packA 'manifest.json')
+& $dotnet run --project $cli --configuration Release --no-build -- `
+    build --profile Palimpsest20 --catalogue $catalogue --output $outputA
+if ($LASTEXITCODE -eq 0 -or
+    -not (Test-Path -LiteralPath $backupSentinel) -or
+    (Get-Sha256Digest (Join-Path $packA 'manifest.json')) -cne
+        $manifestBeforeFailedReplacement) {
+    throw 'CLI failed to preserve the current artifact across a replacement failure.'
 }
+Remove-ProofDirectory $replacementBackup | Out-Null
+
+$recoveryTarget = Resolve-ProofOutputPath (Join-Path $proofRoot 'recovery-target')
+$recoveryBackup = Resolve-ProofOutputPath ($recoveryTarget + '.backup')
+foreach ($path in @($recoveryTarget, $recoveryBackup)) {
+    Remove-ProofDirectory $path | Out-Null
+}
+Copy-Item -LiteralPath $outputA -Destination $recoveryBackup -Recurse
+$recoveryManifest = Get-Sha256Digest (
+    Join-Path $recoveryBackup 'pack/manifest.json')
+& $dotnet run --project $cli --configuration Release --no-build -- `
+    build --profile Palimpsest20 `
+    --catalogue ($catalogue + '.missing') `
+    --output $recoveryTarget
+if ($LASTEXITCODE -eq 0 -or
+    -not (Test-Path -LiteralPath $recoveryTarget) -or
+    (Test-Path -LiteralPath $recoveryBackup) -or
+    (Get-Sha256Digest (Join-Path $recoveryTarget 'pack/manifest.json')) -cne
+        $recoveryManifest) {
+    throw 'CLI failed to recover an owned backup before a compile failure.'
+}
+Remove-ProofDirectory $recoveryTarget | Out-Null
+
+$unowned = Resolve-ProofOutputPath (Join-Path $proofRoot 'unowned')
+Remove-ProofDirectory $unowned | Out-Null
 New-Item -ItemType Directory -Path $unowned | Out-Null
 $sentinel = Join-Path $unowned 'keep.txt'
 Set-Content -LiteralPath $sentinel -Value 'keep' -NoNewline
 & $dotnet run --project $cli --configuration Release --no-build -- `
-    build --catalogue $catalogue --output $unowned
+    build --profile Palimpsest20 --catalogue $catalogue --output $unowned
 if ($LASTEXITCODE -eq 0 -or -not (Test-Path -LiteralPath $sentinel)) {
     throw 'CLI replaced an unowned output directory.'
 }
+Remove-ProofDirectory $unowned | Out-Null
 
-$stagingTarget = Join-Path $root 'artifacts\e4\staging-target'
-$unownedStaging = $stagingTarget + '.staging'
+$stagingTarget = Resolve-ProofOutputPath (Join-Path $proofRoot 'staging-target')
+$unownedStaging = Resolve-ProofOutputPath ($stagingTarget + '.staging')
 foreach ($path in @($stagingTarget, $unownedStaging)) {
-    if (Test-Path -LiteralPath $path) {
-        Remove-Item -LiteralPath $path -Recurse -Force
-    }
+    Remove-ProofDirectory $path | Out-Null
 }
 New-Item -ItemType Directory -Path $unownedStaging | Out-Null
 $stagingSentinel = Join-Path $unownedStaging 'keep.txt'
 Set-Content -LiteralPath $stagingSentinel -Value 'keep' -NoNewline
 & $dotnet run --project $cli --configuration Release --no-build -- `
-    build --catalogue $catalogue --output $stagingTarget
+    build --profile Palimpsest20 --catalogue $catalogue --output $stagingTarget
 if ($LASTEXITCODE -eq 0 -or -not (Test-Path -LiteralPath $stagingSentinel)) {
     throw 'CLI replaced an unowned staging directory.'
 }
+Remove-ProofDirectory $unownedStaging | Out-Null
 
 $godotCandidates = @(
     $env:CHRONICLE_GODOT,
@@ -132,17 +355,28 @@ if (-not $godot -or (& $godot --version) -notlike '4.7.1.stable.mono*') {
 
 $previewRoot = Join-Path $root 'src\Chronicle.VisualPreview.Godot'
 $previewProject = Join-Path $previewRoot 'Chronicle.VisualPreview.Godot.csproj'
-$plan = Join-Path $root 'fixtures\preview-plans\e4-acceptance.json'
-$captureA = Join-Path $proofRoot 'godot-a'
-$captureB = Join-Path $proofRoot 'godot-b'
-foreach ($capture in @($captureA, $captureB)) {
-    if (Test-Path -LiteralPath $capture) {
-        Remove-Item -LiteralPath $capture -Recurse -Force
-    }
+$plan = Join-Path $root 'fixtures\preview-plans\e45-palimpsest20.json'
+if (-not (Test-Path -LiteralPath $plan -PathType Leaf)) {
+    throw "Missing E4.5 Godot preview plan '$plan'."
 }
-$env:APPDATA = Join-Path $root '.cache\godot-appdata'
-$env:LOCALAPPDATA = Join-Path $root '.cache\godot-localappdata'
-New-Item -ItemType Directory -Force -Path $env:APPDATA,$env:LOCALAPPDATA |
+$captureA = Resolve-ProofOutputPath (Join-Path $proofRoot 'godot-a')
+$captureB = Resolve-ProofOutputPath (Join-Path $proofRoot 'godot-b')
+foreach ($capture in @($captureA, $captureB)) {
+    Remove-ProofDirectory $capture | Out-Null
+}
+$previousAppData = $env:APPDATA
+$previousLocalAppData = $env:LOCALAPPDATA
+$godotAppData = Resolve-ProofOutputPath (
+    Join-Path $proofRoot '.godot-appdata')
+$godotLocalAppData = Resolve-ProofOutputPath (
+    Join-Path $proofRoot '.godot-localappdata')
+try {
+foreach ($path in @($godotAppData, $godotLocalAppData)) {
+    Remove-ProofDirectory $path | Out-Null
+}
+$env:APPDATA = $godotAppData
+$env:LOCALAPPDATA = $godotLocalAppData
+New-Item -ItemType Directory -Force -Path $godotAppData,$godotLocalAppData |
     Out-Null
 & $dotnet build $previewProject --configuration Debug -nodeReuse:false
 if ($LASTEXITCODE -ne 0) { throw 'Godot preview build failed.' }
@@ -161,15 +395,46 @@ $logA = (Join-Path $proofRoot 'godot-a.log').Replace('\', '/')
 $logB = (Join-Path $proofRoot 'godot-b.log').Replace('\', '/')
 $interactiveLog = (Join-Path $proofRoot 'godot-interactive.log').Replace('\', '/')
 $godotPreviewRoot = $previewRoot.Replace('\', '/')
-$godotOutputA = $outputA.Replace('\', '/')
-$godotOutputB = $outputB.Replace('\', '/')
+$godotPackA = $packA.Replace('\', '/')
+$godotPackB = $packB.Replace('\', '/')
 $godotPlan = $plan.Replace('\', '/')
 $godotCaptureA = $captureA.Replace('\', '/')
 $godotCaptureB = $captureB.Replace('\', '/')
-& $godot --headless --quit-after 3 --log-file $interactiveLog `
-    --path $godotPreviewRoot -- `
-    --pack $godotOutputA --plan $godotPlan
-if ($LASTEXITCODE -ne 0) { throw 'Interactive preview headless launch failed.' }
+function Invoke-BoundedGodot(
+    [string[]]$Arguments,
+    [string]$Description,
+    [int]$TimeoutSeconds = 30
+) {
+    $process = Start-Process `
+        -FilePath $godot `
+        -ArgumentList $Arguments `
+        -PassThru `
+        -WindowStyle Hidden
+    try {
+        if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+            throw "$Description exceeded $TimeoutSeconds seconds."
+        }
+        if ($process.ExitCode -ne 0) {
+            throw "$Description failed with exit $($process.ExitCode)."
+        }
+    } finally {
+        if (-not $process.HasExited) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            [void]$process.WaitForExit(5000)
+        }
+    }
+}
+
+$headlessArguments = @(
+    '--headless',
+    '--quit-after', '3',
+    '--log-file', $interactiveLog,
+    '--path', $godotPreviewRoot,
+    '--',
+    '--pack', $godotPackA,
+    '--plan', $godotPlan
+)
+Invoke-BoundedGodot $headlessArguments 'Interactive preview headless launch'
 function Invoke-GodotCapture(
     [string]$log,
     [string]$pack,
@@ -186,35 +451,20 @@ function Invoke-GodotCapture(
         '--acceptance',
         '--output', $capture
     )
-    $process = Start-Process `
-        -FilePath $godot `
-        -ArgumentList $arguments `
-        -Wait `
-        -PassThru `
-        -WindowStyle Hidden
-    if ($process.ExitCode -ne 0) {
-        throw "Godot viewport acceptance failed with exit $($process.ExitCode)."
-    }
+    Invoke-BoundedGodot $arguments 'Godot viewport acceptance'
 }
-Invoke-GodotCapture $logA $godotOutputA $godotCaptureA
-Invoke-GodotCapture $logB $godotOutputB $godotCaptureB
+Invoke-GodotCapture $logA $godotPackA $godotCaptureA
+Invoke-GodotCapture $logB $godotPackB $godotCaptureB
 
-$captureFilesA = Get-ChildItem -LiteralPath $captureA -File |
-    Select-Object -ExpandProperty Name |
-    Sort-Object
-$captureFilesB = Get-ChildItem -LiteralPath $captureB -File |
-    Select-Object -ExpandProperty Name |
-    Sort-Object
-if (Compare-Object $captureFilesA $captureFilesB) {
+$captureFilesA = @(Get-RelativeFiles $captureA)
+$captureFilesB = @(Get-RelativeFiles $captureB)
+if ($captureFilesA.Count -ne $captureFilesB.Count -or
+    (Compare-Object $captureFilesA $captureFilesB)) {
     throw 'Godot acceptances emitted different file sets.'
 }
-foreach ($name in $captureFilesA) {
-    $captureHashA = (Get-FileHash -Algorithm SHA256 -LiteralPath (
-        Join-Path $captureA $name)).Hash
-    $captureHashB = (Get-FileHash -Algorithm SHA256 -LiteralPath (
-        Join-Path $captureB $name)).Hash
-    if ($captureHashA -ne $captureHashB) {
-        throw "Godot acceptances differ at '$name'."
+foreach ($relativePath in $captureFilesA) {
+    if (-not (Test-ByteEquality (Join-Path $captureA $relativePath) (Join-Path $captureB $relativePath))) {
+        throw "Godot acceptances differ byte-for-byte at '$relativePath'."
     }
 }
 
@@ -235,8 +485,17 @@ foreach ($godotLog in @($interactiveLog, $logA, $logB)) {
         throw "Godot reported an error in '$godotLog'."
     }
 }
+} finally {
+    $env:APPDATA = $previousAppData
+    $env:LOCALAPPDATA = $previousLocalAppData
+    foreach ($path in @($godotAppData, $godotLocalAppData)) {
+        Remove-ProofDirectory $path | Out-Null
+    }
+}
+
+$aggregateDigest = (Get-Content -Raw -LiteralPath (Join-Path $packA 'hashes.json') |
+    ConvertFrom-Json).aggregateDigest
 Write-Host (
-    "E4 compile milliseconds: {0}; pack: {1}" -f
+    "E4.5 compile milliseconds: {0}; aggregateDigest: {1}" -f
     [Math]::Round($compileTimer.Elapsed.TotalMilliseconds),
-    (Get-Content -Raw (Join-Path $outputA 'hashes.json') |
-        ConvertFrom-Json).aggregatePackDigest)
+    $aggregateDigest)

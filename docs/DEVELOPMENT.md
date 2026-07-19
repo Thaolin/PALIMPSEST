@@ -6,59 +6,60 @@
 - Godot 4.7.1 stable .NET/Mono
 - PowerShell 7 or Windows PowerShell 5.1
 
-Set `CHRONICLE_DOTNET` and `CHRONICLE_GODOT` to exact executable paths when the
-tools are not on `PATH`. The proof script also recognizes the repository-local
-paths `.tools/dotnet/dotnet.exe` and
-`.tools/godot/Godot_v4.7.1-stable_mono_win64/Godot_v4.7.1-stable_mono_win64_console.exe`.
+Set `CHRONICLE_DOTNET` and `CHRONICLE_GODOT` when those exact executables are not
+discoverable. The verifier also checks the repository-local tools and the
+read-only PALIMPSEST tool cache.
 
-## Commands
+## Full proof
 
 ```powershell
 ./tools/verify.ps1
 ```
 
-The command performs the full E0–E4 fail-fast proof. On Windows it briefly runs
-two hidden off-screen OpenGL windows for real viewport capture; the separate
-headless launch still proves scene, script, resource, and draw startup.
+This is the exact E4.5 acceptance command. It restores without requiring the
+network, builds with zero warnings, runs conformance, performs two independent
+CLI builds, verifies pinned hashes and all emitted bytes, and exercises the
+pack-only Godot proof. On Windows, real viewport capture briefly uses hidden
+off-screen OpenGL windows; a separate headless launch proves scene startup.
 
-### E0 pack contract
-
-```powershell
-$env:CHRONICLE_DOTNET = 'C:\path\to\dotnet.exe'
-./tools/verify.ps1
-```
-
-The current proof restores, builds Release, and runs the dependency-free
-public-seam conformance executable, then compiles `catalogues/e3.json` twice,
-compares every emitted file, and exercises compiler output ownership guards.
+## Compile manually
 
 ```powershell
 dotnet run --project src/Chronicle.VisualCompiler.Cli -c Release -- `
-  build --catalogue catalogues/e3.json --output artifacts/manual-e3
+  build --profile Palimpsest20 `
+  --catalogue catalogues/e45-palimpsest20.json `
+  --output artifacts/manual-pal20
 ```
 
-### Interactive Godot preview
+`artifacts/manual-pal20/pack` contains exactly four canonical files.
+`artifacts/manual-pal20/review` contains noncanonical 20px review evidence.
+The CLI refuses to replace directories without its ownership marker.
 
-Run the proof once so `artifacts/e4/build-a` exists, then:
+## Interactive preview
+
+Run the full proof once so `artifacts/e45/build-a/pack` exists, then:
 
 ```powershell
 $root = (Resolve-Path '.').Path
 $godot = 'C:\DEV\PALIMPSEST\.tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe'
 & $godot --path "$root\src\Chronicle.VisualPreview.Godot" -- `
-  --pack "$root\artifacts\e4\build-a" `
-  --plan "$root\fixtures\preview-plans\e4-acceptance.json"
+  --pack "$root\artifacts\e45\build-a\pack" `
+  --plan "$root\fixtures\preview-plans\e45-palimpsest20.json"
 ```
 
 Controls:
 
-- `P`: palette
 - `F`: family
 - `V`: variant
-- `M`: adjacency mask
+- `M`: concrete mask
 - `L`: layer
-- `N`: specimen
-- `S`: inspection scale (1×, 4×, 8×)
+- `N`: next definition
+- `S`: integer inspection scale
 
-The metadata panel shows stable ID, family, size, variant, mask, layer, atlas
-rectangle, anchor, geometry/atlas/pack hashes, and validation count. Close the
-window normally; the preview never edits catalogue or pack files.
+The preview calls only exact `Resolve(string)` IDs and never edits the pack.
+
+## Boundaries
+
+Production code is C# only. Do not add a P-GEN-to-PALIMPSEST runtime adapter, a
+PALIMPSEST filesystem reader, live swapping, semantic gameplay authoring, or
+changes under `C:\DEV\PALIMPSEST`. Those are outside E4.5.

@@ -1,32 +1,46 @@
 # Handoff
 
-- Status: `E4 implemented — awaiting visual review`
-- Active stage: none — implementation is stopped at the E4 review gate
-- Permitted scope: inspect the existing review bundle and preview interactively;
-  record a later adopt, narrow, defer, or reject decision only with explicit
-  authority
-- Current proof: `tools/verify.ps1` restores offline, builds all modules with zero
-  warnings, runs public-seam conformance, compiles two byte-identical packs,
-  validates ownership guards, builds the Godot adapter, launches its scene
-  headlessly, captures the actual OpenGL viewport twice off-screen, requires
-  exact equality with an independent CPU pack oracle, compares all capture
-  files, and verifies bounded shutdown. Final pack:
-  `sha256:1fff3cb03aad5bae0013eef507ec5fb7346efe74b600cf771f9cc311fddb0987`.
-  Final raw viewport:
-  `sha256:c3bfabe9ca9e40f64e05b739fa7ec2c0784142150831c238c62ae769bbe2a7a6`.
-  Both PNGs:
-  `sha256:5fbd5d23fe24c767e3bed4a24779f767f99f15de7eaaff8fc44f9280cad3c03a`.
-  Measured compile: 1.212 s; validated off-screen viewport pack loads:
-  216.170 ms and 221.670 ms; the separate headless load was 231.401 ms.
-  Independent E4 review reports no remaining findings
-- Blockers: none; local .NET SDK 8.0.423 and Godot 4.7.1 .NET are available
-- Limitations: generated Bell/connected forms read strongest; native glyphs are
-  abstract; material objects rely more on silhouette than material treatment;
-  baseline evidence supports narrow authoring leverage, not general replacement
-  of manual art; Surface/Sky swaps are intentionally conservative; true viewport
-  capture uses a hidden off-screen OpenGL window because Godot's Windows
-  `--headless` mode exposes only dummy texture storage; human visual approval
-  remains pending
-- Stop condition: met — do not continue implementation
-- Next forbidden work: any E5/Palimpsest integration, catalogue expansion,
-  adoption claim, publication, commit, push, or deployment
+- Status: `E4.5 complete`
+- Active stage: none; implementation is stopped before E5
+- Public artifact: `artifacts/e45/build-a/pack` after
+  `tools/verify.ps1`
+- Review artifact: `artifacts/e45/build-a/review`
+- Catalogue: `catalogues/e45-palimpsest20.json`
+- Contract fixture: `fixtures/palimpsest20/contract.json` (181 definitions)
+- Hash fixture: `fixtures/palimpsest20/expected-hashes.json`
+- Canonical aggregate:
+  `sha256:f41d1e4e4f76b5e6e57921cda35050582368486e87e932d5f1273ff4c2be9bd8`
+- Godot viewport/CPU-oracle PNG:
+  `sha256:8b987ebe3e65f0e0421d648e4945972f2a253f797c40d35ed7765f5addc92b20`
+- Verification entry point: `tools/verify.ps1`
+
+The proof restores offline, builds all C# projects with zero warnings, runs
+strict bundle/compiler/motif conformance, compiles two complete outputs and
+compares every byte, checks committed hashes, validates output ownership guards,
+builds the Godot adapter, launches its scene, captures both exports through
+Godot, compares viewport output to the CPU oracle, checks logs, and confirms
+bounded process shutdown. Its isolated Godot app-data directories are removed
+in a `finally` block.
+
+The final proof measured the first CLI compile at 1.270 seconds and the two
+headless Godot pack loads at 146.015 ms and 152.434 ms. Both viewport captures
+equal their CPU oracles and each other; the captured pixel digest is
+`sha256:aa544d2e426f382cb77f43e3b246fa01212ce329a7bb02f37d08a8b43b52f5e4`.
+
+Review sheets include native and 4× nearest atlas views, adjacency topology,
+shifted overlap, layers, variants, and both variants of grove/ridge motifs.
+Water, cloud, ridge/wall, path/border, crossing, and transition treatments are
+visibly separate. Manual comparison baselines remain outside the canonical pack.
+Motif coordinate selection is delivered as a pinned pure utility; compilation
+has no Chronicle coordinates on which to invoke it, and runtime invocation is
+left at the E5 boundary.
+
+Remaining risk is visual taste, not contract ambiguity. P-GEN proves a
+source-equivalent artifact, but PALIMPSEST currently has no authorized
+filesystem loader or public construction seam for this directory. Proving
+runtime acceptance or swapping it in requires a separately authorized
+PALIMPSEST production change. That work is E5 and is the precise blocker.
+
+The PALIMPSEST worktree contained unrelated pre-existing local changes during
+verification. E4.5 access to that repository was read-only, and this task did
+not edit, stage, or commit any PALIMPSEST file.

@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 
 namespace Chronicle.VisualPack;
 
-public static class PackCodec
+internal static class PackCodec
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
