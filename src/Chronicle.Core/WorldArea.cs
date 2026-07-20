@@ -79,6 +79,9 @@ public sealed class WorldArea
         }
 
         var cells = new WorldCell[checked(bounds.Width * bounds.Height)];
+        var cairnAddress = state.WorldGrammarVersion == 3
+            ? GeneratedCairnAddress(state.Seed)
+            : (WorldAddress?)null;
         var index = 0;
 
         for (var y = 0; y < bounds.Height; y++)
@@ -89,7 +92,7 @@ public sealed class WorldArea
                     stratum,
                     checked(bounds.MinX + x),
                     checked(bounds.MinY + y));
-                var semantics = SemanticsAt(state, address);
+                var semantics = SemanticsAt(state, address, cairnAddress);
                 cells[index++] = new WorldCell(
                     address,
                     semantics.Ground,
@@ -97,10 +100,10 @@ public sealed class WorldArea
                     semantics.DurableIdentity,
                     semantics.MotifIdentity,
                     new WorldCardinalAdjacency(
-                        North: SameForm(state, semantics, address, 0, -1),
-                        East: SameForm(state, semantics, address, 1, 0),
-                        South: SameForm(state, semantics, address, 0, 1),
-                        West: SameForm(state, semantics, address, -1, 0)));
+                        North: SameForm(state, semantics, address, 0, -1, cairnAddress),
+                        East: SameForm(state, semantics, address, 1, 0, cairnAddress),
+                        South: SameForm(state, semantics, address, 0, 1, cairnAddress),
+                        West: SameForm(state, semantics, address, -1, 0, cairnAddress)));
             }
         }
 
@@ -112,7 +115,8 @@ public sealed class WorldArea
         CellSemantics cell,
         WorldAddress address,
         int deltaX,
-        int deltaY)
+        int deltaY,
+        WorldAddress? cairnAddress)
     {
         if ((deltaX < 0 && address.X == long.MinValue) ||
             (deltaX > 0 && address.X == long.MaxValue) ||
@@ -124,13 +128,17 @@ public sealed class WorldArea
 
         var neighbor = SemanticsAt(
             state,
-            new WorldAddress(cell.Stratum, address.X + deltaX, address.Y + deltaY));
+            new WorldAddress(cell.Stratum, address.X + deltaX, address.Y + deltaY),
+            cairnAddress);
         return cell.Ground == neighbor.Ground && cell.Feature == neighbor.Feature;
     }
 
-    private static CellSemantics SemanticsAt(ChronicleState state, WorldAddress address)
+    private static CellSemantics SemanticsAt(
+        ChronicleState state,
+        WorldAddress address,
+        WorldAddress? cairnAddress)
     {
-        if (state.WorldGrammarVersion is not (0 or 1 or 2))
+        if (state.WorldGrammarVersion is not (0 or 1 or 2 or 3))
         {
             throw new InvalidOperationException(
                 $"Unsupported World Grammar version '{state.WorldGrammarVersion}'.");
@@ -138,9 +146,13 @@ public sealed class WorldArea
 
         if (string.Equals(address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal))
         {
-            if (state.WorldGrammarVersion is 1 or 2)
+            if (state.WorldGrammarVersion is 1 or 2 or 3)
             {
-                return OverlayDurableSubject(state, address, Version1SurfaceAt(state.Seed, address));
+                return OverlayDurableSubject(
+                    state,
+                    address,
+                    Version1SurfaceAt(state.Seed, address),
+                    cairnAddress);
             }
 
             CellSemantics legacySurface =
@@ -162,10 +174,10 @@ public sealed class WorldArea
                 SurfaceTerrain.Water => new(address.Stratum, WorldGround.Water, null, null, null),
                 _ => throw new InvalidOperationException("Unknown legacy Surface terrain."),
             };
-            return OverlayDurableSubject(state, address, legacySurface);
+            return OverlayDurableSubject(state, address, legacySurface, cairnAddress);
         }
 
-        CellSemantics sky = state.WorldGrammarVersion is 1 or 2
+        CellSemantics sky = state.WorldGrammarVersion is 1 or 2 or 3
             ? Version1SkyAt(state.Seed, address)
             : SkyStratum.TerrainAt(state.Seed, address.X, address.Y) switch
             {
@@ -184,23 +196,41 @@ public sealed class WorldArea
                     SkyStratum.LandmarkName),
                 _ => throw new InvalidOperationException("Unknown legacy Sky terrain."),
             };
-        return OverlayDurableSubject(state, address, sky);
+        return OverlayDurableSubject(state, address, sky, cairnAddress);
     }
 
     private static CellSemantics OverlayDurableSubject(
         ChronicleState state,
         WorldAddress address,
-        CellSemantics generated)
+        CellSemantics generated,
+        WorldAddress? cairnAddress)
     {
+        var withCairn =
+            state.WorldGrammarVersion == 3 &&
+            string.Equals(address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal) &&
+            address == cairnAddress
+                ? generated with
+                {
+                    DurableIdentity = state.FirstConflict is
+                        {
+                            Address: var conflictAddress,
+                            Outcome: FirstConflictOutcome.Shattered,
+                        } && conflictAddress == address
+                            ? FirstConflictSubjects.ShatteredCairnIdentity
+                            : FirstConflictSubjects.RivenCairnIdentity,
+                }
+                : generated;
+
         var withLooseStone =
             state.LooseStoneAddress == address &&
-            generated.Feature != WorldFeature.Landmark
-                ? generated with
+            withCairn.Feature != WorldFeature.Landmark &&
+            withCairn.DurableIdentity is null
+                ? withCairn with
                 {
                     Feature = WorldFeature.Stone,
                     DurableIdentity = ChronicleState.LooseStoneIdentity,
                 }
-                : generated;
+                : withCairn;
 
         return withLooseStone.DurableIdentity is null &&
                state.Home?.Address == address
@@ -209,6 +239,75 @@ public sealed class WorldArea
                 DurableIdentity = ChronicleState.HomeHearthstoneIdentity,
             }
             : withLooseStone;
+    }
+
+    internal static WorldAddress GeneratedCairnAddress(long seed)
+    {
+        for (var distance = 1; distance <= 96; distance++)
+        {
+            // Enumerate the accepted selector tuple directly:
+            // (distance, east/axis/west, absolute X, negative Y).
+            for (var absoluteX = 1; absoluteX <= distance; absoluteX++)
+            {
+                var absoluteY = distance - absoluteX;
+                if (TryCairnCandidate(seed, absoluteX, absoluteY, out var east))
+                {
+                    return east;
+                }
+
+                if (absoluteY != 0 &&
+                    TryCairnCandidate(seed, absoluteX, -absoluteY, out east))
+                {
+                    return east;
+                }
+            }
+
+            if (TryCairnCandidate(seed, 0, distance, out var axis))
+            {
+                return axis;
+            }
+
+            if (TryCairnCandidate(seed, 0, -distance, out axis))
+            {
+                return axis;
+            }
+
+            for (var absoluteX = 1; absoluteX <= distance; absoluteX++)
+            {
+                var absoluteY = distance - absoluteX;
+                if (TryCairnCandidate(seed, -absoluteX, absoluteY, out var west))
+                {
+                    return west;
+                }
+
+                if (absoluteY != 0 &&
+                    TryCairnCandidate(seed, -absoluteX, -absoluteY, out west))
+                {
+                    return west;
+                }
+            }
+        }
+
+        throw new InvalidOperationException(
+            "World Grammar v3 could not find a dry Stone Cairn site within its bounded selector.");
+    }
+
+    private static bool TryCairnCandidate(
+        long seed,
+        int x,
+        int y,
+        out WorldAddress address)
+    {
+        address = new WorldAddress(SurfacePatch.SurfaceStratum, x, y);
+        if (address == ChronicleState.InitialLooseStoneAddress ||
+            address == ChronicleState.AcceptedHomeFixtureAddress)
+        {
+            return false;
+        }
+
+        var semantics = Version1SurfaceAt(seed, address);
+        return semantics.Ground != WorldGround.Water &&
+               semantics.Feature == WorldFeature.Stone;
     }
 
     private static CellSemantics Version1SkyAt(long seed, WorldAddress address)
@@ -337,4 +436,5 @@ public sealed class WorldArea
         WorldFeature? Feature,
         string? DurableIdentity,
         string? MotifIdentity);
+
 }

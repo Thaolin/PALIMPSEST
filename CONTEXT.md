@@ -20,6 +20,9 @@ _Avoid_: Chronicle, level, disposable map
 **Chronicle Clock**:
 The fixed-tick continuous time of a Chronicle. The player may pause or change
 its speed for deliberation, but survival never depends on reflex input.
+Pausing freezes autonomous world change and time-driven object behavior. The
+player may still inspect, configure a Loadout, move deliberately, or prepare an
+action whose material resolution waits for a later Chronicle tick.
 _Avoid_: Hard turn sequence, twitch combat clock
 
 **Stratum**:

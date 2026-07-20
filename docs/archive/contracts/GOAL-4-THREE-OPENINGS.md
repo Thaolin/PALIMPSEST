@@ -2,13 +2,15 @@
 
 ## Status
 
-Authorized on 2026-07-19. Slice 4A implementation, automated proof, player UAT,
-and tracker reconciliation completed on 2026-07-19. Slice 4B implementation and
-full automated proof completed on 2026-07-19. Its functional player journey,
-Clock/Codex correction, focused recheck, and tracker reconciliation completed
-on 2026-07-20. Slice 4B is accepted. Slice 4C is the next candidate but remains
-forbidden until separately authorized. The complete retained verifier passed
-again after the correction on 2026-07-20.
+**Complete and accepted on 2026-07-20.** Slice 4A implementation, automated
+proof, player UAT, and tracker reconciliation completed on 2026-07-19. Slice
+4B implementation and full automated proof completed on 2026-07-19; its
+functional player journey, Clock/Codex correction, focused recheck, and tracker
+reconciliation completed on 2026-07-20. Slice 4C's fixture and seams were
+scoped, approved, implemented, and fully verified before its player UAT passed
+on 2026-07-20. The player accepted the alpha while recording closer zoom and
+stronger Cairn legibility as deferred visual work. Goal 5 has not begun and
+remains separately gated.
 
 The player confirmed the public test seams and exact first catalogue/source
 fixture on 2026-07-19.
@@ -26,7 +28,7 @@ Slice 3 complete
 
 ## Goal outcome
 
-A new Chronicle will eventually offer Combat, Explore, and Build as three
+A new Chronicle offers Combat, Explore, and Build as three
 different First Horizons into one persistent world. They are Starting Vectors,
 not permanent classes, separate campaigns, or content locks.
 
@@ -525,8 +527,8 @@ Reject 4B if Home is only a saved coordinate, if the route moves the player,
 if Found bypasses Chronicle matter, if Home is a Godot mode, or if the new UI
 again dominates the playspace.
 
-The exact interactive journey is recorded in the
-[Goal 4B UAT sheet](GOAL-4B-UAT.md). Its functional items and focused
+The exact interactive journey is preserved in the archived
+[Goal 4B UAT sheet](../uat/GOAL-4B-UAT.md). Its functional items and focused
 Clock/Codex correction recheck passed on 2026-07-20.
 
 ### UAT findings and correction
@@ -584,11 +586,251 @@ Slice 4B is complete only when:
 All seven conditions were satisfied on 2026-07-20. Slice 4B is complete; that
 completion does not itself authorize Slice 4C.
 
-## Next authorization boundary — Slice 4C
+## Slice 4C — A Consequential Fight
 
-Slice 4C — A Consequential Fight is the next Roadmap candidate. No production
-work is authorized yet. Before implementation begins, the active Handoff must
-record separate player authorization and narrow 4C to one exact deterministic,
-pausable conflict fixture, its public seams, persistent consequence, automated
-proof, and player UAT. The retained camera-zoom, water-traversal, and route-arrow
-notes do not automatically become 4C scope.
+### Status
+
+**Complete and accepted on 2026-07-20.** The player explicitly approved this
+fixture and its public seams, implementation and the complete automated proof
+finished, and focused player UAT passed. The accepted alpha retained closer
+zoom and Cairn legibility as future visual notes without reopening 4C.
+
+### Player-visible hypothesis
+
+Combat can begin as one legible confrontation with a place-bound danger rather
+than a health bar, damage loop, or reflex arena. The player should be able to
+stop time, understand what will happen, prepare one loaded Word, and let the
+next Chronicle tick make that decision material.
+
+### Fixed first fixture
+
+| Concern | 4C choice |
+| --- | --- |
+| Combat Intent | `AGAINST`, presented as the Combat Starting Vector |
+| First Verb | `Smash`, stable identity `word.smash` |
+| First Horizon | **The Riven Cairn**, a generated Stone ward on the first suitable ridge-spur near the origin |
+| Seed fixture | Seed `41337`, `surface (1, 3)`, one east of the accepted Home site |
+| Threatening subject | **The River-Ward**, a place-bound artifact rather than an Agent |
+| History | “A Stone ward split by the river's old flood rises from the ridge. It was built to hold the ford; every living body completes its closing circuit.” |
+| Warning | Entry pauses the Core Clock before the ward can act; the next active tick resolves the exchange |
+| Player choices | Leave while paused, or prepare intrinsic `Smash` through the existing Loadout and resume the Clock |
+| Failure | Resume without a prepared action; the next tick ends the current Incarnation and leaves the ward intact |
+| Material consequence | Prepared `Smash` resolves on the next tick and leaves **The Shattered Cairn** at the same Address |
+| Study reward | None in 4C; the optional post-fight Study Source is deferred |
+
+`Smash` means “Break a resisting material at the current site by direct
+force.” It requires zero Understanding because it is the Combat First Verb,
+takes no Noun in 4C, and is granted and fitted in slot one by `AGAINST`.
+Combat permission depends on an equipped `Smash`, never on the saved Starting
+Vector. A later mixed Codex can independently fit `Fly`, `Found`, or `Smash`.
+
+The River-Ward is a generated artifact with one authored reaction, not an
+`Agent`, enemy family, or first step toward AI. This preserves Goal 5's first
+named Agent boundary.
+
+### World Grammar rule
+
+World Grammar version `3` delegates every version-`2` Surface/Sky ground,
+feature, and motif plus the Bell Study Source unchanged, then adds this one
+generated subject identity.
+The private rule searches dry generated Stone within Manhattan radius `96`
+of the origin, excluding the origin, the initial loose Stone, and the accepted
+Home fixture. It chooses the minimum tuple:
+
+```text
+(Manhattan distance, side priority, absolute X, negative Y)
+side priority: east 0, axis 1, west 2
+```
+
+The existing ridge grammar guarantees a candidate in that bound. Seed `41337`
+must select `surface (1, 3)`, whose underlying semantics remain Soil, Stone,
+and `surface-ridge-main`. The Cairn does not replace ground, move the loose
+Stone, occupy Home at `surface (0, 3)`, or overlap the Bell.
+
+The generated place exists in every new grammar-`3` Chronicle regardless of
+Starting Vector. `AGAINST` grants the immediate capability to confront it; it
+does not spawn private Combat content.
+
+The intact and shattered Cairn identities make their cell ineligible for
+`Found`. The selector excludes the loose Stone's fixed X/Y coordinate, and the
+current `Fly[Stone]` rule may change only its Stratum, so that delta cannot
+later enter the Cairn cell. Strict v4 validation rejects a grammar-`3` conflict
+whose Address differs from the generated selector or overlaps Home or the
+loose Stone. Older pinned worlds never gain the subject, so an existing Home
+cannot be retroactively covered.
+
+Home also reserves its exact Address from a returning loose Stone:
+`Fly[Stone]` does not advertise that move as a valid target and rejects a
+direct request before mutation. Fixed-tick and replacement counters likewise
+guard before a maximum-minus-one value could transition into an unsaveable
+maximum value: the Clock auto-pauses, replacement rejects as a no-op, and the
+pre-transition Chronicle remains exactly saveable without surfacing an
+application exception.
+
+### One-exchange rule
+
+1. Entering the unresolved Cairn records the threat and pauses the existing
+   Core Chronicle Clock before another tick can advance.
+2. The read-only conflict context names the Cairn and River-Ward, explains its
+   history and exact next-tick consequence, and exposes whether `Smash` is
+   prepared.
+3. Deliberate movement remains available while paused. Leaving clears the
+   pending exchange; the generated ward remains unresolved.
+4. Using an equipped intrinsic `Smash` at the Cairn records that exact Loadout
+   action as pending. It does not resolve immediately.
+5. On the next non-paused fixed tick:
+   - prepared `Smash` shatters the ward, records the outcome, and leaves the
+     Incarnation alive at the same Address;
+   - no prepared action ends the Incarnation and leaves the ward unresolved.
+6. Pause prevents both outcomes and freezes every time-driven River-Ward,
+   Cairn, danger-emphasis, and material phase. Inspection, deliberate retreat,
+   Loadout changes, and preparing `Smash` remain available; no world object
+   reacts or changes because wall-clock frames continue. At Slow, Normal, or
+   Fast, the first delivered tick resolves the exchange. A failed Incarnation
+   consumes exactly that one tick; later ticks in the same pulse are inert
+   because no living Incarnation remains.
+7. Leaving, death, or replacement clears an unresolved pending exchange. A
+   replacement retains `Smash` in the Codex, receives an empty Loadout, and may
+   return to try again.
+8. A resolved Cairn cannot be fought or resolved again.
+
+There is no health, damage number, initiative, hit chance, cooldown, reflex
+window, or off-screen combat.
+
+### Canonical state and persistence
+
+Add one nullable `FirstConflictState`, not a collection or general combat
+model. While threatened or resolved it contains only:
+
+- stable subject identity and generated Address;
+- the tick on which the threat was entered;
+- an optional exact pending `LoadoutSlot`;
+- optional `Shattered` outcome;
+- resolution tick and resolving Incarnation identity when resolved.
+
+Unresolved generated place/history text and visual facts are regenerated and
+not serialized. A resolved outcome derives the durable **The Shattered
+Cairn** overlay over the unchanged Soil/Stone cell.
+
+Strict save envelope `4` is required. Literal version `3` becomes an explicit
+private predecessor shape and migrates with no conflict state while retaining
+its exact supported World Grammar pin (`0`, `1`, or `2`); version `2`, version
+`1`, and pre-envelope paths remain literal compatibility proof. New Chronicles
+begin on World Grammar version `3`. Old pinned worlds do not silently gain the
+Cairn. A predecessor Chronicle with no opening selected continues to expose
+only the openings supported by its pinned grammar.
+
+### Confirmed public seams
+
+Tests and Godot may use only:
+
+- `ChronicleSimulation.Apply(...)` for `AGAINST`, Loadout configuration/use,
+  movement, speed, death, and replacement;
+- `ChronicleSimulation.AdvanceClockPulse()` and the fixed-tick state transition;
+- one read-only `ChronicleSimulation.ConflictContext` snapshot;
+- the public authored Word Catalogue lookup for `Smash`;
+- public Chronicle state for the one canonical conflict delta;
+- `WorldArea.Generate(...)` for intact and shattered Cairn subjects;
+- `VisualGrammar.Compose(...)` and the manual compiled pack for the two subject
+  marks and transient danger emphasis;
+- `ChronicleSaveCodec` for strict v4 persistence and literal predecessor
+  migration;
+- real Godot controls, readouts, and separate-process headless journeys.
+
+Do not add a combat service, actor repository, effect registry, AI interface,
+damage model, encounter manager, or Godot-owned eligibility rule.
+
+### Automated proof
+
+The implementation gate must prove:
+
+1. `AGAINST` grants catalogue-authored `Smash`, fits it once, remains
+   nonbinding, and preserves independent mixed-Codex fitting of `Fly`, `Found`,
+   and `Smash`.
+2. Grammar `3` selects one deterministic non-overlapping Cairn, resolves seed
+   `41337` exactly to `surface (1, 3)`, preserves every grammar-`2` ground,
+   feature, motif, and Bell source, adds exactly one subject identity, and
+   remains replay/query-order neutral.
+3. Seed `41337` exposes the same intact Cairn identity, Address, history, and
+   danger after choosing `AGAINST`, `UP`, or `HERE`; only the granted Word and
+   Loadout differ.
+4. Intact and shattered Cairn cells reject `Found`; the loose Stone cannot
+   overlap the selected cell; `Fly[Stone]` cannot return onto Home; malformed
+   v4 overlap states reject; and each rejected transition preserves an exact
+   save round trip.
+5. Entering the unresolved Cairn pauses before a tick and exposes the exact
+   Core-owned identity, history, warning, and choices.
+6. Pause is inert across Core state and time-driven Godot presentation: the
+   ward, Cairn, danger phase, material identity, Tick, and pending result do not
+   advance. Leaving clears the pending exchange; wrong, absent, remote, and
+   repeated actions reject without mutation.
+7. `Smash` records a pending Loadout action but changes no material until the
+   next active tick.
+8. Slow, Normal, and Fast each resolve the exchange on their first delivered
+   tick. Prepared `Smash` produces the Shattered Cairn while preserving the
+   living Incarnation and Address; later ticks in the same successful pulse
+   are ordinary Chronicle ticks.
+9. The same first tick without a prepared action ends the body, leaves the ward
+   unresolved, consumes no later ticks from that pulse, and lets a replacement
+   retain `Smash` with an empty Loadout.
+10. Paused threat, the resumed-before-next-tick window, pending action, and
+    resolved outcome round-trip exactly; the Shattered Cairn survives
+    leave/revisit, restart, death, and replacement.
+11. Save v4 is strict; literal v3 fixtures with grammar pins `0`, `1`, and `2`,
+    plus literal v2, v1, and pre-envelope saves, migrate without later Word
+    identities, a retroactive Cairn, impossible loose-Stone provenance, or loss
+    of accepted state.
+12. Core, visual composition, Godot, Goal 2, Slice 3, 4A, and 4B regressions
+    remain green.
+
+### Godot proof and UAT boundary
+
+Keep the accepted 20-pixel pack and current enlarged playspace. Add
+`AGAINST — COMBAT` to the existing opening, present `Smash` through the same
+Codex/Loadout/hotbar controls, render the intact and shattered Cairn through the
+shared WorldArea/Visual Grammar path, and show the threat/pending/result through
+the existing readout regions. Do not add a combat screen, action bar, timer
+owned by Godot, or new interface column. Any time-driven Ward or danger
+presentation must follow the Chronicle Clock and visibly freeze while paused;
+selection and other timeless UI feedback may remain responsive.
+
+The headless gate needs two isolated fresh-Chronicle branches:
+
+- prepared `Smash`, save/restart while threatened, next-tick resolution, and
+  durable Shattered Cairn restore;
+- intentional no-action resume, next-tick death, replacement, retained
+  `Smash`, empty Loadout, and intact ward.
+
+The interactive success journey and acceptance questions are in the
+[accepted Goal 4C UAT sheet](../uat/GOAL-4C-UAT.md). The player passed that
+journey on 2026-07-20. Deliberate movement while paused remains intentional:
+the Chronicle Clock freezes autonomous and time-driven progression, not
+responsive commands such as retreat.
+
+### Forbidden in 4C
+
+- health, damage values/types, armor, initiative, turns, combos, cooldowns,
+  hit chance, status effects, weapons, or combat statistics;
+- additional opponents, bestiary, spawn tables, AI, pathfinding, factions, or
+  a general Agent model;
+- loot, inventory, experience, a post-fight Study Source, new Nouns, or
+  `Smash[Noun]`;
+- another Landmark system, generic effect/encounter registries, event sourcing,
+  Chronicle Records, Pressures, raids, or off-screen resolution;
+- terrain collision or water traversal, route arrows, camera-zoom comparison,
+  visual-engine E5/P-GEN adoption, or broad art expansion.
+
+### Definition of 4C done
+
+Slice 4C is complete only when:
+
+1. the player explicitly approves this fixture and its public seams;
+2. the active Handoff records separate production authorization;
+3. every automated Core, persistence, visual, and Godot branch passes;
+4. a real application restart restores both threatened and resolved state;
+5. the player passes the focused 4C UAT;
+6. Goal 4's three Starting Vectors are visible as nonbinding openings into the
+   same grammar-`3` world;
+7. the Roadmap, this contract, UAT sheet, Codemap, Development guide, and
+   active Handoff are reconciled; and
+8. work stops before Goal 5 until separately authorized.

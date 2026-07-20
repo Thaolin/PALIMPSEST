@@ -119,13 +119,14 @@ PASS: Goal 4A Core and Godot Study choice, partial/completed restarts, every Goa
 Goal 4B adds an isolated two-process Home gate. The initial process drives the
 fresh seed-`41337` controls through `HERE`, the flooded-Stone rejection at
 `surface (0, 0)`, founding at soil-supported Stone on `surface (0, 3)`, and
-ordinary departure, then writes a strict v3 canonical save. The verifier reads
-that isolated save to require envelope v3 and explicit Home before a second
+ordinary departure, then writes the current strict canonical save. The
+standalone historical 4B gate required envelope v3; the retained verifier now
+reads envelope v4 with explicit Home before a second
 process restores it, follows the physical Return Route home, and proves the
 exact Home and Hearthstone facts. Core checks retain literal
-v2/v1/pre-envelope migration and death/replacement coverage.
+v3/v2/v1/pre-envelope migration and death/replacement coverage.
 
-The current full automated gate ends with:
+The retained standalone 4B automated gate ended with:
 
 ```text
 GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone route=physical view=50x36 save=3
@@ -139,6 +140,27 @@ asserting that the header remains a fitting four-line readout. The focused
 player visual recheck passed and 4B was accepted on 2026-07-20. The complete
 verifier passed again after this correction with zero errors. Its only warning
 was `NU1900` because the NuGet vulnerability feed was unreachable.
+
+Goal 4C adds four isolated application phases around the same strict save:
+paused threat plus pending `Smash`, successful next-tick resolution, restart
+and Shattered Cairn revisit, and the no-action death/replacement branch. The
+verifier inspects the threatened and resolved v4 envelopes between processes,
+retains old grammar pins, and proves the 20-pixel opening, conflict readout,
+Loadout controls, static danger emphasis, and material consequence through the
+real Godot shell.
+
+The current full automated gate ends with:
+
+```text
+GOAL4C CORE ACCEPTANCE PASS openings=AGAINST,UP,HERE grammar=3 cairn=surface(1,3) smash=word.smash save=4
+PASS: Goal 4C conflict restart and failure acceptance, Goal 4B Home and restart acceptance, Goal 4A Study choice, every Goal 2 regression, Gate 3A Inspector, and Gate 3B visual acceptance verified.
+```
+
+That gate passed on 2026-07-20 with zero build errors. Its only warning was
+`NU1900` because the NuGet vulnerability feed was unreachable. It makes the
+[focused Goal 4C UAT](archive/uat/GOAL-4C-UAT.md) runnable. The player
+subsequently passed that journey on 2026-07-20; the archived sheet retains the
+closer-zoom and Cairn-legibility notes.
 
 To run the individual proof steps instead, restore once, then build and run the
 engine-independent check:
@@ -178,6 +200,17 @@ Stone and Bell completion, immutable public snapshots, strict version-2 JSON,
 string Loadout identities, explicit numeric predecessor migration, and unchanged
 version-0/version-1 physical World semantics.
 
+Goal 4B adds singular Home, Hearthstone material identity, site eligibility,
+the derived physical Return Route, strict save v3, and predecessor proof. Goal
+4C adds authored `Smash`, grammar-v3 Riven Cairn selection, the one-exchange
+Core conflict state, pause/Slow/Normal/Fast resolution rules, all-opening world
+independence, non-overlap invariants, strict save v4, and literal v3 grammar
+pins `0`, `1`, and `2`. Its save proof also covers the resumed-before-next-tick
+window, schema-appropriate predecessor Word identities, fixed loose-Stone X/Y
+provenance, Home-safe `Fly[Stone]` targeting, guard-before-mutation at exhausted
+tick/Incarnation counters without application exceptions, and rejection of
+malformed current state.
+
 The Visuals executable proves both native pack sizes, stable identifiers and
 pack digests, palette/atlas bounds, all connected-feature masks, exact
 dry-ridge-to-water-crossing edge pixels, deterministic address-derived
@@ -185,6 +218,8 @@ variants, mapping and layer order, one-cell-halo crop, overlap agreement, and
 repeatable render-plan digests without referencing Godot. It also composes the
 minimum and maximum representable absolute addresses without wrapping a
 cardinal neighbor or treating the numeric storage limit as authored terrain.
+It additionally proves intact/shattered Cairn identity mapping and static,
+Core-fed danger emphasis without mutating semantic input.
 
 ## Developer World Atlas Inspector
 
@@ -325,97 +360,26 @@ source: its Core-owned situation, qualities, contribution, and ordered
 `Stone`/`Bell` offers replace the old hidden-Stone action. The direction,
 clock, hotbar, Study choice, save, and load controls invoke Core commands.
 Pause stops Chronicle ticks and Study; deliberate commands remain available
-while paused. Slice 2A passed its player UAT with the following historical
-reference journey:
+while paused.
 
-1. Launch with a Slice 0 or fresh save. Confirm the modal `UP` Intent and that
-   movement is unavailable.
-2. Select `UP`; confirm the Codex lists `Fly`, eight hotbar slots remain, and
-   `FLY UP` occupies the first slot.
-3. Before reaching it, confirm the disabled button says `STUDY AT BELL` and the
-   Chronicle Thread points to `sky (0, -4)` without requiring documentation.
-4. Fly up. Confirm the player-centred generated sky, centred marker, and visible
-   gold Bell four cells north.
-5. Move north four times. Confirm the address is `sky (0, -4)` and the
-   application names **The Bell That Fell Up** with its arrival line.
-6. Select `STUDY SKY-STONE`. Confirm the interface names the clapper rather
-   than revealing its result, shows four progress segments, and keeps the Noun
-   list empty until understanding completes.
-7. Pause and wait. Confirm neither Tick nor Study progress advances.
-8. Resume normal speed, save before completion, move away, and load. Confirm
-   the exact partial progress and active Study return.
-9. Remain at the Bell until 16 Chronicle ticks of understanding complete.
-   Confirm `Nouns: Stone` and four filled segments marked `KEPT`.
-10. Select `STUDY AGAIN`. Confirm the Chronicle says it already keeps `Stone`
-   and the Codex does not change.
-11. Close and relaunch. Confirm `Fly`, `Stone`, completed Study, address, speed,
-   and the generated view restore.
-12. Move south four times and use `FLY DOWN`. Confirm the address is
-   `surface (0, 0)` and Fly remains granted.
-13. Move east, fly up, and fly down. Confirm both transitions preserve
-   coordinate `(1, 0)`.
-
-For the accepted Slice 2B reference journey:
-
-1. Load the completed Slice 2A Chronicle. Confirm the Codex still owns `Fly`
-   and `Stone`, while `LOADOUT SLOT 1` separately shows active `FLY`.
-2. Select `CLEAR SLOT 1`. Confirm the Codex remains unchanged, hotbar slot one
-   becomes empty, and self-flight is unavailable.
-3. Select `EQUIP FLY`. Confirm slot one and the hotbar restore intrinsic Fly.
-4. Select `FIT STONE`. Confirm slot one becomes `FLY[STONE]` and self-flight is
-   no longer available.
-5. Move to `surface (0, 0)`, immediately west of the visibly distinct loose
-   Stone at `surface (1, 0)`.
-6. Select the fitted hotbar slot. Confirm the loose Stone receives a gold
-   highlight and the Chronicle Thread asks for a cardinal target.
-7. Select east. Confirm the Incarnation stays at `surface (0, 0)` while the
-   loose Stone moves to `sky (1, 0)`.
-8. Restore intrinsic `FLY`, fly to `sky (0, 0)`, and confirm the same loose
-   Stone is visible one cell east.
-9. Fit `STONE` again and target east. Confirm the Stone returns to
-   `surface (1, 0)` while the Incarnation remains in the sky.
-10. Save with a fitted Loadout and moved Stone, perturb both, then load. Confirm
-    the Loadout, player address, Stone address, Codex, and Study restore exactly.
-
-For the current Slice 2C player UAT:
-
-1. Begin with Incarnation `1`, learned `Fly` and `Stone`, and the loose Stone
-   moved to `sky (1, 0)`. Save.
-2. Equip intrinsic `Fly`, reach The Bell That Fell Up at `sky (0, -4)`, and fit
-   `Stone` so the active slot reads `FLY[STONE]`.
-3. Select `END THIS BODY`. Confirm that the body remains alive and the control
-   changes to `CONFIRM DEATH`.
-4. Select `CONFIRM DEATH`. Confirm the replacement screen says the body ended,
-   time is not advancing, and the Codex and changed Chronicle remain.
-5. Wait. Confirm the displayed Tick does not advance. Save and load on this
-   screen; confirm the same awaiting state returns.
-6. Select `CREATE REPLACEMENT INCARNATION`. Confirm Incarnation `2` appears at
-   `surface (0, 0)` with exactly eight empty Loadout slots.
-7. Confirm `Fly`, `Stone`, completed Understanding, seed, tick, and speed remain
-   unchanged, and the loose Stone is still at `sky (1, 0)`.
-8. Equip intrinsic `Fly`, enter the sky, and observe the first body's moved
-   Stone one cell east.
-9. Save, close the application, relaunch it, and confirm Incarnation `2`, its
-   fitted intrinsic `Fly`, the Codex, Understanding, clock, address, and moved
-   Stone restore exactly.
-
-For the accepted Goal 4B player UAT, use the dedicated
-[Goal 4B UAT sheet](GOAL-4B-UAT.md). It begins from a fresh isolated Chronicle,
-uses the actual 20-pixel `51 × 37` view, and stops before 4C. Its functional
-journey and focused Tick/Clock correction recheck passed; 4B was accepted on
-2026-07-20.
+Completed player journeys are historical evidence, not launch instructions.
+They are preserved in the archived
+[Goal 2 contract](archive/contracts/GOAL-2-A-WORD-KEPT.md),
+[Goal 4A UAT sheet](archive/uat/GOAL-4A-UAT.md), and
+[Goal 4B UAT sheet](archive/uat/GOAL-4B-UAT.md), and
+[Goal 4C UAT sheet](archive/uat/GOAL-4C-UAT.md).
 
 Godot keeps the compatible file at `user://slice0_chronicle.json`. A Slice 0
 file without Intent opens as `Unchosen`; a Slice 1 file with `UP` migrates to
 an explicit Codex containing `Fly`; a Slice 2A file gains intrinsic Fly in
 slot one and the loose Stone at `surface (1, 0)`; a Slice 2B file gains living
 Incarnation identity `1` without changing its Loadout or Stone delta. Literal
-v2, v1, and pre-envelope saves are decoded through predecessor shapes before
-constructing the strict current v3 canonical Chronicle. Current v3 saves use
-stable string Word identities and contain only canonical Chronicle state,
-including optional singular Home, and durable deltas. Surface, sky, Study
-Source, Hearthstone, and route snapshots are regenerated from the seed, pinned
-grammar, durable identity, and World Address.
+v3, v2, v1, and pre-envelope saves are decoded through predecessor shapes
+before constructing the strict current v4 canonical Chronicle. Current v4
+saves use stable string Word identities and contain only canonical Chronicle
+state, including optional singular Home, first-conflict state, and durable
+deltas. Surface, sky, Study Source, Hearthstone, Cairn, and route snapshots are
+regenerated from the seed, pinned grammar, durable identity, and World Address.
 
 To open the editor instead:
 

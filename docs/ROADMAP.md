@@ -21,7 +21,8 @@ Stratum, and lets the player reach a visible sky Landmark and return.
 concrete Verb to reach an otherwise inaccessible place, and understand why it
 worked without reading documentation.
 
-Implementation contract: [Slice 1 — First Horizon](SLICE-1-FIRST-HORIZON.md).
+Historical implementation contract:
+[Slice 1 — First Horizon](archive/contracts/SLICE-1-FIRST-HORIZON.md).
 
 ## Goal 2 — A Word Kept After Death
 
@@ -40,7 +41,8 @@ Deliver three sequential UAT slices:
 build without erasing the first Chronicle’s material state. Each child slice
 requires separate UAT before the next begins.
 
-Implementation contract: [Goal 2 — A Word Kept After Death](GOAL-2-A-WORD-KEPT.md).
+Historical implementation contract:
+[Goal 2 — A Word Kept After Death](archive/contracts/GOAL-2-A-WORD-KEPT.md).
 
 ## Slice 3 — A World With Shape
 
@@ -64,7 +66,8 @@ The parallel candidate compiler is specified in the
 [Chronicle Visual Engine drop-in contract](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md).
 It is pure C# at authoring time with a Godot preview adapter, remains absent
 from the shipped runtime, and does not block Gate 3B. Its separate E0–E4
-[build handoff](CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md) stops before
+[historical build handoff](archive/prompts/CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md)
+stops before
 Palimpsest integration. P-GEN's E4.5 technical proof was independently
 reproduced on 2026-07-20, but it is not adopted or currently drop-in. Its
 [readiness review](P-GEN-E4-5-READINESS-REVIEW.md) records the consumer,
@@ -80,12 +83,15 @@ Implementation contract: [Slice 3 — A World With Shape](SLICE-3-WORLD-VISUAL-G
 
 ## Goal 4 — Three Openings, One Chronicle
 
-**Status:** Authorized on 2026-07-19. Slice 4A completed implementation,
-automated proof, player UAT, and tracker reconciliation on 2026-07-19. Slice
-4B completed implementation and automated proof on 2026-07-19, then passed
-functional player UAT, its focused Clock/Codex correction recheck, and tracker
-reconciliation on 2026-07-20. Slice 4B is complete. Slice 4C is next but remains
-forbidden until separately authorized.
+**Status:** Complete and accepted on 2026-07-20. Slice 4A completed
+implementation, automated proof, player UAT, and tracker reconciliation on
+2026-07-19. Slice 4B completed implementation and automated proof on
+2026-07-19, then passed functional player UAT, its focused Clock/Codex
+correction recheck, and tracker reconciliation on 2026-07-20. Slice 4C's exact
+fixture and public seams were approved, implemented, fully verified, and
+passed player UAT on 2026-07-20. Closer zoom and stronger Cairn legibility
+remain deferred visual notes; deliberate movement while paused is accepted
+command responsiveness. Goal 5 has not begun and remains separately gated.
 
 Begin only after Goal 2 and both Slice 3 gates pass. Deliver three sequential
 UAT slices that turn Combat, Explore, and Build into genuine openings onto the
@@ -116,8 +122,10 @@ production chains, jobs, Pressure, or free teleportation yet.
 
 **Implementation state:** complete and accepted on 2026-07-20. The fixed Home
 fixture, automated proof, functional player journey, compact Tick/Clock
-correction, focused recheck, and tracker reconciliation all passed. This does
-not authorize 4C. See [Goal 4B UAT](GOAL-4B-UAT.md).
+correction, focused recheck, and tracker reconciliation all passed. That
+acceptance did not itself authorize 4C; separate authorization followed. See
+the archived
+[Goal 4B UAT](archive/uat/GOAL-4B-UAT.md).
 
 **Accept when:** a builder experiences Home as an authored-by-play place, while
 an explorer can leave it modest and use it as an expedition anchor without
@@ -125,15 +133,17 @@ entering a management mode.
 
 ### 4C — A Consequential Fight
 
-**Authorization state:** next candidate; not yet authorized. Confirm one exact
-fixture, public seams, persistent consequence, automated proof, and UAT
-boundary before changing production code.
+**Implementation state:** complete and accepted on 2026-07-20. The `AGAINST` /
+`Smash` / Riven Cairn fixture, one-exchange fixed-tick rule, strict save-v4
+boundary, automated proof, and player result are preserved in the archived
+[Goal 4 contract](archive/contracts/GOAL-4-THREE-OPENINGS.md) and
+[Goal 4C UAT sheet](archive/uat/GOAL-4C-UAT.md).
 
 Add the Combat Starting Vector and one deterministic, pausable conflict tied to
 a generated place and its history. The encounter uses the same Loadout and
-Chronicle rules as exploration, leaves a material consequence, and may create a
-valuable Study opportunity. Do not build a broad bestiary, loot economy, or
-reflex combat layer.
+Chronicle rules as exploration and leaves a material consequence. The scoped
+first fixture deliberately defers any post-fight Study opportunity. Do not
+build a broad bestiary, loot economy, or reflex combat layer.
 
 **Accept when:** the player can stop, understand the danger, choose a meaningful
 Expression or action, and see the result persist outside a combat screen.
@@ -144,11 +154,12 @@ generated world, and eventual Incarnations. Each child slice requires its own
 automated proof and player UAT before the next begins.
 
 Implementation contract:
-[Goal 4 — Three Openings, One Chronicle](GOAL-4-THREE-OPENINGS.md).
+[Goal 4 — Three Openings, One Chronicle](archive/contracts/GOAL-4-THREE-OPENINGS.md).
 
 ## Goal 5 — Home Has People
 
-Begin only after Goal 4 proves the Home–expedition rhythm.
+**Status:** Not authorized. Goal 4 has proved the Home–expedition rhythm, but
+no Goal 5 child slice may begin without separate authorization.
 
 ### 5A — Someone Comes Home
 

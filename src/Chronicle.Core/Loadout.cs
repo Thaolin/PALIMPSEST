@@ -16,6 +16,9 @@ public readonly record struct LoadoutSlot(
     public bool IsIntrinsicFound => Verb == WordIds.Found && Noun is null;
 
     [JsonIgnore]
+    public bool IsIntrinsicSmash => Verb == WordIds.Smash && Noun is null;
+
+    [JsonIgnore]
     public bool IsFlyStone => Verb == WordIds.Fly && Noun == WordIds.Stone;
 
     [JsonIgnore]
@@ -23,6 +26,7 @@ public readonly record struct LoadoutSlot(
     {
         { IsIntrinsicFly: true } => "FLY",
         { IsIntrinsicFound: true } => "FOUND",
+        { IsIntrinsicSmash: true } => "SMASH",
         { IsFlyStone: true } => "FLY[STONE]",
         _ when IsEmpty => "—",
         _ => "?",

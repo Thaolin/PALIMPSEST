@@ -6,8 +6,8 @@ This specification grants no authority to change production code, does not
 block Slice 3 Gate 3B, and does not make the candidate engine a runtime
 dependency.
 
-The copy-paste implementation handoff is
-[Build the Chronicle Visual Engine](CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md).
+The completed copy-paste implementation handoff is archived as
+[Build the Chronicle Visual Engine](archive/prompts/CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md).
 It authorizes a separate workspace through Stage E4 and forbids Stage E5
 Palimpsest integration.
 

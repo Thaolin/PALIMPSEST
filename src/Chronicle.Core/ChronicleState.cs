@@ -21,6 +21,7 @@ public enum OpeningIntent
     Unchosen = 0,
     Up = 1,
     Here = 2,
+    Against = 3,
 }
 
 public enum IncarnationLifeState
@@ -42,10 +43,13 @@ public sealed record ChronicleState(
     long IncarnationId = 1,
     IncarnationLifeState IncarnationLife = IncarnationLifeState.Alive,
     int WorldGrammarVersion = 0,
-    HomeState? Home = null)
+    HomeState? Home = null,
+    FirstConflictState? FirstConflict = null)
 {
     public static readonly WorldAddress InitialLooseStoneAddress =
         new(SurfacePatch.SurfaceStratum, 1, 0);
+    internal static readonly WorldAddress AcceptedHomeFixtureAddress =
+        new(SurfacePatch.SurfaceStratum, 0, 3);
     public const string LooseStoneIdentity = "Loose Stone";
     public const string HomeHearthstoneIdentity = "The First Hearthstone";
 
@@ -72,7 +76,7 @@ public sealed record ChronicleState(
         LooseStoneAddress: InitialLooseStoneAddress,
         IncarnationId: 1,
         IncarnationLife: IncarnationLifeState.Alive,
-        WorldGrammarVersion: 2);
+        WorldGrammarVersion: 3);
 
     public ChronicleState AdvanceTick()
     {
@@ -81,7 +85,33 @@ public sealed record ChronicleState(
             return this;
         }
 
-        var advanced = this with { Tick = Tick + 1 };
+        if (Tick >= long.MaxValue - 1)
+        {
+            return this with { Speed = ChronicleSpeed.Paused };
+        }
+
+        var advanced = this with { Tick = checked(Tick + 1) };
+        if (advanced.FirstConflict is { Outcome: null } conflict)
+        {
+            return conflict.PendingAction == new LoadoutSlot(WordIds.Smash)
+                ? advanced with
+                {
+                    FirstConflict = conflict with
+                    {
+                        PendingAction = null,
+                        Outcome = FirstConflictOutcome.Shattered,
+                        ResolvedTick = advanced.Tick,
+                        ResolvingIncarnationId = advanced.IncarnationId,
+                    },
+                }
+                : advanced with
+                {
+                    IncarnationLife = IncarnationLifeState.AwaitingReplacement,
+                    Study = advanced.Study.Stop(),
+                    FirstConflict = null,
+                };
+        }
+
         if (advanced.Study.ActiveWord is not { } activeWord ||
             advanced.Study.ActiveSourceId is not { } activeSourceId)
         {
@@ -122,6 +152,7 @@ public sealed record ChronicleState(
         {
             OpeningIntent.Up => WordIds.Fly,
             OpeningIntent.Here => WordIds.Found,
+            OpeningIntent.Against => WordIds.Smash,
             _ => null,
         };
         var codex = firstVerb is { } word ? Codex.Learn(word) : Codex;
@@ -143,11 +174,18 @@ public sealed record ChronicleState(
     internal ChronicleState BeginStudy(StudySourceId sourceId, WordId wordId) =>
         this with { Study = Study.Begin(sourceId, wordId) };
 
-    internal ChronicleState TravelTo(WorldAddress address) => this with
+    internal ChronicleState TravelTo(WorldAddress address)
     {
-        Address = address,
-        Study = address == Address ? Study : Study.Stop(),
-    };
+        var moved = this with
+        {
+            Address = address,
+            Study = address == Address ? Study : Study.Stop(),
+        };
+
+        return moved.FirstConflict is { Outcome: null } conflict && address != conflict.Address
+            ? moved with { FirstConflict = null }
+            : moved;
+    }
 
     internal ChronicleState EndIncarnationAtBell() =>
         HasLivingIncarnation &&
@@ -156,24 +194,36 @@ public sealed record ChronicleState(
             {
                 IncarnationLife = IncarnationLifeState.AwaitingReplacement,
                 Study = Study.Stop(),
+                FirstConflict = FirstConflict is { Outcome: null } ? null : FirstConflict,
             }
             : this;
 
-    internal ChronicleState CreateReplacementIncarnation() =>
-        IncarnationLife == IncarnationLifeState.AwaitingReplacement
-            ? this with
-            {
-                Address = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 0),
-                Loadout = LoadoutState.Empty,
-                IncarnationId = checked(IncarnationId + 1),
-                IncarnationLife = IncarnationLifeState.Alive,
-                Study = Study.Stop(),
-            }
-            : this;
+    internal ChronicleState CreateReplacementIncarnation()
+    {
+        if (IncarnationLife != IncarnationLifeState.AwaitingReplacement)
+        {
+            return this;
+        }
+
+        if (IncarnationId >= long.MaxValue - 1)
+        {
+            return this;
+        }
+
+        return this with
+        {
+            Address = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 0),
+            Loadout = LoadoutState.Empty,
+            IncarnationId = checked(IncarnationId + 1),
+            IncarnationLife = IncarnationLifeState.Alive,
+            Study = Study.Stop(),
+            FirstConflict = FirstConflict is { Outcome: null } ? null : FirstConflict,
+        };
+    }
 
     internal ChronicleState MigrateAndValidate()
     {
-        if (WorldGrammarVersion is not (0 or 1 or 2))
+        if (WorldGrammarVersion is not (0 or 1 or 2 or 3))
         {
             throw new InvalidOperationException($"Unsupported World Grammar version '{WorldGrammarVersion}'.");
         }
@@ -187,6 +237,7 @@ public sealed record ChronicleState(
         {
             OpeningIntent.Up => Codex.Learn(WordIds.Fly),
             OpeningIntent.Here => Codex.Learn(WordIds.Found),
+            OpeningIntent.Against => Codex.Learn(WordIds.Smash),
             _ => Codex,
         };
         var study = Study;
@@ -254,7 +305,7 @@ public sealed record ChronicleState(
 
 public static class ChronicleSaveCodec
 {
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
 
@@ -286,7 +337,7 @@ public static class ChronicleSaveCodec
                 "A Chronicle save envelope was missing its Version.");
         }
 
-        return DeserializePreEnvelope(json);
+        return DeserializePreEnvelope(document.RootElement, json);
     }
 
     private static ChronicleState DeserializeEnvelope(
@@ -303,20 +354,38 @@ public static class ChronicleSaveCodec
             1 => DeserializeVersion1(root),
             2 => DeserializeVersion2(root),
             3 => DeserializeVersion3(root),
+            4 => DeserializeVersion4(root),
             _ => throw new InvalidOperationException($"Unsupported Chronicle save version '{version}'."),
         };
     }
 
     private static ChronicleState DeserializeVersion1(JsonElement root)
     {
+        RequireObjectWithProperties(
+            root,
+            "Version 1 envelope",
+            "Version",
+            "Chronicle");
         if (!root.TryGetProperty("Chronicle", out var chronicleElement))
         {
             throw new InvalidOperationException("Version 1 Chronicle save data was missing its Chronicle.");
         }
 
+        ValidatePredecessorDocument(
+            chronicleElement,
+            "Version 1 Chronicle",
+            requireIntentAndGrammar: true);
         var predecessor = chronicleElement.Deserialize<PredecessorChronicleState>(Options)
             ?? throw new InvalidOperationException("Version 1 Chronicle save data was empty.");
-        return MigratePredecessor(predecessor, migrateWorldGrammarOne: true);
+        if (predecessor.WorldGrammarVersion is not (0 or 1))
+        {
+            throw new InvalidOperationException(
+                "Version 1 Chronicle saves only support World Grammar pins 0 or 1.");
+        }
+
+        var migrated = MigratePredecessor(predecessor, migrateWorldGrammarOne: true);
+        ValidateCurrentState(migrated);
+        return migrated;
     }
 
     private static ChronicleState DeserializeVersion2(JsonElement root)
@@ -344,18 +413,66 @@ public static class ChronicleSaveCodec
             throw new InvalidOperationException("Version 3 Chronicle save data was missing its Chronicle.");
         }
 
+        RequireExactObjectWithProperties(
+            chronicleElement,
+            "Version 3 Chronicle",
+            "Seed",
+            "Tick",
+            "Address",
+            "Speed",
+            "Intent",
+            "Codex",
+            "Study",
+            "Loadout",
+            "LooseStoneAddress",
+            "IncarnationId",
+            "IncarnationLife",
+            "WorldGrammarVersion",
+            "Home");
         ValidateVersion3Document(chronicleElement);
-        var state = chronicleElement.Deserialize<ChronicleState>(Options)
+        var predecessor = chronicleElement.Deserialize<Version3ChronicleState>(Options)
             ?? throw new InvalidOperationException("Version 3 Chronicle save data was empty.");
+        return MigrateVersion3(predecessor);
+    }
+
+    private static ChronicleState DeserializeVersion4(JsonElement root)
+    {
+        RequireExactObjectWithProperties(
+            root,
+            "Version 4 envelope",
+            "Version",
+            "Chronicle");
+        if (!root.TryGetProperty("Chronicle", out var chronicleElement))
+        {
+            throw new InvalidOperationException("Version 4 Chronicle save data was missing its Chronicle.");
+        }
+
+        ValidateVersion4Document(chronicleElement);
+        var state = chronicleElement.Deserialize<ChronicleState>(Options)
+            ?? throw new InvalidOperationException("Version 4 Chronicle save data was empty.");
         ValidateCurrentState(state);
         return state;
     }
 
-    private static ChronicleState DeserializePreEnvelope(string json)
+    private static ChronicleState DeserializePreEnvelope(
+        JsonElement root,
+        string json)
     {
+        ValidatePredecessorDocument(
+            root,
+            "Pre-envelope Chronicle",
+            requireIntentAndGrammar: false);
         var predecessor = JsonSerializer.Deserialize<PredecessorChronicleState>(json, Options)
             ?? throw new InvalidOperationException("Pre-envelope Chronicle save data was empty.");
-        return MigratePredecessor(predecessor, migrateWorldGrammarOne: false);
+        if (predecessor.WorldGrammarVersion != 0)
+        {
+            throw new InvalidOperationException(
+                "Pre-envelope Chronicle saves support only World Grammar pin 0.");
+        }
+
+        var migrated = MigratePredecessor(predecessor, migrateWorldGrammarOne: false);
+        ValidateCurrentState(migrated);
+        return migrated;
     }
 
     private static ChronicleState MigratePredecessor(
@@ -366,6 +483,12 @@ public static class ChronicleSaveCodec
         {
             throw new InvalidOperationException(
                 "Predecessor Chronicle saves only support Unchosen or UP Intent.");
+        }
+
+        if (predecessor.WorldGrammarVersion is not (0 or 1 or 2))
+        {
+            throw new InvalidOperationException(
+                "Predecessor Chronicle saves only support World Grammar pins 0, 1, or 2.");
         }
 
         var codex = new CodexState(
@@ -413,6 +536,12 @@ public static class ChronicleSaveCodec
                 "Version 2 Chronicle saves only support Unchosen or UP Intent.");
         }
 
+        if (predecessor.WorldGrammarVersion is not (0 or 1 or 2))
+        {
+            throw new InvalidOperationException(
+                "Version 2 Chronicle saves only support World Grammar pins 0, 1, or 2.");
+        }
+
         var state = new ChronicleState(
             predecessor.Seed,
             predecessor.Tick,
@@ -428,6 +557,34 @@ public static class ChronicleSaveCodec
             predecessor.WorldGrammarVersion,
             Home: null);
         var migrated = state.MigrateAndValidate();
+        ValidateCurrentState(migrated);
+        return migrated;
+    }
+
+    private static ChronicleState MigrateVersion3(Version3ChronicleState predecessor)
+    {
+        if (predecessor.Intent == OpeningIntent.Against ||
+            predecessor.WorldGrammarVersion is not (0 or 1 or 2))
+        {
+            throw new InvalidOperationException(
+                "Version 3 Chronicle saves only support World Grammar pins 0, 1, or 2 without AGAINST.");
+        }
+
+        var migrated = new ChronicleState(
+            predecessor.Seed,
+            predecessor.Tick,
+            predecessor.Address,
+            predecessor.Speed,
+            predecessor.Intent,
+            predecessor.Codex,
+            predecessor.Study,
+            predecessor.Loadout,
+            predecessor.LooseStoneAddress,
+            predecessor.IncarnationId,
+            predecessor.IncarnationLife,
+            predecessor.WorldGrammarVersion,
+            predecessor.Home,
+            FirstConflict: null);
         ValidateCurrentState(migrated);
         return migrated;
     }
@@ -458,7 +615,19 @@ public static class ChronicleSaveCodec
 
     private static void ValidateVersion3Document(JsonElement chronicle)
     {
-        RequireExactObjectWithProperties(
+        ValidateCurrentDocument(chronicle);
+        ValidateAllowedWordIdentities(
+            chronicle,
+            "Version 3",
+            WordIds.Fly,
+            WordIds.Found,
+            WordIds.Stone,
+            WordIds.Bell);
+    }
+
+    private static void ValidateCurrentDocument(JsonElement chronicle)
+    {
+        RequireObjectWithProperties(
             chronicle,
             "Chronicle",
             "Seed",
@@ -546,6 +715,117 @@ public static class ChronicleSaveCodec
             "Y");
     }
 
+    private static void ValidateVersion4Document(JsonElement chronicle)
+    {
+        RequireExactObjectWithProperties(
+            chronicle,
+            "Chronicle",
+            "Seed",
+            "Tick",
+            "Address",
+            "Speed",
+            "Intent",
+            "Codex",
+            "Study",
+            "Loadout",
+            "LooseStoneAddress",
+            "IncarnationId",
+            "IncarnationLife",
+            "WorldGrammarVersion",
+            "Home",
+            "FirstConflict");
+        ValidateCurrentDocument(chronicle);
+        ValidateConflictDocument(chronicle.GetProperty("FirstConflict"));
+    }
+
+    private static void ValidateConflictDocument(JsonElement conflict)
+    {
+        if (conflict.ValueKind == JsonValueKind.Null)
+        {
+            return;
+        }
+
+        RequireExactObjectWithProperties(
+            conflict,
+            "First Conflict",
+            "SubjectId",
+            "Address",
+            "ThreatenedTick",
+            "PendingAction",
+            "Outcome",
+            "ResolvedTick",
+            "ResolvingIncarnationId");
+        RequireExactObjectWithProperties(
+            conflict.GetProperty("Address"),
+            "First Conflict Address",
+            "Stratum",
+            "X",
+            "Y");
+
+        var pendingAction = conflict.GetProperty("PendingAction");
+        if (pendingAction.ValueKind != JsonValueKind.Null)
+        {
+            RequireExactObjectWithProperties(
+                pendingAction,
+                "First Conflict pending Loadout action",
+                "Verb",
+                "Noun");
+        }
+
+        RequireNullableNumber(conflict.GetProperty("Outcome"), "First Conflict outcome");
+        RequireNullableNumber(conflict.GetProperty("ResolvedTick"), "First Conflict resolution tick");
+        RequireNullableNumber(
+            conflict.GetProperty("ResolvingIncarnationId"),
+            "First Conflict resolving Incarnation identity");
+    }
+
+    private static void ValidateAllowedWordIdentities(
+        JsonElement chronicle,
+        string saveName,
+        params WordId[] allowedWords)
+    {
+        void ValidateWord(JsonElement element, string field)
+        {
+            if (element.ValueKind == JsonValueKind.Null)
+            {
+                return;
+            }
+
+            var word = ReadKnownWordId(element, $"{saveName} {field}");
+            if (!allowedWords.Contains(word))
+            {
+                throw new InvalidOperationException(
+                    $"{saveName} saves cannot contain later Word identity '{word}'.");
+            }
+        }
+
+        foreach (var word in chronicle
+                     .GetProperty("Codex")
+                     .GetProperty("Words")
+                     .EnumerateArray())
+        {
+            ValidateWord(word, "Codex Word");
+        }
+
+        var study = chronicle.GetProperty("Study");
+        foreach (var entry in study.GetProperty("Understanding").EnumerateArray())
+        {
+            ValidateWord(entry.GetProperty("Word"), "Study Understanding Word");
+        }
+
+        ValidateWord(study.GetProperty("ActiveWord"), "active Study Word");
+
+        var loadout = chronicle.GetProperty("Loadout");
+        for (var index = 1; index <= LoadoutState.SlotCount; index++)
+        {
+            var slot = loadout.GetProperty($"Slot{index}");
+            foreach (var property in new[] { "Verb", "Noun" })
+            {
+                ValidateWord(slot.GetProperty(property), $"Loadout {property}");
+            }
+        }
+    }
+
     private static void ValidateVersion2Document(JsonElement chronicle)
     {
         RequireObjectWithProperties(
@@ -596,6 +876,53 @@ public static class ChronicleSaveCodec
                 "Verb",
                 "Noun");
         }
+
+        ValidateAllowedWordIdentities(
+            chronicle,
+            "Version 2",
+            WordIds.Fly,
+            WordIds.Stone,
+            WordIds.Bell);
+    }
+
+    private static void ValidatePredecessorDocument(
+        JsonElement chronicle,
+        string name,
+        bool requireIntentAndGrammar)
+    {
+        RequireObjectWithProperties(
+            chronicle,
+            name,
+            "Seed",
+            "Tick",
+            "Address",
+            "Speed");
+        if (requireIntentAndGrammar)
+        {
+            RequireObjectWithProperties(
+                chronicle,
+                name,
+                "Intent",
+                "WorldGrammarVersion");
+        }
+
+        RequireObjectWithProperties(
+            chronicle.GetProperty("Address"),
+            $"{name} Address",
+            "Stratum",
+            "X",
+            "Y");
+
+        if (chronicle.TryGetProperty("LooseStoneAddress", out var looseStone) &&
+            looseStone.ValueKind != JsonValueKind.Null)
+        {
+            RequireObjectWithProperties(
+                looseStone,
+                $"{name} loose-Stone Address",
+                "Stratum",
+                "X",
+                "Y");
+        }
     }
 
     private static void RequireObjectWithProperties(
@@ -642,6 +969,14 @@ public static class ChronicleSaveCodec
         if (element.ValueKind != JsonValueKind.Array)
         {
             throw new InvalidOperationException($"{name} must be a JSON array.");
+        }
+    }
+
+    private static void RequireNullableNumber(JsonElement element, string name)
+    {
+        if (element.ValueKind is not (JsonValueKind.Null or JsonValueKind.Number))
+        {
+            throw new InvalidOperationException($"{name} must be a number or null.");
         }
     }
 
@@ -734,9 +1069,10 @@ public static class ChronicleSaveCodec
 
     private static void ValidateCurrentState(ChronicleState state)
     {
-        if (state.Tick < 0)
+        if (state.Tick < 0 || state.Tick == long.MaxValue)
         {
-            throw new InvalidOperationException("A Chronicle tick cannot be negative.");
+            throw new InvalidOperationException(
+                "A Chronicle tick must be non-negative and leave room for another fixed tick.");
         }
 
         if (!Enum.IsDefined(state.Speed))
@@ -749,7 +1085,7 @@ public static class ChronicleSaveCodec
             throw new InvalidOperationException($"Unknown opening Intent '{state.Intent}'.");
         }
 
-        if (state.WorldGrammarVersion is not (0 or 1 or 2))
+        if (state.WorldGrammarVersion is not (0 or 1 or 2 or 3))
         {
             throw new InvalidOperationException(
                 $"Unsupported World Grammar version '{state.WorldGrammarVersion}'.");
@@ -761,17 +1097,23 @@ public static class ChronicleSaveCodec
                 $"Unknown Incarnation life state '{state.IncarnationLife}'.");
         }
 
-        if (state.IncarnationId <= 0)
+        if (state.IncarnationId <= 0 || state.IncarnationId == long.MaxValue)
         {
-            throw new InvalidOperationException("A current Incarnation identity must be positive.");
+            throw new InvalidOperationException(
+                "A current Incarnation identity must be positive and leave room for replacement.");
         }
 
         ValidateOpeningIntentProvenance(state);
         ValidateCurrentAddress(state.Address, "Incarnation");
-        ValidateCurrentAddress(
-            state.LooseStoneAddress
-                ?? throw new InvalidOperationException("Current saves require the loose-Stone Address."),
-            "Loose Stone");
+        var looseStoneAddress = state.LooseStoneAddress
+            ?? throw new InvalidOperationException("Current saves require the loose-Stone Address.");
+        ValidateCurrentAddress(looseStoneAddress, "Loose Stone");
+        if (looseStoneAddress.X != ChronicleState.InitialLooseStoneAddress.X ||
+            looseStoneAddress.Y != ChronicleState.InitialLooseStoneAddress.Y)
+        {
+            throw new InvalidOperationException(
+                "The loose Stone must retain its fixed X/Y provenance across Strata.");
+        }
         if (state.Loadout is null)
         {
             throw new InvalidOperationException("Current saves require all eight Loadout slots.");
@@ -780,6 +1122,8 @@ public static class ChronicleSaveCodec
         state.Loadout.Value.Validate(state.Codex);
         ValidateCurrentStudy(state);
         ValidateHome(state);
+        ValidateGeneratedCairnNonOverlap(state);
+        ValidateFirstConflict(state);
     }
 
     private static void ValidateOpeningIntentProvenance(ChronicleState state)
@@ -792,6 +1136,19 @@ public static class ChronicleSaveCodec
         if (state.Intent == OpeningIntent.Here && !state.Codex.Contains(WordIds.Found))
         {
             throw new InvalidOperationException("HERE Chronicles must retain Found in the Codex.");
+        }
+
+        if (state.Intent == OpeningIntent.Against)
+        {
+            if (state.WorldGrammarVersion != 3)
+            {
+                throw new InvalidOperationException("AGAINST is only available in World Grammar version 3.");
+            }
+
+            if (!state.Codex.Contains(WordIds.Smash))
+            {
+                throw new InvalidOperationException("AGAINST Chronicles must retain Smash in the Codex.");
+            }
         }
     }
 
@@ -894,6 +1251,149 @@ public static class ChronicleSaveCodec
         }
     }
 
+    private static void ValidateGeneratedCairnNonOverlap(ChronicleState state)
+    {
+        if (state.WorldGrammarVersion != 3)
+        {
+            return;
+        }
+
+        var cairnAddress = WorldArea.GeneratedCairnAddress(state.Seed);
+        if (state.LooseStoneAddress == cairnAddress)
+        {
+            throw new InvalidOperationException("The loose Stone cannot overlap the generated Riven Cairn.");
+        }
+
+        if (state.Home?.Address == cairnAddress)
+        {
+            throw new InvalidOperationException("Home cannot overlap the generated Riven Cairn.");
+        }
+    }
+
+    private static void ValidateFirstConflict(ChronicleState state)
+    {
+        if (state.FirstConflict is not { } conflict)
+        {
+            if (state.WorldGrammarVersion == 3 &&
+                state.HasLivingIncarnation &&
+                state.Address == WorldArea.GeneratedCairnAddress(state.Seed))
+            {
+                throw new InvalidOperationException(
+                    "A living Incarnation at the generated Riven Cairn must retain its conflict state.");
+            }
+
+            return;
+        }
+
+        if (state.WorldGrammarVersion != 3)
+        {
+            throw new InvalidOperationException("First Conflict state requires World Grammar version 3.");
+        }
+
+        if (!string.Equals(
+                conflict.SubjectId,
+                FirstConflictSubjects.RiverWardSubjectId,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("First Conflict must retain the stable River-Ward subject identity.");
+        }
+
+        var cairnAddress = WorldArea.GeneratedCairnAddress(state.Seed);
+        if (conflict.Address != cairnAddress)
+        {
+            throw new InvalidOperationException(
+                "First Conflict must retain the generated Riven Cairn Address.");
+        }
+
+        if (conflict.Address == state.LooseStoneAddress || conflict.Address == state.Home?.Address)
+        {
+            throw new InvalidOperationException(
+                "First Conflict cannot overlap the loose Stone or Home.");
+        }
+
+        if (conflict.ThreatenedTick < 0 || conflict.ThreatenedTick > state.Tick)
+        {
+            throw new InvalidOperationException("First Conflict threat tick must be within Chronicle time.");
+        }
+
+        if (conflict.PendingAction is { } pendingAction &&
+            pendingAction != new LoadoutSlot(WordIds.Smash))
+        {
+            throw new InvalidOperationException(
+                "First Conflict may retain only the exact intrinsic Smash Loadout action.");
+        }
+
+        if (conflict.PendingAction is not null && !state.Codex.Contains(WordIds.Smash))
+        {
+            throw new InvalidOperationException(
+                "A pending First Conflict Smash action requires Smash in the Codex.");
+        }
+
+        if (conflict.Outcome is null)
+        {
+            if (!state.HasLivingIncarnation)
+            {
+                throw new InvalidOperationException(
+                    "Awaiting-replacement Chronicles cannot retain an unresolved First Conflict.");
+            }
+
+            if (conflict.ResolvedTick is not null ||
+                conflict.ResolvingIncarnationId is not null)
+            {
+                throw new InvalidOperationException(
+                    "An unresolved First Conflict cannot retain resolution provenance.");
+            }
+
+            if (state.Address != conflict.Address)
+            {
+                throw new InvalidOperationException(
+                    "An unresolved First Conflict must retain the living Incarnation at the Riven Cairn.");
+            }
+
+            if (conflict.ThreatenedTick != state.Tick)
+            {
+                throw new InvalidOperationException(
+                    "An unresolved First Conflict must remain on its exact threatened tick until resolution.");
+            }
+
+            return;
+        }
+
+        if (conflict.Outcome != FirstConflictOutcome.Shattered)
+        {
+            throw new InvalidOperationException("First Conflict has an unknown outcome.");
+        }
+
+        if (!state.Codex.Contains(WordIds.Smash))
+        {
+            throw new InvalidOperationException(
+                "A Shattered First Conflict requires Smash in the durable Codex.");
+        }
+
+        if (conflict.PendingAction is not null)
+        {
+            throw new InvalidOperationException(
+                "A resolved First Conflict cannot retain a pending action.");
+        }
+
+        if (conflict.ResolvedTick is not { } resolvedTick ||
+            conflict.ThreatenedTick == long.MaxValue ||
+            resolvedTick != conflict.ThreatenedTick + 1 ||
+            resolvedTick > state.Tick)
+        {
+            throw new InvalidOperationException(
+                "First Conflict resolution tick must follow the threat within Chronicle time.");
+        }
+
+        if (conflict.ResolvingIncarnationId is not { } resolvingIncarnationId ||
+            resolvingIncarnationId <= 0 ||
+            resolvingIncarnationId > state.IncarnationId)
+        {
+            throw new InvalidOperationException(
+                "First Conflict must retain a valid resolving Incarnation identity.");
+        }
+    }
+
     private static void ValidateCurrentAddress(WorldAddress address, string subject)
     {
         if (!string.Equals(
@@ -926,6 +1426,23 @@ public static class ChronicleSaveCodec
         public long IncarnationId { get; init; }
         public IncarnationLifeState IncarnationLife { get; init; }
         public int WorldGrammarVersion { get; init; }
+    }
+
+    private sealed class Version3ChronicleState
+    {
+        public long Seed { get; init; }
+        public long Tick { get; init; }
+        public WorldAddress Address { get; init; }
+        public ChronicleSpeed Speed { get; init; }
+        public OpeningIntent Intent { get; init; }
+        public CodexState Codex { get; init; }
+        public StudyState Study { get; init; }
+        public LoadoutState? Loadout { get; init; }
+        public WorldAddress? LooseStoneAddress { get; init; }
+        public long IncarnationId { get; init; }
+        public IncarnationLifeState IncarnationLife { get; init; }
+        public int WorldGrammarVersion { get; init; }
+        public HomeState? Home { get; init; }
     }
 
     private sealed class PredecessorChronicleState

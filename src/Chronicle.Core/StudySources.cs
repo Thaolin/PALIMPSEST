@@ -66,7 +66,9 @@ internal static class StudySourceGrammar
 
     internal static StudySourceSnapshot? At(ChronicleState state, WorldAddress address)
     {
-        if ((state.WorldGrammarVersion != 0 && state.WorldGrammarVersion != 2) ||
+        if ((state.WorldGrammarVersion != 0 &&
+             state.WorldGrammarVersion != 2 &&
+             state.WorldGrammarVersion != 3) ||
             !string.Equals(address.Stratum, SkyStratum.StratumName, StringComparison.Ordinal))
         {
             return null;

@@ -14,17 +14,27 @@ VerifyPartialStudySurvivesDeathReplacementAndReturn();
 VerifyIndependentBellStudyCompletion();
 VerifyLegacySaveCompatibility();
 VerifyWorldGrammarVersionMigrationAndPinning();
+VerifyGrammar3CairnIsDeterministicAndOpeningIndependent();
+VerifyEnteringRivenCairnPausesAndExposesConflictContext();
+VerifyPausedCairnCommandsAndRejectionsStayDeliberate();
+VerifyPreparedSmashResolvesOnFirstDeliveredTickAtAllSpeeds();
+VerifyUnpreparedCairnTickEndsOnlyOneBodyAndReplacementRetainsSmash();
+VerifyFirstConflictSaveV4AndLiteralVersion3Migration();
+VerifySaveBoundaryRejectsFutureAndMalformedState();
+VerifyCounterTransitionsRejectBeforeUnsavableState();
+VerifyCairnRejectsFoundAndFlyStoneCannotOverwriteIt();
 VerifySlice1SaveMigratesCodex();
 VerifySerializedIntent();
 VerifyMovementRequiresIntent();
 VerifyUpIntent();
 VerifyHereBuildOpeningGrantsFound();
+VerifyAgainstOpeningGrantsSmash();
 VerifyFoundRejectsUnsupportedUseWithoutMutation();
 VerifyHomeSiteEligibility();
 VerifyFoundEstablishesSingularHome();
 VerifyHomeReturnRouteGuidesPhysicalSteps();
 VerifyHomeHearthstoneOverlaysExistingRidge();
-VerifyHomeSaveV3AndVersion2Migration();
+VerifyHomeSaveV4AndVersion2Migration();
 VerifyNonHereChronicleCanRetainEquipAndFoundHome();
 VerifyHomeSurvivesReplacementAndFoundRemainsReequipable();
 VerifyFlyAvailability();
@@ -69,6 +79,7 @@ VerifyUnequippedFlyIsUnavailable();
 VerifyIntrinsicFlyUsesLoadoutSlot();
 VerifyFlyStoneMovesOnlyTheLooseStone();
 VerifyFlyStoneReturnsTheLooseStone();
+VerifyFlyStoneCannotOverlapHome();
 VerifyFlyStoneRejectsInvalidTargets();
 VerifyLoadoutReplayAndSaveLoad();
 VerifyDeathRequiresLivingIncarnationAtBell();
@@ -78,9 +89,9 @@ VerifyLifecycleSaveEnvelopeAndMigration();
 VerifyLifecycleReplay();
 
 Console.WriteLine(
-    "GOAL4A CORE ACCEPTANCE PASS catalogue=Fly,Stone,Bell source=Stone>Bell stone=16 bell=16 save=2");
+    "GOAL4C CORE ACCEPTANCE PASS openings=AGAINST,UP,HERE grammar=3 cairn=surface(1,3) smash=word.smash save=4");
 Console.WriteLine(
-    "PASS: Gate 3A Core World Grammar plus Slice 0 through Slice 2C regression and save compatibility verified.");
+    "PASS: Goal 4C conflict/save proof plus retained Gate 3A, Goal 2, and Goal 4A/4B Core regressions verified.");
 
 static void VerifyAuthoredWordCatalogue()
 {
@@ -91,16 +102,18 @@ static void VerifyAuthoredWordCatalogue()
         [
             WordIds.Fly,
             WordIds.Found,
+            WordIds.Smash,
             WordIds.Stone,
             WordIds.Bell,
         ]),
-        "The authored Word Catalogue must expose stable Fly, Found, Stone, and Bell identities in canonical order.");
+        "The authored Word Catalogue must expose stable Fly, Found, Smash, Stone, and Bell identities in canonical order.");
     Assert(
-        words.Select(word => word.Id).Distinct().Count() == 4,
+        words.Select(word => word.Id).Distinct().Count() == 5,
         "The authored Word Catalogue must not contain duplicate Word identities.");
 
     var fly = WordCatalogue.Get(WordIds.Fly);
     var found = WordCatalogue.Get(WordIds.Found);
+    var smash = WordCatalogue.Get(WordIds.Smash);
     var stone = WordCatalogue.Get(WordIds.Stone);
     var bell = WordCatalogue.Get(WordIds.Bell);
 
@@ -116,6 +129,12 @@ static void VerifyAuthoredWordCatalogue()
         found.CompatibleNouns.Count == 0,
         "Found must be an authored intrinsic Verb without a 4B Noun.");
     Assert(
+        smash.Kind == WordKind.Verb &&
+        smash.DisplayName == "Smash" &&
+        smash.UnderstandingRequired == 0 &&
+        smash.CompatibleNouns.Count == 0,
+        "Smash must be an authored intrinsic Verb without a 4C Noun.");
+    Assert(
         stone.Kind == WordKind.Noun &&
         stone.DisplayName == "Stone" &&
         stone.CompatibleNouns.Count == 0,
@@ -128,6 +147,7 @@ static void VerifyAuthoredWordCatalogue()
     Assert(
         !string.IsNullOrWhiteSpace(fly.Meaning) &&
         !string.IsNullOrWhiteSpace(found.Meaning) &&
+        !string.IsNullOrWhiteSpace(smash.Meaning) &&
         !string.IsNullOrWhiteSpace(stone.Meaning) &&
         !string.IsNullOrWhiteSpace(bell.Meaning),
         "Every catalogue Word must have an authored meaning.");
@@ -166,7 +186,7 @@ static void VerifyCurrentSaveShapeIsStrict()
     legacyCodex["Chronicle"]!["Codex"]!["HasFly"] = true;
     AssertThrows<InvalidOperationException>(
         () => ChronicleSaveCodec.Deserialize(legacyCodex.ToJsonString()),
-        "Version 3 must reject mixed predecessor Boolean Codex fields.");
+        "Version 4 must reject mixed predecessor Boolean Codex fields.");
 
     var duplicateCodex = System.Text.Json.Nodes.JsonNode.Parse(currentJson)!;
     duplicateCodex["Chronicle"]!["Codex"]!["Words"] =
@@ -174,7 +194,7 @@ static void VerifyCurrentSaveShapeIsStrict()
             """["word.fly","word.fly"]""");
     AssertThrows<InvalidOperationException>(
         () => ChronicleSaveCodec.Deserialize(duplicateCodex.ToJsonString()),
-        "Version 3 must reject duplicate Codex Words before canonicalization.");
+        "Version 4 must reject duplicate Codex Words before canonicalization.");
 
     var outOfOrderCodex = System.Text.Json.Nodes.JsonNode.Parse(currentJson)!;
     outOfOrderCodex["Chronicle"]!["Codex"]!["Words"] =
@@ -182,13 +202,13 @@ static void VerifyCurrentSaveShapeIsStrict()
             """["word.found","word.fly"]""");
     AssertThrows<InvalidOperationException>(
         () => ChronicleSaveCodec.Deserialize(outOfOrderCodex.ToJsonString()),
-        "Version 3 must reject out-of-order Codex Words before canonicalization.");
+        "Version 4 must reject out-of-order Codex Words before canonicalization.");
 
     var legacyStudy = System.Text.Json.Nodes.JsonNode.Parse(currentJson)!;
     legacyStudy["Chronicle"]!["Study"]!["StoneUnderstanding"] = 7;
     AssertThrows<InvalidOperationException>(
         () => ChronicleSaveCodec.Deserialize(legacyStudy.ToJsonString()),
-        "Version 3 must reject mixed predecessor Bell-specific Study fields.");
+        "Version 4 must reject mixed predecessor Bell-specific Study fields.");
 
     var duplicateUnderstanding = System.Text.Json.Nodes.JsonNode.Parse(currentJson)!;
     duplicateUnderstanding["Chronicle"]!["Study"]!["Understanding"] =
@@ -196,7 +216,7 @@ static void VerifyCurrentSaveShapeIsStrict()
             """[{"Word":"word.stone","Amount":1},{"Word":"word.stone","Amount":2}]""");
     AssertThrows<InvalidOperationException>(
         () => ChronicleSaveCodec.Deserialize(duplicateUnderstanding.ToJsonString()),
-        "Version 3 must reject duplicate Understanding Words before canonicalization.");
+        "Version 4 must reject duplicate Understanding Words before canonicalization.");
 
     var outOfOrderUnderstanding = System.Text.Json.Nodes.JsonNode.Parse(currentJson)!;
     outOfOrderUnderstanding["Chronicle"]!["Study"]!["Understanding"] =
@@ -204,7 +224,7 @@ static void VerifyCurrentSaveShapeIsStrict()
             """[{"Word":"word.bell","Amount":1},{"Word":"word.stone","Amount":1}]""");
     AssertThrows<InvalidOperationException>(
         () => ChronicleSaveCodec.Deserialize(outOfOrderUnderstanding.ToJsonString()),
-        "Version 3 must reject out-of-order Understanding Words before canonicalization.");
+        "Version 4 must reject out-of-order Understanding Words before canonicalization.");
 
     var zeroUnderstanding = System.Text.Json.Nodes.JsonNode.Parse(currentJson)!;
     zeroUnderstanding["Chronicle"]!["Study"]!["Understanding"] =
@@ -212,57 +232,57 @@ static void VerifyCurrentSaveShapeIsStrict()
             """[{"Word":"word.stone","Amount":0}]""");
     AssertThrows<InvalidOperationException>(
         () => ChronicleSaveCodec.Deserialize(zeroUnderstanding.ToJsonString()),
-        "Version 3 must reject zero Understanding entries before canonicalization removes them.");
+        "Version 4 must reject zero Understanding entries before canonicalization removes them.");
 
-    AssertVersion3RejectsUnexpectedProperty(
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["ReturnRoute"] = new System.Text.Json.Nodes.JsonObject(),
-        "Version 3 must reject unexpected envelope properties.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject unexpected envelope properties.");
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["Chronicle"]!["ReturnRoute"] = new System.Text.Json.Nodes.JsonObject(),
-        "Version 3 must reject transient ReturnRoute data on the Chronicle.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject transient ReturnRoute data on the Chronicle.");
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["Chronicle"]!["Address"]!["Generated"] = true,
-        "Version 3 must reject unexpected Chronicle Address properties.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject unexpected Chronicle Address properties.");
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["Chronicle"]!["LooseStoneAddress"]!["Generated"] = true,
-        "Version 3 must reject unexpected loose-Stone Address properties.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject unexpected loose-Stone Address properties.");
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["Chronicle"]!["Codex"]!["HasStone"] = false,
-        "Version 3 must reject mixed legacy Codex properties.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject mixed legacy Codex properties.");
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["Chronicle"]!["Study"]!["IsStudyingBell"] = false,
-        "Version 3 must reject mixed legacy Study properties.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject mixed legacy Study properties.");
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["Chronicle"]!["Study"]!["Understanding"] =
             System.Text.Json.Nodes.JsonNode.Parse(
                 """[{"Word":"word.stone","Amount":1,"LegacyAmount":1}]"""),
-        "Version 3 must reject unexpected Understanding-entry properties.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject unexpected Understanding-entry properties.");
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["Chronicle"]!["Loadout"]!["CurrentSite"] = new System.Text.Json.Nodes.JsonObject(),
-        "Version 3 must reject transient CurrentSite data on the Loadout.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject transient CurrentSite data on the Loadout.");
+    AssertVersion4RejectsUnexpectedProperty(
         currentJson,
         root => root["Chronicle"]!["Loadout"]!["Slot1"]!["LegacyVerb"] = 1,
-        "Version 3 must reject unexpected Loadout-slot properties.");
+        "Version 4 must reject unexpected Loadout-slot properties.");
 
     var foundedJson = ChronicleSaveCodec.Serialize(FoundedHereHome());
-    AssertVersion3RejectsUnexpectedProperty(
+    AssertVersion4RejectsUnexpectedProperty(
         foundedJson,
         root => root["Chronicle"]!["Home"]!["CurrentSite"] = new System.Text.Json.Nodes.JsonObject(),
-        "Version 3 must reject transient CurrentSite data on Home.");
-    AssertVersion3RejectsUnexpectedProperty(
+        "Version 4 must reject transient CurrentSite data on Home.");
+    AssertVersion4RejectsUnexpectedProperty(
         foundedJson,
         root => root["Chronicle"]!["Home"]!["Address"]!["ReturnRoute"] =
             new System.Text.Json.Nodes.JsonObject(),
-        "Version 3 must reject unexpected Home Address properties.");
+        "Version 4 must reject unexpected Home Address properties.");
 
     var hereWithoutFound = System.Text.Json.Nodes.JsonNode.Parse(currentJson)!;
     hereWithoutFound["Chronicle"]!["Intent"] = (int)OpeningIntent.Here;
@@ -326,8 +346,8 @@ static void VerifyGeneratedBellStudySource()
         ?? throw new InvalidOperationException("The generated Bell cell must expose its Study Source.");
 
     Assert(
-        simulation.State.WorldGrammarVersion == 2,
-        "The generated two-offer Study Source must be pinned by World Grammar version 2.");
+        simulation.State.WorldGrammarVersion == 3,
+        "World Grammar version 3 must retain the generated two-offer Bell Study Source unchanged.");
     Assert(source.Id == StudySourceIds.BellSkyStone, "The Bell source must have one stable identity.");
     Assert(source.Name == "Sky-Stone Clapper", "The Bell source must name the encountered situation.");
     Assert(source.Address == SkyStratum.LandmarkAddress, "The Bell source must retain its generated World Address.");
@@ -409,7 +429,7 @@ static void VerifySelectedUnderstandingSaveLoad()
     var json = ChronicleSaveCodec.Serialize(expected);
     var restored = ChronicleSaveCodec.Deserialize(json);
 
-    Assert(json.Contains("\"Version\": 3", StringComparison.Ordinal), "Current saves must use envelope version 3.");
+    Assert(json.Contains("\"Version\": 4", StringComparison.Ordinal), "Current saves must use envelope version 4.");
     Assert(
         json.Contains("\"word.bell\"", StringComparison.Ordinal) &&
         json.Contains("\"ActiveSourceId\"", StringComparison.Ordinal),
@@ -513,6 +533,12 @@ static void VerifyStudySourceVersionMigrationAndLegacyCompatibility()
             $"A literal version-1 save must reject {invalidIntent.Name} Intent before migration.");
     }
 
+    var futureVersion1 = System.Text.Json.Nodes.JsonNode.Parse(version1Json)!;
+    futureVersion1["Chronicle"]!["WorldGrammarVersion"] = 3;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(futureVersion1.ToJsonString()),
+        "A literal version-1 save must not acquire the later grammar-3 Cairn rule.");
+
     var version1Physical = migrated with { WorldGrammarVersion = 1 };
     foreach (var stratum in new[] { SurfacePatch.SurfaceStratum, SkyStratum.StratumName })
     {
@@ -560,6 +586,12 @@ static void VerifyStudySourceVersionMigrationAndLegacyCompatibility()
             () => ChronicleSaveCodec.Deserialize(invalidPreEnvelope.ToJsonString()),
             $"A literal pre-envelope save must reject {invalidIntent.Name} Intent before migration.");
     }
+
+    var futurePreEnvelope = System.Text.Json.Nodes.JsonNode.Parse(legacyJson)!;
+    futurePreEnvelope["WorldGrammarVersion"] = 3;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(futurePreEnvelope.ToJsonString()),
+        "A literal pre-envelope save must not acquire the later grammar-3 Cairn rule.");
 }
 
 static void VerifyStudyChoiceRejections()
@@ -746,8 +778,8 @@ static void VerifyWorldGrammarVersionMigrationAndPinning()
 
     var newChronicle = ChronicleState.Begin(41_337);
     Assert(
-        newChronicle.WorldGrammarVersion == 2,
-        "A newly created Chronicle must pin World Grammar version 2.");
+        newChronicle.WorldGrammarVersion == 3,
+        "A newly created Chronicle must pin World Grammar version 3.");
 
     var json = ChronicleSaveCodec.Serialize(newChronicle);
     var restored = ChronicleSaveCodec.Deserialize(json);
@@ -755,8 +787,628 @@ static void VerifyWorldGrammarVersionMigrationAndPinning()
         json.Contains("\"WorldGrammarVersion\"", StringComparison.Ordinal),
         "A new Chronicle save must include its pinned World Grammar version.");
     Assert(
-        restored.WorldGrammarVersion == 2,
+        restored.WorldGrammarVersion == 3,
         "Save/load must retain a new Chronicle's pinned World Grammar version.");
+}
+
+static void VerifyGrammar3CairnIsDeterministicAndOpeningIndependent()
+{
+    var baseState = ChronicleState.Begin(41_337);
+    var bounds = new WorldRectangle(-96, -96, 193, 193);
+    var area = WorldArea.Generate(baseState, SurfacePatch.SurfaceStratum, bounds);
+    var cairns = area.Cells
+        .Where(cell => cell.DurableIdentity == FirstConflictSubjects.RivenCairnIdentity)
+        .ToArray();
+
+    Assert(
+        baseState.WorldGrammarVersion == 3 &&
+        baseState.FirstConflict is null,
+        "New Chronicles must pin World Grammar 3 without manufacturing a conflict delta.");
+    Assert(
+        cairns.Length == 1 &&
+        cairns[0].Address == new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3) &&
+        cairns[0].Ground == WorldGround.Soil &&
+        cairns[0].Feature == WorldFeature.Stone &&
+        cairns[0].MotifIdentity == "surface-ridge-main",
+        "Seed 41337 must place one intact Riven Cairn at the authored dry Stone ridge-spur fixture.");
+    Assert(
+        cairns[0].Address != baseState.Address &&
+        cairns[0].Address != ChronicleState.InitialLooseStoneAddress &&
+        cairns[0].Address != new WorldAddress(SurfacePatch.SurfaceStratum, 0, 3),
+        "The generated Cairn must not overlap the origin, loose Stone, or accepted Home fixture.");
+
+    var v2 = baseState with { WorldGrammarVersion = 2 };
+    var v2Area = WorldArea.Generate(v2, SurfacePatch.SurfaceStratum, bounds);
+    Assert(
+        area.Cells.Zip(v2Area.Cells).All(pair =>
+            pair.First.Address == pair.Second.Address &&
+            pair.First.Ground == pair.Second.Ground &&
+            pair.First.Feature == pair.Second.Feature &&
+            pair.First.MotifIdentity == pair.Second.MotifIdentity),
+        "Grammar 3 must delegate every version-2 surface ground, feature, and motif unchanged.");
+
+    var skyBounds = new WorldRectangle(-8, -8, 17, 17);
+    var v3Sky = WorldArea.Generate(baseState, SkyStratum.StratumName, skyBounds);
+    var v2Sky = WorldArea.Generate(v2, SkyStratum.StratumName, skyBounds);
+    var v3Bell = new ChronicleSimulation(
+        baseState with { Address = SkyStratum.LandmarkAddress }).CurrentStudySource;
+    var v2Bell = new ChronicleSimulation(
+        v2 with { Address = SkyStratum.LandmarkAddress }).CurrentStudySource;
+    Assert(
+        v3Sky.Cells.SequenceEqual(v2Sky.Cells) &&
+        v3Bell is not null &&
+        v2Bell is not null &&
+        v3Bell.Id == v2Bell.Id &&
+        v3Bell.Offers.Select(offer => offer.Word.Id).SequenceEqual(
+            v2Bell.Offers.Select(offer => offer.Word.Id)) &&
+        v3Bell.Offers.Select(offer => offer.UnderstandingYield).SequenceEqual(
+            v2Bell.Offers.Select(offer => offer.UnderstandingYield)),
+        "Grammar 3 must delegate every version-2 Sky cell and the Bell Study Source unchanged.");
+    Assert(
+        area.Cells.SequenceEqual(
+            WorldArea.Generate(baseState, SurfacePatch.SurfaceStratum, bounds).Cells),
+        "Grammar-3 Cairn generation must be replay- and query-order-neutral.");
+
+    var openings = new ChronicleSimulation[]
+    {
+        new(ChronicleState.Begin(41_337)),
+        new(ChronicleState.Begin(41_337)),
+        new(ChronicleState.Begin(41_337)),
+    };
+    openings[0].Apply(new ChooseAgainstIntent());
+    openings[1].Apply(new ChooseUpIntent());
+    openings[2].Apply(new ChooseHereIntent());
+
+    Assert(
+        openings.All(simulation =>
+        {
+            var cell = WorldArea.Generate(
+                simulation.State,
+                SurfacePatch.SurfaceStratum,
+                new WorldRectangle(1, 3, 1, 1)).Cells[0];
+            return simulation.State.WorldGrammarVersion == 3 &&
+                   cell.DurableIdentity == FirstConflictSubjects.RivenCairnIdentity;
+        }),
+        "AGAINST, UP, and HERE must expose the same generated intact Cairn rather than private opening content.");
+}
+
+static void VerifyEnteringRivenCairnPausesAndExposesConflictContext()
+{
+    var simulation = new ChronicleSimulation(ChronicleState.Begin(41_337));
+    simulation.Apply(new ChooseAgainstIntent());
+    simulation.Apply(new MoveIncarnation(1, 0));
+    simulation.Apply(new MoveIncarnation(0, 1));
+    simulation.Apply(new MoveIncarnation(0, 1));
+    simulation.Apply(new MoveIncarnation(0, 1));
+
+    var context = simulation.ConflictContext
+        ?? throw new InvalidOperationException("Entering the intact Cairn must expose Core conflict context.");
+    var paused = simulation.State;
+
+    Assert(
+        paused.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3) &&
+        paused.Speed == ChronicleSpeed.Paused &&
+        paused.FirstConflict == new FirstConflictState(
+            FirstConflictSubjects.RiverWardSubjectId,
+            paused.Address,
+            ThreatenedTick: 0),
+        "Entering the unresolved Riven Cairn must record its threat and pause before any fixed tick advances.");
+    Assert(
+        context.CairnIdentity == FirstConflictSubjects.RivenCairnIdentity &&
+        context.SubjectIdentity == FirstConflictSubjects.RiverWardIdentity &&
+        context.History == FirstConflictSubjects.History &&
+        context.Warning == FirstConflictSubjects.Warning &&
+        !context.IsSmashPrepared &&
+        context.IsThreatened &&
+        !context.IsResolved,
+        "Conflict Context must name the Riven Cairn and River-Ward, explain its history and next-tick warning, and expose preparation.");
+
+    simulation.AdvanceClockPulse();
+    Assert(
+        simulation.State == paused,
+        "A paused Chronicle must freeze the unresolved ward, conflict state, and fixed Chronicle tick.");
+
+    var allOpenings = new[]
+    {
+        (ChronicleCommand)new ChooseAgainstIntent(),
+        new ChooseUpIntent(),
+        new ChooseHereIntent(),
+    };
+    var contexts = allOpenings.Select(opening =>
+    {
+        var branch = new ChronicleSimulation(ChronicleState.Begin(41_337));
+        branch.Apply(opening);
+        branch.Apply(new MoveIncarnation(1, 0));
+        branch.Apply(new MoveIncarnation(0, 1));
+        branch.Apply(new MoveIncarnation(0, 1));
+        branch.Apply(new MoveIncarnation(0, 1));
+        return branch.ConflictContext
+            ?? throw new InvalidOperationException("Every grammar-3 opening must enter the shared Cairn conflict.");
+    }).ToArray();
+    Assert(
+        contexts.All(candidate =>
+            candidate.CairnIdentity == FirstConflictSubjects.RivenCairnIdentity &&
+            candidate.SubjectIdentity == FirstConflictSubjects.RiverWardIdentity &&
+            candidate.History == FirstConflictSubjects.History &&
+            candidate.Warning == FirstConflictSubjects.Warning &&
+            candidate.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3)),
+        "AGAINST, UP, and HERE must expose the same Cairn identity, history, and danger; only their granted language differs.");
+}
+
+static void VerifyPausedCairnCommandsAndRejectionsStayDeliberate()
+{
+    var simulation = AgainstAtRivenCairn();
+    var paused = simulation.State;
+
+    var remote = simulation.Apply(
+        new UseLoadoutSlot(0, new WorldAddress(SurfacePatch.SurfaceStratum, 1, 2)));
+    var absent = simulation.Apply(new UseLoadoutSlot(7));
+    Assert(
+        !remote.Applied &&
+        !absent.Applied &&
+        simulation.State == paused,
+        "Remote or absent actions must reject without mutating the paused ward exchange.");
+
+    var cleared = simulation.Apply(new ClearLoadoutSlot(0));
+    var equipped = simulation.Apply(new ConfigureLoadoutSlot(1, WordIds.Smash));
+    Assert(
+        cleared.Applied &&
+        equipped.Applied &&
+        simulation.State.Speed == ChronicleSpeed.Paused &&
+        simulation.State.Tick == paused.Tick,
+        "Paused Cairn time must allow deliberate Loadout configuration without autonomous change.");
+
+    var prepared = simulation.Apply(new UseLoadoutSlot(1));
+    var preparedState = simulation.State;
+    var repeated = simulation.Apply(new UseLoadoutSlot(1));
+    Assert(
+        prepared.Applied &&
+        !repeated.Applied &&
+        simulation.State == preparedState,
+        "Smash must queue once and repeated preparation must reject without changing the pending exchange.");
+
+    var retreat = simulation.Apply(new MoveIncarnation(0, -1));
+    Assert(
+        retreat.Applied &&
+        simulation.State.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 1, 2) &&
+        simulation.State.Speed == ChronicleSpeed.Paused &&
+        simulation.State.FirstConflict is null &&
+        simulation.ConflictContext is null,
+        "Deliberate retreat while paused must clear an unresolved pending exchange without advancing time.");
+    Assert(
+        WorldArea.Generate(
+            simulation.State,
+            SurfacePatch.SurfaceStratum,
+            new WorldRectangle(1, 3, 1, 1)).Cells.Single().DurableIdentity ==
+            FirstConflictSubjects.RivenCairnIdentity,
+        "Leaving an unresolved Cairn must leave its generated River-Ward intact.");
+}
+
+static void VerifyPreparedSmashResolvesOnFirstDeliveredTickAtAllSpeeds()
+{
+    foreach (var speed in new[]
+    {
+        ChronicleSpeed.Slow,
+        ChronicleSpeed.Normal,
+        ChronicleSpeed.Fast,
+    })
+    {
+        var simulation = AgainstAtRivenCairn();
+        var threatened = simulation.State;
+        var prepared = simulation.Apply(new UseLoadoutSlot(0));
+        var pending = simulation.State;
+
+        Assert(
+            prepared.Applied &&
+            pending.Tick == threatened.Tick &&
+            pending.FirstConflict?.PendingAction == new LoadoutSlot(WordIds.Smash) &&
+            WorldArea.Generate(
+                pending,
+                SurfacePatch.SurfaceStratum,
+                new WorldRectangle(1, 3, 1, 1)).Cells.Single().DurableIdentity ==
+                FirstConflictSubjects.RivenCairnIdentity,
+            "Prepared intrinsic Smash must record its exact Loadout action without resolving material before a tick.");
+
+        simulation.Apply(new SetChronicleSpeed(speed));
+        simulation.AdvanceClockPulse();
+        var resolved = simulation.State;
+        var context = simulation.ConflictContext
+            ?? throw new InvalidOperationException("The Shattered Cairn must retain its read-only conflict provenance.");
+        var expectedPulseTicks = speed switch
+        {
+            ChronicleSpeed.Slow => 1,
+            ChronicleSpeed.Normal => 2,
+            ChronicleSpeed.Fast => 4,
+            _ => throw new InvalidOperationException("The fixture requires an active Chronicle speed."),
+        };
+
+        Assert(
+            resolved.HasLivingIncarnation &&
+            resolved.Address == threatened.Address &&
+            resolved.Tick == threatened.Tick + expectedPulseTicks &&
+            resolved.FirstConflict == new FirstConflictState(
+                FirstConflictSubjects.RiverWardSubjectId,
+                threatened.Address,
+                threatened.Tick,
+                PendingAction: null,
+                Outcome: FirstConflictOutcome.Shattered,
+                ResolvedTick: threatened.Tick + 1,
+                ResolvingIncarnationId: threatened.IncarnationId),
+            "At every active speed, the first delivered tick must shatter the ward and later pulse ticks remain ordinary Chronicle ticks.");
+        Assert(
+            context.CairnIdentity == FirstConflictSubjects.ShatteredCairnIdentity &&
+            context.IsResolved &&
+            !context.IsThreatened &&
+            !context.IsSmashPrepared &&
+            WorldArea.Generate(
+                resolved,
+                SurfacePatch.SurfaceStratum,
+                new WorldRectangle(1, 3, 1, 1)).Cells.Single().DurableIdentity ==
+                FirstConflictSubjects.ShatteredCairnIdentity,
+            "Successful Smash must leave The Shattered Cairn as the durable non-Agent material outcome.");
+    }
+}
+
+static void VerifyUnpreparedCairnTickEndsOnlyOneBodyAndReplacementRetainsSmash()
+{
+    foreach (var speed in new[]
+    {
+        ChronicleSpeed.Slow,
+        ChronicleSpeed.Normal,
+        ChronicleSpeed.Fast,
+    })
+    {
+        var simulation = AgainstAtRivenCairn();
+        var threatened = simulation.State;
+        simulation.Apply(new SetChronicleSpeed(speed));
+        simulation.AdvanceClockPulse();
+        var ended = simulation.State;
+
+        Assert(
+            ended.Tick == threatened.Tick + 1 &&
+            ended.IncarnationLife == IncarnationLifeState.AwaitingReplacement &&
+            ended.FirstConflict is null &&
+            WorldArea.Generate(
+                ended,
+                SurfacePatch.SurfaceStratum,
+                new WorldRectangle(1, 3, 1, 1)).Cells.Single().DurableIdentity ==
+                FirstConflictSubjects.RivenCairnIdentity,
+            "No prepared action must end the body on exactly the first delivered tick and leave the River-Ward unresolved.");
+
+        var replacement = simulation.Apply(new CreateReplacementIncarnation());
+        Assert(
+            replacement.Applied &&
+            simulation.State.HasLivingIncarnation &&
+            simulation.State.Codex.Contains(WordIds.Smash) &&
+            simulation.State.ActiveLoadout.Slots.All(slot => slot.IsEmpty),
+            "A replacement after Cairn failure must retain Smash in the Codex with an empty Loadout.");
+    }
+}
+
+static void VerifyFirstConflictSaveV4AndLiteralVersion3Migration()
+{
+    var threatenedSimulation = AgainstAtRivenCairn();
+    var threatened = threatenedSimulation.State;
+    var threatenedJson = ChronicleSaveCodec.Serialize(threatened);
+    var threatenedRestored = ChronicleSaveCodec.Deserialize(threatenedJson);
+
+    Assert(
+        threatenedJson.Contains("\"Version\": 4", StringComparison.Ordinal) &&
+        threatenedJson.Contains("\"FirstConflict\"", StringComparison.Ordinal) &&
+        threatenedRestored == threatened,
+        "Strict save envelope v4 must round-trip the threatened River-Ward state exactly.");
+
+    threatenedSimulation.Apply(new UseLoadoutSlot(0));
+    var pending = threatenedSimulation.State;
+    var pendingJson = ChronicleSaveCodec.Serialize(pending);
+    var pendingRestored = ChronicleSaveCodec.Deserialize(pendingJson);
+    Assert(
+        pendingRestored == pending &&
+        pendingRestored.FirstConflict?.PendingAction == new LoadoutSlot(WordIds.Smash),
+        "Strict save envelope v4 must retain the exact pending Smash Loadout action.");
+
+    var forgedPendingWithoutSmash = System.Text.Json.Nodes.JsonNode.Parse(pendingJson)!;
+    forgedPendingWithoutSmash["Chronicle"]!["Intent"] = (int)OpeningIntent.Here;
+    forgedPendingWithoutSmash["Chronicle"]!["Codex"]!["Words"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""["word.found"]""");
+    forgedPendingWithoutSmash["Chronicle"]!["Loadout"]!["Slot1"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""{"Verb":"word.found","Noun":null}""");
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(forgedPendingWithoutSmash.ToJsonString()),
+        "A forged pending Smash action must reject when Smash is absent from the durable Codex.");
+
+    var resolving = new ChronicleSimulation(pendingRestored);
+    resolving.Apply(new SetChronicleSpeed(ChronicleSpeed.Slow));
+    var resumedBeforeTick = resolving.State;
+    var resumedJson = ChronicleSaveCodec.Serialize(resumedBeforeTick);
+    var resumedRestored = ChronicleSaveCodec.Deserialize(resumedJson);
+    Assert(
+        resumedRestored == resumedBeforeTick &&
+        resumedRestored.Speed == ChronicleSpeed.Slow &&
+        resumedRestored.FirstConflict is { Outcome: null, PendingAction: { IsIntrinsicSmash: true } },
+        "The reachable resumed-before-next-tick conflict state must round-trip without losing the pending action.");
+    resolving = new ChronicleSimulation(resumedRestored);
+    resolving.AdvanceClockPulse();
+    var shattered = resolving.State;
+    var shatteredJson = ChronicleSaveCodec.Serialize(shattered);
+    var shatteredRestored = ChronicleSaveCodec.Deserialize(shatteredJson);
+    Assert(
+        shatteredRestored == shattered &&
+        shatteredRestored.FirstConflict?.Outcome == FirstConflictOutcome.Shattered &&
+        WorldArea.Generate(
+            shatteredRestored,
+            SurfacePatch.SurfaceStratum,
+            new WorldRectangle(1, 3, 1, 1)).Cells.Single().DurableIdentity ==
+            FirstConflictSubjects.ShatteredCairnIdentity,
+        "Strict save envelope v4 must retain the resolved Shattered Cairn outcome and provenance.");
+
+    var forgedShatteredWithoutSmash = System.Text.Json.Nodes.JsonNode.Parse(shatteredJson)!;
+    forgedShatteredWithoutSmash["Chronicle"]!["Intent"] = (int)OpeningIntent.Here;
+    forgedShatteredWithoutSmash["Chronicle"]!["Codex"]!["Words"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""["word.found"]""");
+    forgedShatteredWithoutSmash["Chronicle"]!["Loadout"]!["Slot1"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""{"Verb":"word.found","Noun":null}""");
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(forgedShatteredWithoutSmash.ToJsonString()),
+        "A forged Shattered Cairn outcome must reject when Smash is absent from the durable Codex.");
+
+    var revisit = new ChronicleSimulation(shatteredRestored);
+    revisit.Apply(new MoveIncarnation(0, -1));
+    revisit.Apply(new MoveIncarnation(0, 1));
+    Assert(
+        WorldArea.Generate(
+            revisit.State,
+            SurfacePatch.SurfaceStratum,
+            new WorldRectangle(1, 3, 1, 1)).Cells.Single().DurableIdentity ==
+            FirstConflictSubjects.ShatteredCairnIdentity,
+        "The Shattered Cairn must survive leaving and revisiting its generated Address.");
+
+    var deathAndReplacement = new ChronicleSimulation(
+        shatteredRestored with { Address = SkyStratum.LandmarkAddress });
+    deathAndReplacement.Apply(new EndIncarnationAtBell());
+    deathAndReplacement.Apply(new CreateReplacementIncarnation());
+    Assert(
+        WorldArea.Generate(
+            deathAndReplacement.State,
+            SurfacePatch.SurfaceStratum,
+            new WorldRectangle(1, 3, 1, 1)).Cells.Single().DurableIdentity ==
+            FirstConflictSubjects.ShatteredCairnIdentity,
+        "The Shattered Cairn must survive Incarnation death and replacement.");
+
+    AssertVersion4RejectsUnexpectedProperty(
+        threatenedJson,
+        root => root["Chronicle"]!["FirstConflict"]!["Unexpected"] = true,
+        "Version 4 must reject unexpected First Conflict fields.");
+    AssertVersion4RejectsUnexpectedProperty(
+        threatenedJson,
+        root => root["Chronicle"]!["FirstConflict"] = new System.Text.Json.Nodes.JsonObject(),
+        "Version 4 must reject incomplete First Conflict data.");
+
+    var offSiteThreat = System.Text.Json.Nodes.JsonNode.Parse(threatenedJson)!;
+    offSiteThreat["Chronicle"]!["Address"]!["X"] = 0;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(offSiteThreat.ToJsonString()),
+        "Version 4 must reject an unresolved conflict away from the Cairn.");
+
+    var staleThreatTick = System.Text.Json.Nodes.JsonNode.Parse(threatenedJson)!;
+    staleThreatTick["Chronicle"]!["Tick"] = 1;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(staleThreatTick.ToJsonString()),
+        "Version 4 must reject stale unresolved threat provenance that cannot resolve on ThreatenedTick + 1.");
+
+    var looseStoneOverlap = System.Text.Json.Nodes.JsonNode.Parse(threatenedJson)!;
+    looseStoneOverlap["Chronicle"]!["LooseStoneAddress"]!["Y"] = 3;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(looseStoneOverlap.ToJsonString()),
+        "Version 4 must reject a loose Stone overlap with the generated Cairn.");
+
+    var skyLooseStoneOverlap = System.Text.Json.Nodes.JsonNode.Parse(threatenedJson)!;
+    skyLooseStoneOverlap["Chronicle"]!["LooseStoneAddress"]!["Stratum"] =
+        SkyStratum.StratumName;
+    skyLooseStoneOverlap["Chronicle"]!["LooseStoneAddress"]!["Y"] = 3;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(skyLooseStoneOverlap.ToJsonString()),
+        "Version 4 must reject a sky loose Stone whose X/Y provenance would let Fly[Stone] overwrite the Cairn.");
+
+    var homeOverlap = System.Text.Json.Nodes.JsonNode.Parse(threatenedJson)!;
+    homeOverlap["Chronicle"]!["Codex"]!["Words"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""["word.found","word.smash"]""");
+    homeOverlap["Chronicle"]!["Home"] = System.Text.Json.Nodes.JsonNode.Parse(
+        """
+        {
+          "HoldingId": "holding.home",
+          "DisplayName": "The First Hearth",
+          "Address": { "Stratum": "surface", "X": 1, "Y": 3 },
+          "FoundedTick": 0,
+          "FoundingIncarnationId": 1,
+          "Material": 1
+        }
+        """);
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(homeOverlap.ToJsonString()),
+        "Version 4 must reject a Home overlap with the generated Cairn.");
+
+    foreach (var grammarPin in new[] { 0, 1, 2 })
+    {
+        var migrated = ChronicleSaveCodec.Deserialize(LiteralVersion3Fixture(grammarPin));
+        var oldWorld = new ChronicleSimulation(migrated);
+        var against = oldWorld.Apply(new ChooseAgainstIntent());
+        var oldCell = WorldArea.Generate(
+            migrated,
+            SurfacePatch.SurfaceStratum,
+            new WorldRectangle(1, 3, 1, 1)).Cells.Single();
+
+        Assert(
+            migrated.WorldGrammarVersion == grammarPin &&
+            migrated.FirstConflict is null &&
+            oldCell.DurableIdentity is null &&
+            !against.Applied &&
+            oldWorld.State == migrated,
+            "Literal version-3 predecessor pins must survive unchanged without a retroactive Cairn or AGAINST opening.");
+    }
+
+    var version3SmashCodex = System.Text.Json.Nodes.JsonNode.Parse(LiteralVersion3Fixture(2))!;
+    version3SmashCodex["Chronicle"]!["Codex"]!["Words"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""["word.smash"]""");
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(version3SmashCodex.ToJsonString()),
+        "Literal version 3 must reject the later Smash Codex identity.");
+
+    var version3SmashLoadout = System.Text.Json.Nodes.JsonNode.Parse(LiteralVersion3Fixture(2))!;
+    version3SmashLoadout["Chronicle"]!["Loadout"]!["Slot1"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""{"Verb":"word.smash","Noun":null}""");
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(version3SmashLoadout.ToJsonString()),
+        "Literal version 3 must reject the later Smash Loadout identity.");
+
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(LiteralVersion3Fixture(3)),
+        "Literal version 3 must reject a grammar-3 pin rather than inventing a conflict state.");
+}
+
+static void VerifySaveBoundaryRejectsFutureAndMalformedState()
+{
+    var version2 = System.Text.Json.Nodes.JsonNode.Parse(LiteralVersion3Fixture(2))!;
+    version2["Version"] = 2;
+    version2["Chronicle"]!.AsObject().Remove("Home");
+    version2["Chronicle"]!["Codex"]!["Words"] =
+        System.Text.Json.Nodes.JsonNode.Parse(
+            """["word.fly","word.found","word.smash"]""");
+    version2["Chronicle"]!["Loadout"]!["Slot1"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""{"Verb":"word.fly","Noun":null}""");
+    version2["Chronicle"]!["Loadout"]!["Slot2"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""{"Verb":"word.found","Noun":null}""");
+    version2["Chronicle"]!["Loadout"]!["Slot3"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""{"Verb":"word.smash","Noun":null}""");
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(version2.ToJsonString()),
+        "Literal version 2 must reject Found and Smash identities introduced by later save envelopes.");
+
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize("""{"Version":1,"Chronicle":{}}"""),
+        "A malformed empty version-1 predecessor must not migrate into invalid current state.");
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize("{}"),
+        "A malformed empty pre-envelope predecessor must not migrate into invalid current state.");
+
+    foreach (var futureGrammarPin in new[] { 1, 2 })
+    {
+        AssertThrows<InvalidOperationException>(
+            () => ChronicleSaveCodec.Deserialize(
+                LiteralPreEnvelopeFixture(futureGrammarPin)),
+            $"A pre-envelope Chronicle must reject later World Grammar pin {futureGrammarPin}.");
+    }
+
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(LiteralVersion1Fixture(2)),
+        "A version-1 Chronicle must reject the later World Grammar 2 pin.");
+
+    var current = System.Text.Json.Nodes.JsonNode.Parse(
+        ChronicleSaveCodec.Serialize(ChronicleState.Begin(41_337)))!;
+    current["Chronicle"]!["Tick"] = long.MaxValue;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(current.ToJsonString()),
+        "A current save must reject an unadvanceable maximum Chronicle tick.");
+
+    current = System.Text.Json.Nodes.JsonNode.Parse(
+        ChronicleSaveCodec.Serialize(ChronicleState.Begin(41_337)))!;
+    current["Chronicle"]!["IncarnationId"] = long.MaxValue;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(current.ToJsonString()),
+        "A current save must reject an unincrementable maximum Incarnation identity.");
+}
+
+static void VerifyCairnRejectsFoundAndFlyStoneCannotOverwriteIt()
+{
+    var mixed = new ChronicleSimulation(ChronicleState.Begin(41_337));
+    mixed.Apply(new ChooseHereIntent());
+    var mixedJson = System.Text.Json.Nodes.JsonNode.Parse(
+        ChronicleSaveCodec.Serialize(mixed.State))!;
+    mixedJson["Chronicle"]!["Codex"]!["Words"] =
+        System.Text.Json.Nodes.JsonNode.Parse(
+            """["word.fly","word.found","word.smash","word.stone"]""");
+    mixedJson["Chronicle"]!["Study"]!["Understanding"] =
+        System.Text.Json.Nodes.JsonNode.Parse(
+            """[{"Word":"word.stone","Amount":16}]""");
+    mixedJson["Chronicle"]!["Loadout"]!["Slot2"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""{"Verb":"word.smash","Noun":null}""");
+    mixedJson["Chronicle"]!["Loadout"]!["Slot3"] =
+        System.Text.Json.Nodes.JsonNode.Parse("""{"Verb":"word.fly","Noun":"word.stone"}""");
+    var simulation = new ChronicleSimulation(ChronicleSaveCodec.Deserialize(mixedJson.ToJsonString()));
+
+    Assert(
+        simulation.State.Codex.Contains(WordIds.Fly) &&
+        simulation.State.Codex.Contains(WordIds.Found) &&
+        simulation.State.Codex.Contains(WordIds.Smash) &&
+        simulation.State.ActiveLoadout[0] == new LoadoutSlot(WordIds.Found) &&
+        simulation.State.ActiveLoadout[1] == new LoadoutSlot(WordIds.Smash) &&
+        simulation.State.ActiveLoadout[2] == new LoadoutSlot(WordIds.Fly, WordIds.Stone),
+        "A mixed Codex must independently fit Fly, Found, and Smash without treating an opening as a permanent class.");
+
+    simulation.Apply(new MoveIncarnation(1, 0));
+    simulation.Apply(new MoveIncarnation(0, 1));
+    simulation.Apply(new MoveIncarnation(0, 1));
+    simulation.Apply(new MoveIncarnation(0, 1));
+    var intact = simulation.State;
+    var found = simulation.Apply(new UseLoadoutSlot(0));
+    var flyStone = simulation.Apply(new UseLoadoutSlot(2, intact.Address));
+
+    Assert(
+        !found.Applied &&
+        !flyStone.Applied &&
+        simulation.State == intact &&
+        simulation.HomeContext.CurrentSite.IsEligible == false &&
+        simulation.HomeContext.CurrentSite.DurableIdentity == FirstConflictSubjects.RivenCairnIdentity,
+        "The intact Cairn must reject Found and Fly[Stone] targeting without overwriting the ward or creating Home.");
+
+    simulation.Apply(new UseLoadoutSlot(1));
+    simulation.Apply(new SetChronicleSpeed(ChronicleSpeed.Slow));
+    simulation.AdvanceClockPulse();
+    var shattered = simulation.State;
+    var foundAfterShatter = simulation.Apply(new UseLoadoutSlot(0));
+    Assert(
+        !foundAfterShatter.Applied &&
+        simulation.State == shattered &&
+        simulation.HomeContext.CurrentSite.DurableIdentity == FirstConflictSubjects.ShatteredCairnIdentity,
+        "The Shattered Cairn must remain ineligible for Found and retain its durable material identity.");
+}
+
+static void VerifyCounterTransitionsRejectBeforeUnsavableState()
+{
+    var maxTickJson = System.Text.Json.Nodes.JsonNode.Parse(
+        ChronicleSaveCodec.Serialize(ChronicleState.Begin(41_337)))!;
+    maxTickJson["Chronicle"]!["Tick"] = long.MaxValue - 1;
+    var maxTick = new ChronicleSimulation(
+        ChronicleSaveCodec.Deserialize(maxTickJson.ToJsonString()));
+    var beforeTick = maxTick.State;
+
+    maxTick.AdvanceClockPulse();
+    var exhaustedTick = beforeTick with { Speed = ChronicleSpeed.Paused };
+    Assert(
+        maxTick.State == exhaustedTick &&
+        ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(maxTick.State)) == exhaustedTick,
+        "A maximum-minus-one clock pulse must pause before publishing an unsaveable tick and remain exactly saveable.");
+    maxTick.AdvanceClockPulse();
+    Assert(
+        maxTick.State == exhaustedTick,
+        "An exhausted paused Chronicle must remain inert without throwing on later frame pulses.");
+
+    var awaitingReplacement = ChronicleState.Begin(41_337) with
+    {
+        IncarnationId = long.MaxValue - 1,
+        IncarnationLife = IncarnationLifeState.AwaitingReplacement,
+    };
+    var maxIncarnation = new ChronicleSimulation(
+        ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(awaitingReplacement)));
+    var beforeReplacement = maxIncarnation.State;
+
+    var replacement = maxIncarnation.Apply(new CreateReplacementIncarnation());
+    Assert(
+        !replacement.Applied &&
+        maxIncarnation.State == beforeReplacement &&
+        ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(maxIncarnation.State)) ==
+        beforeReplacement,
+        "A maximum-minus-one replacement request must reject without throwing and leave the Chronicle exactly saveable.");
 }
 
 static void VerifySlice1SaveMigratesCodex()
@@ -864,6 +1516,37 @@ static void VerifyHereBuildOpeningGrantsFound()
     Assert(
         !repeated.Applied && simulation.State == selected,
         "Repeating HERE must not duplicate Found or mutate the Chronicle.");
+}
+
+static void VerifyAgainstOpeningGrantsSmash()
+{
+    var smash = WordCatalogue.Get(WordIds.Smash);
+    var simulation = new ChronicleSimulation(ChronicleState.Begin(41_337));
+
+    var result = simulation.Apply(new ChooseAgainstIntent());
+
+    Assert(
+        smash.Kind == WordKind.Verb &&
+        smash.DisplayName == "Smash" &&
+        smash.UnderstandingRequired == 0 &&
+        smash.CompatibleNouns.Count == 0,
+        "Smash must be the authored intrinsic zero-Understanding Combat Verb.");
+    Assert(
+        result.Applied &&
+        simulation.State.Intent == OpeningIntent.Against &&
+        simulation.State.Codex.Contains(WordIds.Smash) &&
+        simulation.State.ActiveLoadout[0] == new LoadoutSlot(WordIds.Smash) &&
+        simulation.State.ActiveLoadout.Slots.Count(slot => slot.Verb == WordIds.Smash) == 1,
+        "AGAINST must add Smash to the durable Codex and equip it exactly once in slot 1.");
+    Assert(
+        !simulation.State.Codex.Contains(WordIds.Fly) &&
+        !simulation.State.Codex.Contains(WordIds.Found),
+        "The Combat opening must grant only Smash and remain independent from Explore and Build.");
+
+    var repeated = simulation.Apply(new ChooseAgainstIntent());
+    Assert(
+        !repeated.Applied,
+        "Repeating AGAINST must not duplicate Smash or mutate the Chronicle.");
 }
 
 static void VerifyFoundRejectsUnsupportedUseWithoutMutation()
@@ -1174,7 +1857,7 @@ static void VerifyHomeHearthstoneOverlaysExistingRidge()
         "Hearthstone area queries must be deterministic and read-only.");
 }
 
-static void VerifyHomeSaveV3AndVersion2Migration()
+static void VerifyHomeSaveV4AndVersion2Migration()
 {
     const string goal4AVersion2Json =
         """
@@ -1262,6 +1945,12 @@ static void VerifyHomeSaveV3AndVersion2Migration()
         () => ChronicleSaveCodec.Deserialize(illegalVersion2.ToJsonString()),
         "A version-2 predecessor save must reject the later HERE Intent.");
 
+    var futureVersion2 = System.Text.Json.Nodes.JsonNode.Parse(goal4AVersion2Json)!;
+    futureVersion2["Chronicle"]!["WorldGrammarVersion"] = 3;
+    AssertThrows<InvalidOperationException>(
+        () => ChronicleSaveCodec.Deserialize(futureVersion2.ToJsonString()),
+        "A version-2 predecessor save must not acquire the later grammar-3 Cairn rule.");
+
     var simulation = new ChronicleSimulation(ChronicleState.Begin(41_337));
     simulation.Apply(new ChooseHereIntent());
     simulation.Apply(new MoveIncarnation(0, 1));
@@ -1275,7 +1964,7 @@ static void VerifyHomeSaveV3AndVersion2Migration()
     var chronicle = document["Chronicle"]!.AsObject();
     var home = chronicle["Home"]!.AsObject();
     Assert(
-        document["Version"]!.GetValue<int>() == 3 &&
+        document["Version"]!.GetValue<int>() == 4 &&
         home["HoldingId"]!.GetValue<string>() == "holding.home" &&
         home["DisplayName"]!.GetValue<string>() == "The First Hearth" &&
         home["Address"]!["Stratum"]!.GetValue<string>() == SurfacePatch.SurfaceStratum &&
@@ -1284,7 +1973,7 @@ static void VerifyHomeSaveV3AndVersion2Migration()
         home["FoundedTick"]!.GetValue<long>() == founded.Tick &&
         home["FoundingIncarnationId"]!.GetValue<long>() == founded.IncarnationId &&
         home["Material"]!.GetValue<int>() == (int)HomeMaterialState.HearthstoneRaised,
-        "Version 3 must explicitly serialize the exact singular Home state.");
+        "Version 4 must explicitly serialize the exact singular Home state.");
     Assert(
         !json.Contains("ReturnRoute", StringComparison.Ordinal) &&
         !json.Contains("CurrentSite", StringComparison.Ordinal),
@@ -1294,7 +1983,7 @@ static void VerifyHomeSaveV3AndVersion2Migration()
     Assert(
         restored == founded &&
         new ChronicleSimulation(restored).HomeContext.ReturnRoute?.Arrived == true,
-        "Version 3 must round-trip Home exactly and regenerate route knowledge.");
+        "Version 4 must round-trip Home exactly and regenerate route knowledge.");
     var explorerSave = ChronicleSaveCodec.Serialize(
         founded with
         {
@@ -1313,16 +2002,16 @@ static void VerifyHomeSaveV3AndVersion2Migration()
     Assert(
         noHomeChronicle.ContainsKey("Home") &&
         noHomeChronicle["Home"] is null,
-        "Version 3 must serialize an explicit nullable Home.");
+        "Version 4 must serialize an explicit nullable Home.");
     noHomeChronicle.Remove("Home");
     AssertThrows<InvalidOperationException>(
         () => ChronicleSaveCodec.Deserialize(
             new System.Text.Json.Nodes.JsonObject
             {
-                ["Version"] = 3,
+                ["Version"] = 4,
                 ["Chronicle"] = noHomeChronicle,
             }.ToJsonString()),
-        "A version-3 Chronicle missing its explicit Home field must be rejected.");
+        "A version-4 Chronicle missing its explicit Home field must be rejected.");
 }
 
 static void VerifyNonHereChronicleCanRetainEquipAndFoundHome()
@@ -2494,13 +3183,13 @@ static void VerifyLoadoutIdentityPersistenceAndPredecessorCollision()
     Assert(
         slot.GetProperty("Verb").GetString() == WordIds.Fly.Value &&
         slot.GetProperty("Noun").GetString() == WordIds.Stone.Value,
-        "Version 3 must serialize Loadout words as their exact stable string identities.");
+        "Version 4 must serialize Loadout words as their exact stable string identities.");
     Assert(
         !json.Contains("\"Value\"", StringComparison.Ordinal),
-        "Version 3 must not leak WordId implementation objects into saved Loadout state.");
+        "Version 4 must not leak WordId implementation objects into saved Loadout state.");
     Assert(
         ChronicleSaveCodec.Deserialize(json) == simulation.State,
-        "A string-identity Loadout must round-trip exactly through version 3.");
+        "A string-identity Loadout must round-trip exactly through version 4.");
 
     const string version1FittedJson =
         """
@@ -2696,6 +3385,57 @@ static void VerifyFlyStoneReturnsTheLooseStone()
     Assert(
         simulation.State.LooseStoneAddress == ChronicleState.InitialLooseStoneAddress,
         "The same Expression must return Stone to its matching surface address.");
+}
+
+static void VerifyFlyStoneCannotOverlapHome()
+{
+    var fixture = new ChronicleSimulation(ChronicleState.Begin(15));
+    fixture.Apply(new ChooseHereIntent());
+    var json = System.Text.Json.Nodes.JsonNode.Parse(
+        ChronicleSaveCodec.Serialize(fixture.State))!;
+    json["Chronicle"]!["Address"] =
+        System.Text.Json.Nodes.JsonNode.Parse(
+            """{"Stratum":"sky","X":0,"Y":0}""");
+    json["Chronicle"]!["Codex"]!["Words"] =
+        System.Text.Json.Nodes.JsonNode.Parse(
+            """["word.fly","word.found","word.stone"]""");
+    json["Chronicle"]!["Study"]!["Understanding"] =
+        System.Text.Json.Nodes.JsonNode.Parse(
+            """[{"Word":"word.stone","Amount":16}]""");
+    json["Chronicle"]!["Loadout"]!["Slot1"] =
+        System.Text.Json.Nodes.JsonNode.Parse(
+            """{"Verb":"word.fly","Noun":"word.stone"}""");
+    json["Chronicle"]!["LooseStoneAddress"] =
+        System.Text.Json.Nodes.JsonNode.Parse(
+            """{"Stratum":"sky","X":1,"Y":0}""");
+    json["Chronicle"]!["Home"] = System.Text.Json.Nodes.JsonNode.Parse(
+        """
+        {
+          "HoldingId": "holding.home",
+          "DisplayName": "The First Hearth",
+          "Address": { "Stratum": "surface", "X": 1, "Y": 0 },
+          "FoundedTick": 0,
+          "FoundingIncarnationId": 1,
+          "Material": 1
+        }
+        """);
+
+    var simulation = new ChronicleSimulation(
+        ChronicleSaveCodec.Deserialize(json.ToJsonString()));
+    var before = simulation.State;
+    Assert(
+        simulation.ValidTargetsForSlot(0).Count == 0,
+        "Core must not advertise a Fly[Stone] target whose destination would overlap Home.");
+    var result = simulation.Apply(
+        new UseLoadoutSlot(
+            0,
+            new WorldAddress(SkyStratum.StratumName, 1, 0)));
+
+    Assert(
+        !result.Applied &&
+        simulation.State == before &&
+        ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(simulation.State)) == before,
+        "Fly[Stone] must reject before returning the loose Stone onto Home and preserve a saveable state.");
 }
 
 static void VerifyFlyStoneRejectsInvalidTargets()
@@ -2900,7 +3640,7 @@ static void VerifyLifecycleSaveEnvelopeAndMigration()
     var awaiting = EndedChronicle().State;
     var awaitingJson = ChronicleSaveCodec.Serialize(awaiting);
     var restoredAwaiting = ChronicleSaveCodec.Deserialize(awaitingJson);
-    Assert(awaitingJson.Contains("\"Version\": 3", StringComparison.Ordinal), "Current saves must use version 3.");
+    Assert(awaitingJson.Contains("\"Version\": 4", StringComparison.Ordinal), "Current saves must use version 4.");
     Assert(awaitingJson.Contains("\"Chronicle\"", StringComparison.Ordinal), "Current saves must wrap Chronicle state.");
     Assert(restoredAwaiting == awaiting, "Save/load before replacement must preserve the awaiting Chronicle exactly.");
 
@@ -3035,6 +3775,80 @@ static ChronicleSimulation AtBellWithFound()
         simulation.State with { Address = SkyStratum.LandmarkAddress });
 }
 
+static ChronicleSimulation AgainstAtRivenCairn()
+{
+    var simulation = new ChronicleSimulation(ChronicleState.Begin(41_337));
+    simulation.Apply(new ChooseAgainstIntent());
+    simulation.Apply(new MoveIncarnation(1, 0));
+    simulation.Apply(new MoveIncarnation(0, 1));
+    simulation.Apply(new MoveIncarnation(0, 1));
+    simulation.Apply(new MoveIncarnation(0, 1));
+    return simulation;
+}
+
+static string LiteralVersion3Fixture(int grammarPin) =>
+    """
+    {
+      "Version": 3,
+      "Chronicle": {
+        "Seed": 41337,
+        "Tick": 0,
+        "Address": { "Stratum": "surface", "X": 0, "Y": 0 },
+        "Speed": 2,
+        "Intent": 0,
+        "Codex": { "Words": [] },
+        "Study": {
+          "Understanding": [],
+          "ActiveSourceId": null,
+          "ActiveWord": null
+        },
+        "Loadout": {
+          "Slot1": { "Verb": null, "Noun": null },
+          "Slot2": { "Verb": null, "Noun": null },
+          "Slot3": { "Verb": null, "Noun": null },
+          "Slot4": { "Verb": null, "Noun": null },
+          "Slot5": { "Verb": null, "Noun": null },
+          "Slot6": { "Verb": null, "Noun": null },
+          "Slot7": { "Verb": null, "Noun": null },
+          "Slot8": { "Verb": null, "Noun": null }
+        },
+        "LooseStoneAddress": { "Stratum": "surface", "X": 1, "Y": 0 },
+        "IncarnationId": 1,
+        "IncarnationLife": 0,
+        "WorldGrammarVersion": __GRAMMAR_PIN__,
+        "Home": null
+      }
+    }
+    """.Replace("__GRAMMAR_PIN__", grammarPin.ToString(), StringComparison.Ordinal);
+
+static string LiteralVersion1Fixture(int grammarPin) =>
+    """
+    {
+      "Version": 1,
+      "Chronicle": {
+        "Seed": 41337,
+        "Tick": 0,
+        "Address": { "Stratum": "surface", "X": 0, "Y": 0 },
+        "Speed": 2,
+        "Intent": 0,
+        "Codex": { "HasFly": false, "HasStone": false },
+        "Study": { "StoneUnderstanding": 0, "IsStudyingBell": false },
+        "WorldGrammarVersion": __GRAMMAR_PIN__
+      }
+    }
+    """.Replace("__GRAMMAR_PIN__", grammarPin.ToString(), StringComparison.Ordinal);
+
+static string LiteralPreEnvelopeFixture(int grammarPin) =>
+    """
+    {
+      "Seed": 41337,
+      "Tick": 0,
+      "Address": { "Stratum": "surface", "X": 0, "Y": 0 },
+      "Speed": 2,
+      "WorldGrammarVersion": __GRAMMAR_PIN__
+    }
+    """.Replace("__GRAMMAR_PIN__", grammarPin.ToString(), StringComparison.Ordinal);
+
 static ChronicleSimulation BeginWithUp()
 {
     var simulation = new ChronicleSimulation(ChronicleState.Begin(41_337));
@@ -3128,7 +3942,7 @@ static void AssertThrows<TException>(Action action, string message)
     throw new InvalidOperationException(message);
 }
 
-static void AssertVersion3RejectsUnexpectedProperty(
+static void AssertVersion4RejectsUnexpectedProperty(
     string json,
     Action<System.Text.Json.Nodes.JsonObject> addUnexpectedProperty,
     string message)

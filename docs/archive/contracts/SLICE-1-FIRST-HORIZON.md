@@ -9,7 +9,7 @@ Slice 2.
 
 The implementation paths below are historical. Slice 3 Gate 3B later replaced
 the two concrete Godot views with the shared `WorldVisualView`; current
-ownership is canonical in the [Codemap](CODEMAP.md).
+ownership is canonical in the [Codemap](../../CODEMAP.md).
 
 ## Outcome
 

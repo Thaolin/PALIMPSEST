@@ -14,6 +14,14 @@ public partial class ChronicleApp : Node
     private const int CanvasPixelHeight = 900;
     private const int MapPixelWidth = 1020;
     private const int MapPixelHeight = 740;
+    private const string LegacyOpeningPrompt =
+        "Explore and Build are Starting Vectors, not classes.\n" +
+        "The sky has no road; the ground can remember.\n" +
+        "Where do you intend to go?";
+    private const string CombatOpeningPrompt =
+        "Combat, Explore, and Build are Starting Vectors, not classes.\n" +
+        "The river has a ward; the sky has no road; the ground can remember.\n" +
+        "Where do you intend to go?";
 
     private static readonly StringName MoveNorthAction = "chronicle_move_north";
     private static readonly StringName MoveSouthAction = "chronicle_move_south";
@@ -35,12 +43,15 @@ public partial class ChronicleApp : Node
     private Label _loadoutReadout = null!;
     private Label _statusReadout = null!;
     private Label _guidanceReadout = null!;
+    private Label _openingPrompt = null!;
+    private Button _againstButton = null!;
     private Button _upButton = null!;
     private Button _hereButton = null!;
     private Button _flyButton = null!;
     private Button _studyButton = null!;
     private Button _equipFlyButton = null!;
     private Button _equipFoundButton = null!;
+    private Button _equipSmashButton = null!;
     private Button _fitStoneButton = null!;
     private Button _clearFirstSlotButton = null!;
     private Button _ringBellButton = null!;
@@ -77,6 +88,7 @@ public partial class ChronicleApp : Node
     private WorldAddress _renderedAddress;
     private WorldAddress? _renderedLooseStoneAddress;
     private HomeState? _renderedHome;
+    private FirstConflictState? _renderedFirstConflict;
     private int _renderedWorldGrammarVersion;
     private bool _renderedHasLivingIncarnation;
     private bool _hasRenderedWorld;
@@ -85,6 +97,10 @@ public partial class ChronicleApp : Node
     private bool _verifyGoal4APartial;
     private bool _verifyGoal4B;
     private bool _verifyGoal4BRestart;
+    private bool _verifyGoal4C;
+    private bool _verifyGoal4CRestart;
+    private bool _verifyGoal4CResolved;
+    private bool _verifyGoal4CFailure;
     private string _lastSaveLoadStatus = "Starting Chronicle.";
     private string _lastAnswerStatus = string.Empty;
     private string _lastCommandStatus = string.Empty;
@@ -100,6 +116,10 @@ public partial class ChronicleApp : Node
         _verifyGoal4APartial = arguments.Contains("--verify-4a-partial", StringComparer.Ordinal);
         _verifyGoal4B = arguments.Contains("--verify-4b", StringComparer.Ordinal);
         _verifyGoal4BRestart = arguments.Contains("--verify-4b-restart", StringComparer.Ordinal);
+        _verifyGoal4C = arguments.Contains("--verify-4c", StringComparer.Ordinal);
+        _verifyGoal4CRestart = arguments.Contains("--verify-4c-restart", StringComparer.Ordinal);
+        _verifyGoal4CResolved = arguments.Contains("--verify-4c-resolved", StringComparer.Ordinal);
+        _verifyGoal4CFailure = arguments.Contains("--verify-4c-failure", StringComparer.Ordinal);
         _visualCellSize = RequestedVisualCellSize(arguments);
         _visualPack = ManualVisualPack.CreateGate3B(_visualCellSize);
         _visualAtlasTexture = VisualPackGodotAdapter.CreateAtlasTexture(_visualPack);
@@ -133,6 +153,22 @@ public partial class ChronicleApp : Node
         else if (_verifyGoal4BRestart)
         {
             Callable.From(RunGoal4BRestartAcceptance).CallDeferred();
+        }
+        else if (_verifyGoal4C)
+        {
+            Callable.From(RunGoal4CAcceptance).CallDeferred();
+        }
+        else if (_verifyGoal4CRestart)
+        {
+            Callable.From(RunGoal4CRestartAcceptance).CallDeferred();
+        }
+        else if (_verifyGoal4CResolved)
+        {
+            Callable.From(RunGoal4CResolvedRestartAcceptance).CallDeferred();
+        }
+        else if (_verifyGoal4CFailure)
+        {
+            Callable.From(RunGoal4CFailureAcceptance).CallDeferred();
         }
         else if (_verifyGoal4APartial)
         {
@@ -337,7 +373,7 @@ public partial class ChronicleApp : Node
             Size = new Vector2(468, 130),
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
         };
-        _guidanceReadout.AddThemeFontSizeOverride("font_size", 14);
+        _guidanceReadout.AddThemeFontSizeOverride("font_size", 13);
         _guidanceReadout.AddThemeColorOverride("font_color", new Color(0.76f, 0.84f, 0.9f));
         panel.AddChild(_guidanceReadout);
         AddChild(panel);
@@ -415,31 +451,38 @@ public partial class ChronicleApp : Node
         _equipFlyButton = AddCommandButton(
             codexPanel,
             "EQUIP FLY",
-            new Vector2(8, 144),
-            new Vector2(98, 32),
+            new Vector2(4, 144),
+            new Vector2(82, 32),
             () => ConfigureFirstSlot(WordIds.Fly, noun: null),
-            fontSize: 12);
+            fontSize: 10);
         _equipFoundButton = AddCommandButton(
             codexPanel,
             "EQUIP FOUND",
-            new Vector2(110, 144),
-            new Vector2(112, 32),
+            new Vector2(90, 144),
+            new Vector2(90, 32),
             () => ConfigureFirstSlot(WordIds.Found, noun: null),
-            fontSize: 12);
+            fontSize: 10);
+        _equipSmashButton = AddCommandButton(
+            codexPanel,
+            "EQUIP SMASH",
+            new Vector2(184, 144),
+            new Vector2(95, 32),
+            () => ConfigureFirstSlot(WordIds.Smash, noun: null),
+            fontSize: 10);
         _fitStoneButton = AddCommandButton(
             codexPanel,
             "FIT STONE",
-            new Vector2(232, 144),
-            new Vector2(98, 32),
+            new Vector2(283, 144),
+            new Vector2(75, 32),
             () => ConfigureFirstSlot(WordIds.Fly, WordIds.Stone),
-            fontSize: 12);
+            fontSize: 10);
         _clearFirstSlotButton = AddCommandButton(
             codexPanel,
             "CLEAR SLOT 1",
-            new Vector2(334, 144),
-            new Vector2(124, 32),
+            new Vector2(362, 144),
+            new Vector2(96, 32),
             ClearFirstSlot,
-            fontSize: 12);
+            fontSize: 10);
 
         BuildStudyChoicePanel(codexPanel);
 
@@ -679,22 +722,34 @@ public partial class ChronicleApp : Node
         title.AddThemeColorOverride("font_color", new Color(0.92f, 0.83f, 0.44f));
         _openingPanel.AddChild(title);
 
-        var prompt = new Label
+        _openingPrompt = new Label
         {
             Position = new Vector2(400, 255),
             Size = new Vector2(800, 120),
-            Text = "Explore and Build are Starting Vectors, not classes.\nThe sky has no road; the ground can remember.\nWhere do you intend to go?",
+            Text = CombatOpeningPrompt,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        prompt.AddThemeFontSizeOverride("font_size", 20);
-        prompt.AddThemeColorOverride("font_color", new Color(0.86f, 0.91f, 0.96f));
-        _openingPanel.AddChild(prompt);
+        _openingPrompt.AddThemeFontSizeOverride("font_size", 20);
+        _openingPrompt.AddThemeColorOverride("font_color", new Color(0.86f, 0.91f, 0.96f));
+        _openingPanel.AddChild(_openingPrompt);
+
+        _againstButton = new Button
+        {
+            Name = "ChooseAgainstIntent",
+            Position = new Vector2(374, 430),
+            Size = new Vector2(260, 68),
+            Text = "AGAINST — COMBAT",
+            FocusMode = Control.FocusModeEnum.None,
+        };
+        _againstButton.AddThemeFontSizeOverride("font_size", 20);
+        _againstButton.Pressed += ChooseAgainstIntent;
+        _openingPanel.AddChild(_againstButton);
 
         _upButton = new Button
         {
             Name = "ChooseUpIntent",
-            Position = new Vector2(522, 430),
+            Position = new Vector2(670, 430),
             Size = new Vector2(260, 68),
             Text = "UP — EXPLORE",
             FocusMode = Control.FocusModeEnum.None,
@@ -706,7 +761,7 @@ public partial class ChronicleApp : Node
         _hereButton = new Button
         {
             Name = "ChooseHereIntent",
-            Position = new Vector2(818, 430),
+            Position = new Vector2(966, 430),
             Size = new Vector2(260, 68),
             Text = "HERE — BUILD",
             FocusMode = Control.FocusModeEnum.None,
@@ -715,7 +770,32 @@ public partial class ChronicleApp : Node
         _hereButton.Pressed += ChooseHereIntent;
         _openingPanel.AddChild(_hereButton);
 
+        ConfigureOpeningOptions(_simulation.State);
         AddChild(_openingPanel);
+    }
+
+    private void ConfigureOpeningOptions(ChronicleState state)
+    {
+        var offersCombat = state.WorldGrammarVersion == 3;
+        _againstButton.Visible = offersCombat;
+        _againstButton.Disabled = !offersCombat;
+        _openingPrompt.Text = offersCombat ? CombatOpeningPrompt : LegacyOpeningPrompt;
+        _upButton.Position = offersCombat
+            ? new Vector2(670, 430)
+            : new Vector2(522, 430);
+        _hereButton.Position = offersCombat
+            ? new Vector2(966, 430)
+            : new Vector2(818, 430);
+    }
+
+    private void ChooseAgainstIntent()
+    {
+        var result = _simulation.Apply(new ChooseAgainstIntent());
+        _lastCommandStatus = result.Message;
+        _lastAnswerStatus = result.Applied
+            ? "THE CHRONICLE ANSWERS: SMASH — COMBAT STARTING VECTOR"
+            : string.Empty;
+        RefreshPresentation();
     }
 
     private void ChooseUpIntent()
@@ -875,7 +955,6 @@ public partial class ChronicleApp : Node
         {
             Text = text,
             Position = position,
-            Size = size,
             FocusMode = Control.FocusModeEnum.None,
         };
         button.AddThemeFontSizeOverride("font_size", fontSize);
@@ -885,6 +964,10 @@ public partial class ChronicleApp : Node
             RefreshPresentation();
         };
         parent.AddChild(button);
+        // Godot clamps Size against the active in-tree theme minimum. Apply
+        // the font override and attach first so compact controls do not retain
+        // the default-font minimum width from construction.
+        button.Size = size;
         return button;
     }
 
@@ -922,9 +1005,11 @@ public partial class ChronicleApp : Node
             _lastCommandStatus = string.Empty;
             _lastAnswerStatus = _simulation.State.Codex.Contains(WordIds.Found)
                 ? "Codex Verb: Found"
-                : _simulation.State.Codex.HasFly
-                    ? "Codex Verb: Fly"
-                    : string.Empty;
+                : _simulation.State.Codex.Contains(WordIds.Smash)
+                    ? "Codex Verb: Smash"
+                    : _simulation.State.Codex.HasFly
+                        ? "Codex Verb: Fly"
+                        : string.Empty;
             _lastSaveLoadStatus = "Loaded Chronicle from user://.";
             LogState("SLICE2C LOAD");
         }
@@ -939,8 +1024,9 @@ public partial class ChronicleApp : Node
     {
         try
         {
+            var json = ChronicleSaveCodec.Serialize(_simulation.State);
             using var file = Godot.FileAccess.Open(SavePath, Godot.FileAccess.ModeFlags.Write);
-            file.StoreString(ChronicleSaveCodec.Serialize(_simulation.State));
+            file.StoreString(json);
             _lastSaveLoadStatus = "Saved Chronicle to user://.";
             LogState("SLICE2C SAVE");
         }
@@ -960,6 +1046,7 @@ public partial class ChronicleApp : Node
             ? _simulation.CurrentStudySource
             : null;
         var homeContext = _simulation.HomeContext;
+        var conflictContext = _simulation.ConflictContext;
         if (!hasLivingIncarnation || !atBell)
         {
             _deathConfirmationArmed = false;
@@ -976,6 +1063,7 @@ public partial class ChronicleApp : Node
             state.Address != _renderedAddress ||
             state.LooseStoneAddress != _renderedLooseStoneAddress ||
             state.Home != _renderedHome ||
+            state.FirstConflict != _renderedFirstConflict ||
             state.WorldGrammarVersion != _renderedWorldGrammarVersion ||
             hasLivingIncarnation != _renderedHasLivingIncarnation;
         IReadOnlyList<WorldAddress> highlightedTargets = _targetingSlot is { } targetingSlot
@@ -1027,7 +1115,10 @@ public partial class ChronicleApp : Node
                     _visualPack.StyleVersion,
                     hasLivingIncarnation ? state.Address : null,
                     highlightedTargets,
-                    SelectedAddresses: []));
+                    SelectedAddresses: [],
+                    DangerAddresses: conflictContext is { IsThreatened: true } threat
+                        ? [threat.Address]
+                        : []));
             activeWorldView.SetPlan(_visualPack, plan);
         }
 
@@ -1037,6 +1128,7 @@ public partial class ChronicleApp : Node
             _renderedAddress = state.Address;
             _renderedLooseStoneAddress = state.LooseStoneAddress;
             _renderedHome = state.Home;
+            _renderedFirstConflict = state.FirstConflict;
             _renderedWorldGrammarVersion = state.WorldGrammarVersion;
             _renderedHasLivingIncarnation = hasLivingIncarnation;
             _hasRenderedWorld = true;
@@ -1052,6 +1144,7 @@ public partial class ChronicleApp : Node
             $"{_visibleWorldBounds.Width} × {_visibleWorldBounds.Height} CELLS · " +
             $"PACK STYLE {_visualPack.StyleVersion}";
 
+        ConfigureOpeningOptions(state);
         _openingPanel.Visible = hasLivingIncarnation && state.Intent == OpeningIntent.Unchosen;
         _replacementPanel.Visible = !hasLivingIncarnation;
         foreach (var directionButton in _directionButtons)
@@ -1098,12 +1191,17 @@ public partial class ChronicleApp : Node
             !hasLivingIncarnation ||
             !state.Codex.Contains(WordIds.Found) ||
             firstSlot.IsIntrinsicFound;
+        _equipSmashButton.Disabled =
+            !hasLivingIncarnation ||
+            !state.Codex.Contains(WordIds.Smash) ||
+            (firstSlot.Verb == WordIds.Smash && firstSlot.Noun is null);
         _fitStoneButton.Disabled =
             !hasLivingIncarnation ||
             !state.Codex.HasFly ||
             !state.Codex.HasStone ||
             firstSlot.IsFlyStone;
         _clearFirstSlotButton.Disabled = !hasLivingIncarnation || firstSlot.IsEmpty;
+        ApplyCompactLoadoutControlSizes();
 
         _pauseButton.Disabled = !hasLivingIncarnation;
         _slowButton.Disabled = !hasLivingIncarnation;
@@ -1146,9 +1244,9 @@ public partial class ChronicleApp : Node
             $"Understanding kept: {StudyProgressText(state)}\n" +
             $"The changed Chronicle remains.";
 
-        _guidanceReadout.Text = GuidanceText(state, homeContext);
+        _guidanceReadout.Text = GuidanceText(state, homeContext, conflictContext);
 
-        var placeText = CurrentPlaceText(state, homeContext);
+        var placeText = CurrentPlaceText(state, homeContext, conflictContext);
         _statusReadout.Text = string.IsNullOrWhiteSpace(placeText)
             ? string.Join(
                 "\n",
@@ -1223,12 +1321,30 @@ public partial class ChronicleApp : Node
         }
     }
 
+    private void ApplyCompactLoadoutControlSizes()
+    {
+        // These buttons are created before they enter the scene tree. Godot's
+        // first themed minimum-size pass uses the default font and may expand
+        // them; reapply the accepted row once their 10px overrides are active.
+        _equipFlyButton.Size = new Vector2(82, 32);
+        _equipFoundButton.Size = new Vector2(90, 32);
+        _equipSmashButton.Size = new Vector2(95, 32);
+        _fitStoneButton.Size = new Vector2(75, 32);
+        _clearFirstSlotButton.Size = new Vector2(96, 32);
+    }
+
     private string CurrentPlaceText(
         ChronicleState state,
-        HomeContextSnapshot homeContext)
+        HomeContextSnapshot homeContext,
+        ConflictContextSnapshot? conflictContext)
     {
         var sections = new List<string>();
-        if (homeContext.Home is { } home)
+        if (conflictContext is { } conflict &&
+            conflict.Address == state.Address)
+        {
+            sections.Add(ConflictPlaceText(state, conflict));
+        }
+        else if (homeContext.Home is { } home)
         {
             sections.Add(HomeStatusText(home));
         }
@@ -1297,11 +1413,31 @@ public partial class ChronicleApp : Node
 
     private string GuidanceText(
         ChronicleState state,
-        HomeContextSnapshot homeContext)
+        HomeContextSnapshot homeContext,
+        ConflictContextSnapshot? conflictContext)
     {
         if (!state.HasLivingIncarnation)
         {
             return "The body ended. The Chronicle and Codex remain; choose when to create the next Incarnation.";
+        }
+
+        if (conflictContext is { IsThreatened: true } threat &&
+            threat.Address == state.Address)
+        {
+            var pending = threat.IsSmashPrepared
+                ? "SMASH is prepared; resume the Clock for the next active tick."
+                : "Leave while paused, or prepare SMASH before resuming.";
+            return $"{threat.History}\n{threat.Warning}\n{pending}";
+        }
+
+        if (conflictContext is { IsResolved: true } resolved &&
+            resolved.Address == state.Address)
+        {
+            var resolution = resolved.ResolvedTick is { } tick
+                ? $"Resolved on Tick {tick}"
+                : "Resolved";
+            return $"{resolved.CairnIdentity} remains at {resolved.Address}. {resolution}; " +
+                   "the underlying Stone ridge remains material.";
         }
 
         if (_targetingSlot is { } targetingSlot)
@@ -1328,6 +1464,12 @@ public partial class ChronicleApp : Node
                 : $"You are at {SkyStratum.LandmarkName}. Study its {source.Name} to choose a Word.";
         }
 
+        if (state.Codex.Contains(WordIds.Smash) &&
+            conflictContext is not { IsResolved: true })
+        {
+            return FirstConflictGuidance(state, conflictContext);
+        }
+
         if (state.Codex.HasStone)
         {
             var stoneAddress = state.LooseStoneAddress?.ToString() ?? "unknown";
@@ -1341,9 +1483,97 @@ public partial class ChronicleApp : Node
             return "You are at The Bell That Fell Up. Study its sky-stone clapper here.";
         }
 
+        if (state.Intent == OpeningIntent.Against)
+        {
+            return "The first confrontation is settled. No active conflict follows this Incarnation; " +
+                   "explore the changed Chronicle.";
+        }
+
         return string.Equals(state.Address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal)
             ? "Fly to the sky, then reach The Bell at sky (0, -4) to study its clapper."
             : "The Bell That Fell Up is at sky (0, -4). Its clapper can be studied there.";
+    }
+
+    private string FirstConflictGuidance(
+        ChronicleState state,
+        ConflictContextSnapshot? conflictContext)
+    {
+        var cairnAddress = conflictContext?.Address ?? VisibleCairnAddress();
+        var cairnIdentity = conflictContext?.CairnIdentity ??
+            FirstConflictSubjects.RivenCairnIdentity;
+        var loadout = state.ActiveLoadout[0].IsIntrinsicSmash
+            ? "SMASH is fitted in slot 1."
+            : "Re-equip SMASH in slot 1 before confronting it.";
+
+        if (cairnAddress is not { } address)
+        {
+            return $"{cairnIdentity} lies on a dry Stone ridge near the origin. {loadout}";
+        }
+
+        if (!string.Equals(
+                state.Address.Stratum,
+                address.Stratum,
+                StringComparison.Ordinal))
+        {
+            return $"{cairnIdentity} is at {address}; return to the surface to reach it. {loadout}";
+        }
+
+        if (state.Address == address)
+        {
+            return $"{cairnIdentity} is here. {loadout}";
+        }
+
+        var next = state.Address.X != address.X
+            ? state.Address with
+            {
+                X = state.Address.X < address.X
+                    ? state.Address.X + 1
+                    : state.Address.X - 1,
+            }
+            : state.Address with
+            {
+                Y = state.Address.Y < address.Y
+                    ? state.Address.Y + 1
+                    : state.Address.Y - 1,
+            };
+        return $"{cairnIdentity}: WALK {DirectionTo(state.Address, next)} " +
+               $"toward {address}. {loadout}";
+    }
+
+    private WorldAddress? VisibleCairnAddress() =>
+        _worldArea?.Cells
+            .Where(cell =>
+                string.Equals(
+                    cell.DurableIdentity,
+                    FirstConflictSubjects.RivenCairnIdentity,
+                    StringComparison.Ordinal) ||
+                string.Equals(
+                    cell.DurableIdentity,
+                    FirstConflictSubjects.ShatteredCairnIdentity,
+                    StringComparison.Ordinal))
+            .Select(cell => (WorldAddress?)cell.Address)
+            .FirstOrDefault();
+
+    private static string ConflictPlaceText(
+        ChronicleState state,
+        ConflictContextSnapshot conflict)
+    {
+        if (conflict.IsThreatened)
+        {
+            var pending = conflict.IsSmashPrepared
+                ? "SMASH — next active tick"
+                : "none — next active tick ends this body";
+            return $"{conflict.CairnIdentity} · {conflict.SubjectIdentity}\n" +
+                   $"Threatened Tick {conflict.ThreatenedTick} · Clock: {state.Speed}\n" +
+                   $"Pending: {pending}";
+        }
+
+        var resolved = conflict.ResolvedTick is { } tick
+            ? $"Resolved Tick {tick}"
+            : "Resolved";
+        return $"{conflict.CairnIdentity} · {conflict.SubjectIdentity}\n" +
+               $"Result: {conflict.Outcome} · {resolved}\n" +
+               $"At {conflict.Address}";
     }
 
     private static string FoundGuidance(ChronicleState state, HomeSiteSnapshot site)
@@ -1659,9 +1889,9 @@ public partial class ChronicleApp : Node
             Press(_saveButton);
             VerifyAcceptance(
                 SaveVersion(_simulation.State) == ChronicleSaveCodec.CurrentVersion &&
-                ChronicleSaveCodec.CurrentVersion == 3,
-                "The Goal 4B journey must save the current Home state in strict version 3.");
-            GD.Print("GOAL4B SAVE READY home=surface:0,3 route=surface:0,1 save=3");
+                ChronicleSaveCodec.CurrentVersion == 4,
+                "The Goal 4B journey must save the current Home state in strict version 4.");
+            GD.Print("GOAL4B SAVE READY home=surface:0,3 route=surface:0,1 save=4");
             GetTree().Quit();
         }
         catch (Exception exception)
@@ -1725,6 +1955,7 @@ public partial class ChronicleApp : Node
         {
             flyControl,
             foundControl,
+            _equipSmashButton,
             _fitStoneButton,
             _clearFirstSlotButton,
         };
@@ -1735,10 +1966,8 @@ public partial class ChronicleApp : Node
                 button.Position.Y >= 0 &&
                 button.Position.X + button.Size.X <= codexPanel.Size.X &&
                 button.Position.Y + button.Size.Y <= codexPanel.Size.Y) &&
-            orderedControls
-                .Zip(orderedControls.Skip(1))
-                .All(pair => pair.First.Position.X + pair.First.Size.X <= pair.Second.Position.X),
-            "EQUIP FLY, EQUIP FOUND, FIT STONE, and CLEAR SLOT 1 must fit without overlap " +
+            ControlsDoNotOverlap(orderedControls),
+            "EQUIP FLY, EQUIP FOUND, EQUIP SMASH, FIT STONE, and CLEAR SLOT 1 must fit without overlap " +
             $"in the existing Codex panel. panel={codexPanel.Size}; " +
             $"controls={string.Join(",", orderedControls.Select(control =>
                 $"{control.Text}:{control.Position}+{control.Size}/min{control.GetMinimumSize()}"))}");
@@ -1839,11 +2068,11 @@ public partial class ChronicleApp : Node
 
             Press(_saveButton);
             VerifyAcceptance(
-                SaveVersion(_simulation.State) == 3,
-                "The returned Home Chronicle must remain a strict version-3 save.");
+                SaveVersion(_simulation.State) == 4,
+                "The returned Home Chronicle must remain a strict version-4 save.");
             GD.Print(
                 "GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone " +
-                "route=physical view=50x36 save=3");
+                "route=physical view=50x36 save=4");
             GetTree().Quit();
         }
         catch (Exception exception)
@@ -1851,6 +2080,446 @@ public partial class ChronicleApp : Node
             GD.PushError($"GOAL4B RESTART ACCEPTANCE failed: {exception.Message}");
             GetTree().Quit(1);
         }
+    }
+
+    private void RunGoal4CAcceptance()
+    {
+        try
+        {
+            VerifyAcceptance(
+                _visualCellSize == 20,
+                "Goal 4C's isolated player fixture must run at the accepted 20-pixel cell size.");
+            VerifyLegacyOpeningCompatibility();
+            StartFreshGoal4CFixture();
+            VerifyGoal4CControls();
+
+            var threat = DriveCombatToCairn();
+            VerifyGoal4CCairnPresentation(
+                threat,
+                "subject.riven-cairn-river-ward",
+                dangerVisible: true);
+            VerifyChronicleReadoutLayout();
+            VerifyLabelFits(_statusReadout, "Cairn threat status");
+            VerifyLabelFits(_guidanceReadout, "River-Ward threat guidance");
+
+            var pausedThreat = _simulation.State;
+            var pausedPlanDigest = RequireActiveVisualPlan().Digest;
+            _Process(ClockPulseSeconds * 2);
+            VerifyAcceptance(
+                _simulation.State == pausedThreat &&
+                _simulation.ConflictContext == threat &&
+                RequireActiveVisualPlan().Digest == pausedPlanDigest,
+                "Paused Godot clock pulses must leave the River-Ward, Cairn, danger emphasis, pending result, and Tick unchanged.");
+
+            Press(_directionButtons[1]);
+            VerifyAcceptance(
+                _simulation.State.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 0, 3) &&
+                _simulation.State.Speed == ChronicleSpeed.Paused &&
+                _simulation.ConflictContext is null &&
+                !RequireActiveVisualPlan().Marks.Any(mark =>
+                    mark.VisualId == "emphasis.danger.river-ward"),
+                "Leaving the Cairn while paused must clear only the pending exchange and its time-driven danger emphasis.");
+            Press(_directionButtons[3]);
+            threat = RequireGoal4CThreat(prepared: false);
+
+            var beforePrepare = _simulation.State;
+            Press(_flyButton);
+            var prepared = RequireGoal4CThreat(prepared: true);
+            VerifyAcceptance(
+                _simulation.State.Tick == beforePrepare.Tick &&
+                _simulation.State.Address == beforePrepare.Address &&
+                _simulation.State.FirstConflict is
+                {
+                    PendingAction: { IsIntrinsicSmash: true },
+                    Outcome: null,
+                } &&
+                _lastCommandStatus == "Prepared Smash for the next active Chronicle tick." &&
+                _statusReadout.Text.Contains("Pending: SMASH", StringComparison.Ordinal) &&
+                _guidanceReadout.Text.Contains("SMASH is prepared", StringComparison.Ordinal),
+                "The existing SMASH hotbar slot must prepare a Core-owned pending action without changing the Cairn before a tick.");
+            VerifyGoal4CCairnPresentation(
+                prepared,
+                "subject.riven-cairn-river-ward",
+                dangerVisible: true);
+
+            Press(_saveButton);
+            VerifyAcceptance(
+                SaveVersion(_simulation.State) == 4,
+                "The threatened pending-SMASH Chronicle must save under strict envelope version 4.");
+            GD.Print("GOAL4C THREATENED SAVE READY address=surface:1,3 pending=Smash save=4");
+            GetTree().Quit();
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"GOAL4C ACCEPTANCE failed: {exception.Message}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void RunGoal4CRestartAcceptance()
+    {
+        try
+        {
+            VerifyAcceptance(
+                _visualCellSize == 20,
+                "Goal 4C's threatened restart must run at the accepted 20-pixel cell size.");
+            var threat = RequireGoal4CThreat(prepared: true);
+            VerifyAcceptance(
+                _simulation.State.Intent == OpeningIntent.Against &&
+                _simulation.State.Codex.Contains(WordIds.Smash) &&
+                _simulation.State.ActiveLoadout[0].IsIntrinsicSmash &&
+                _readout.Text.Contains("Clock: Paused", StringComparison.Ordinal) &&
+                _codexReadout.Text.Contains("Verbs: Smash", StringComparison.Ordinal),
+                "The separate process must restore the paused Combat Chronicle, Codex Smash, equipped Loadout, and pending ward exchange exactly.");
+            VerifyGoal4CCairnPresentation(
+                threat,
+                "subject.riven-cairn-river-ward",
+                dangerVisible: true);
+
+            var frozen = _simulation.State;
+            var frozenPlanDigest = RequireActiveVisualPlan().Digest;
+            _Process(ClockPulseSeconds * 2);
+            VerifyAcceptance(
+                _simulation.State == frozen &&
+                _simulation.ConflictContext == threat &&
+                RequireActiveVisualPlan().Digest == frozenPlanDigest,
+                "The separate threatened restart must keep all time-driven conflict presentation frozen until the Clock resumes.");
+
+            var tickBeforeResolution = _simulation.State.Tick;
+            Press(_slowButton);
+            _Process(ClockPulseSeconds);
+            var resolved = _simulation.ConflictContext ?? throw new InvalidOperationException(
+                "The first active tick did not retain a resolved Cairn context.");
+            VerifyAcceptance(
+                _simulation.State.HasLivingIncarnation &&
+                _simulation.State.Tick == tickBeforeResolution + 1 &&
+                _simulation.State.Address == threat.Address &&
+                resolved.IsResolved &&
+                resolved.Outcome == FirstConflictOutcome.Shattered &&
+                resolved.PendingAction is null &&
+                resolved.ResolvedTick == _simulation.State.Tick &&
+                resolved.ResolvingIncarnationId == _simulation.State.IncarnationId &&
+                _statusReadout.Text.Contains(FirstConflictSubjects.ShatteredCairnIdentity, StringComparison.Ordinal) &&
+                _guidanceReadout.Text.Contains("underlying Stone ridge remains material", StringComparison.Ordinal),
+                "The first delivered active Chronicle tick must shatter the ward through Core while the body stays at the same Address.");
+            VerifyGoal4CCairnPresentation(
+                resolved,
+                "subject.shattered-cairn",
+                dangerVisible: false);
+
+            Press(_saveButton);
+            VerifyAcceptance(
+                SaveVersion(_simulation.State) == 4,
+                "The resolved Shattered Cairn Chronicle must save under strict envelope version 4.");
+            GD.Print("GOAL4C SUCCESS RESOLVED address=surface:1,3 result=shattered save=4");
+            GetTree().Quit();
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"GOAL4C RESTART ACCEPTANCE failed: {exception.Message}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void RunGoal4CResolvedRestartAcceptance()
+    {
+        try
+        {
+            VerifyAcceptance(
+                _visualCellSize == 20,
+                "Goal 4C's resolved restart must run at the accepted 20-pixel cell size.");
+            var resolved = _simulation.ConflictContext ?? throw new InvalidOperationException(
+                "Goal 4C resolved restart did not restore a conflict context.");
+            VerifyAcceptance(
+                _simulation.State.HasLivingIncarnation &&
+                _simulation.State.Intent == OpeningIntent.Against &&
+                _simulation.State.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3) &&
+                _simulation.State.Codex.Contains(WordIds.Smash) &&
+                _simulation.State.ActiveLoadout[0].IsIntrinsicSmash &&
+                resolved.IsResolved &&
+                resolved.CairnIdentity == FirstConflictSubjects.ShatteredCairnIdentity &&
+                resolved.Outcome == FirstConflictOutcome.Shattered &&
+                _statusReadout.Text.Contains(FirstConflictSubjects.ShatteredCairnIdentity, StringComparison.Ordinal),
+                "A separate application restart must restore the same living body, Smash Loadout, and durable Shattered Cairn result.");
+            VerifyGoal4CCairnPresentation(
+                resolved,
+                "subject.shattered-cairn",
+                dangerVisible: false);
+
+            Press(_directionButtons[1]);
+            VerifyAcceptance(
+                _simulation.State.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 0, 3) &&
+                _simulation.ConflictContext is
+                {
+                    IsResolved: true,
+                    Outcome: FirstConflictOutcome.Shattered,
+                } &&
+                !_statusReadout.Text.Contains(
+                    FirstConflictSubjects.ShatteredCairnIdentity,
+                    StringComparison.Ordinal) &&
+                !_statusReadout.Text.Contains(
+                    FirstConflictSubjects.RiverWardIdentity,
+                    StringComparison.Ordinal) &&
+                !_guidanceReadout.Text.Contains("Resolved on Tick", StringComparison.Ordinal) &&
+                !_guidanceReadout.Text.Contains("WALK", StringComparison.Ordinal) &&
+                !_guidanceReadout.Text.Contains("Re-equip SMASH", StringComparison.Ordinal) &&
+                _guidanceReadout.Text.Contains(
+                    "No active conflict follows",
+                    StringComparison.Ordinal),
+                "Leaving the Shattered Cairn must keep its durable Core result without presenting it as the player's current place.");
+            Press(_directionButtons[3]);
+            VerifyAcceptance(
+                _simulation.ConflictContext is { IsResolved: true, Outcome: FirstConflictOutcome.Shattered } &&
+                _simulation.State.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3) &&
+                _simulation.State.Speed != ChronicleSpeed.Paused,
+                "Leaving and returning to the Shattered Cairn must not create a second fight or pause the Chronicle.");
+            VerifyGoal4CCairnPresentation(
+                _simulation.ConflictContext!,
+                "subject.shattered-cairn",
+                dangerVisible: false);
+
+            Press(_saveButton);
+            VerifyAcceptance(
+                SaveVersion(_simulation.State) == 4,
+                "The revisited Shattered Cairn must remain a strict version-4 Chronicle save.");
+            GD.Print("GOAL4C SUCCESS RESTART PASS address=surface:1,3 result=shattered save=4");
+            GetTree().Quit();
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"GOAL4C RESOLVED RESTART ACCEPTANCE failed: {exception.Message}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void RunGoal4CFailureAcceptance()
+    {
+        try
+        {
+            VerifyAcceptance(
+                _visualCellSize == 20,
+                "Goal 4C's intentional no-action branch must run at the accepted 20-pixel cell size.");
+            StartFreshGoal4CFixture();
+            var threat = DriveCombatToCairn();
+            VerifyAcceptance(
+                !threat.IsSmashPrepared && threat.PendingAction is null,
+                "The intentional failure branch must reach the ward without preparing Smash.");
+
+            var tickBeforeFailure = _simulation.State.Tick;
+            Press(_fastButton);
+            _Process(ClockPulseSeconds);
+            VerifyAcceptance(
+                _simulation.State.IncarnationLife == IncarnationLifeState.AwaitingReplacement &&
+                !_simulation.State.HasLivingIncarnation &&
+                _simulation.State.Tick == tickBeforeFailure + 1 &&
+                _simulation.State.FirstConflict is null &&
+                _replacementPanel.Visible &&
+                _replacementReadout.Text.Contains("Time is not advancing", StringComparison.Ordinal),
+                "A no-action Fast pulse must end the body on its first tick and make every later tick in that pulse inert.");
+            VerifyGoal4CIntactCairnPresentation();
+
+            Press(_createReplacementButton);
+            VerifyAcceptance(
+                _simulation.State.HasLivingIncarnation &&
+                _simulation.State.IncarnationId == 2 &&
+                _simulation.State.Intent == OpeningIntent.Against &&
+                _simulation.State.Codex.Contains(WordIds.Smash) &&
+                _simulation.State.ActiveLoadout.Slots.All(slot => slot.IsEmpty) &&
+                _simulation.State.FirstConflict is null &&
+                !_replacementPanel.Visible &&
+                !_equipSmashButton.Disabled &&
+                _codexReadout.Text.Contains("Verbs: Smash", StringComparison.Ordinal),
+                "The failure replacement must retain Smash in the Codex with exactly eight empty Loadout slots and an intact ward.");
+            VerifyGoal4CIntactCairnPresentation();
+
+            Press(_saveButton);
+            VerifyAcceptance(
+                SaveVersion(_simulation.State) == 4,
+                "The intact-ward replacement branch must remain a strict version-4 Chronicle save.");
+            GD.Print("GOAL4C FAILURE ACCEPTANCE PASS tick=1 replacement=2 smash=retained loadout=empty ward=intact");
+            GetTree().Quit();
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"GOAL4C FAILURE ACCEPTANCE failed: {exception.Message}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void StartFreshGoal4CFixture()
+    {
+        _simulation = new ChronicleSimulation(ChronicleState.Begin(InitialSeed));
+        ResetGoal4BPresentation("Reset canonical Goal 4C fixture.");
+    }
+
+    private void VerifyLegacyOpeningCompatibility()
+    {
+        foreach (var grammarVersion in new[] { 0, 1, 2 })
+        {
+            _simulation = new ChronicleSimulation(
+                ChronicleState.Begin(InitialSeed) with { WorldGrammarVersion = grammarVersion });
+            ResetGoal4BPresentation($"Loaded grammar-{grammarVersion} opening compatibility fixture.");
+
+            VerifyAcceptance(
+                _simulation.State.Intent == OpeningIntent.Unchosen &&
+                _openingPanel.Visible &&
+                !_againstButton.Visible &&
+                _againstButton.Disabled &&
+                _openingPrompt.Text == LegacyOpeningPrompt &&
+                _upButton.Visible &&
+                _upButton.Position == new Vector2(522, 430) &&
+                _hereButton.Visible &&
+                _hereButton.Position == new Vector2(818, 430) &&
+                !_openingPanel
+                    .GetChildren()
+                    .OfType<Button>()
+                    .Any(button => button.Visible && button.Text == "AGAINST — COMBAT"),
+                $"Migrated grammar-{grammarVersion} Chronicles must retain the two-vector Explore/Build opening without Combat.");
+        }
+    }
+
+    private ConflictContextSnapshot DriveCombatToCairn()
+    {
+        var openingButtons = _openingPanel.GetChildren().OfType<Button>();
+        VerifyAcceptance(
+            _openingPanel.Visible &&
+            openingButtons.Any(button => button.Visible && button.Text == "AGAINST — COMBAT") &&
+            openingButtons.Any(button => button.Visible && button.Text == "UP — EXPLORE") &&
+            openingButtons.Any(button => button.Visible && button.Text == "HERE — BUILD"),
+            "The First Horizon must visibly offer AGAINST — COMBAT, UP — EXPLORE, and HERE — BUILD together.");
+
+        Press(_againstButton);
+        VerifyAcceptance(
+            _simulation.State.Intent == OpeningIntent.Against &&
+            _simulation.State.Codex.Contains(WordIds.Smash) &&
+            !_simulation.State.Codex.Contains(WordIds.Fly) &&
+            !_simulation.State.Codex.Contains(WordIds.Found) &&
+            _simulation.State.ActiveLoadout[0].IsIntrinsicSmash &&
+            _flyButton.Text == "SMASH" &&
+            !_flyButton.Disabled &&
+            _lastAnswerStatus.Contains("SMASH — COMBAT STARTING VECTOR", StringComparison.Ordinal),
+            "The real AGAINST button must grant only intrinsic Smash through the normal Codex, Loadout, and first hotbar slot.");
+        VerifyAcceptance(
+            _guidanceReadout.Text.Contains(
+                FirstConflictSubjects.RivenCairnIdentity,
+                StringComparison.Ordinal) &&
+            _guidanceReadout.Text.Contains("surface (1, 3)", StringComparison.Ordinal) &&
+            !_guidanceReadout.Text.Contains(
+                SkyStratum.LandmarkName,
+                StringComparison.Ordinal),
+            "The Combat Starting Vector must direct the Chronicle Thread toward the generated Riven Cairn rather than the unreachable Bell.");
+
+        Press(_directionButtons[3]);
+        for (var step = 0; step < 3; step++)
+        {
+            Press(_directionButtons[2]);
+        }
+
+        return RequireGoal4CThreat(prepared: false);
+    }
+
+    private ConflictContextSnapshot RequireGoal4CThreat(bool prepared)
+    {
+        var context = _simulation.ConflictContext ?? throw new InvalidOperationException(
+            "The Riven Cairn did not expose a Core-owned conflict context.");
+        VerifyAcceptance(
+            _simulation.State.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3) &&
+            _simulation.State.Speed == ChronicleSpeed.Paused &&
+            context.IsThreatened &&
+            !context.IsResolved &&
+            context.CairnIdentity == FirstConflictSubjects.RivenCairnIdentity &&
+            context.SubjectIdentity == FirstConflictSubjects.RiverWardIdentity &&
+            context.History == FirstConflictSubjects.History &&
+            context.Warning == FirstConflictSubjects.Warning &&
+            context.Address == _simulation.State.Address &&
+            context.IsSmashPrepared == prepared &&
+            context.PendingAction == (prepared
+                ? (LoadoutSlot?)new LoadoutSlot(WordIds.Smash)
+                : null) &&
+            _statusReadout.Text.Contains(FirstConflictSubjects.RivenCairnIdentity, StringComparison.Ordinal) &&
+            _statusReadout.Text.Contains(FirstConflictSubjects.RiverWardIdentity, StringComparison.Ordinal) &&
+            _guidanceReadout.Text.Contains(FirstConflictSubjects.History, StringComparison.Ordinal) &&
+            _guidanceReadout.Text.Contains(FirstConflictSubjects.Warning, StringComparison.Ordinal),
+            "Entering the unresolved Cairn must pause before a tick and present Core-owned identity, history, warning, and pending action facts.");
+        return context;
+    }
+
+    private void VerifyGoal4CCairnPresentation(
+        ConflictContextSnapshot context,
+        string visualId,
+        bool dangerVisible)
+    {
+        var plan = RequireActiveVisualPlan();
+        VerifyAcceptance(
+            plan.Bounds.Width == 51 &&
+            plan.Bounds.Height == 37 &&
+            plan.Bounds.Width * _visualCellSize == MapPixelWidth &&
+            plan.Bounds.Height * _visualCellSize == MapPixelHeight,
+            "The 20-pixel Goal 4C player view must retain the accepted 51 × 37 playspace.");
+        VerifyAcceptance(
+            _worldArea is not null,
+            "Cairn presentation requires the shared generated World Area.");
+        var cairn = _worldArea!.Cells.Single(cell => cell.Address == context.Address);
+        VerifyAcceptance(
+            cairn.Ground == WorldGround.Soil &&
+            cairn.Feature == WorldFeature.Stone &&
+            cairn.DurableIdentity == context.CairnIdentity &&
+            plan.Marks.Any(mark =>
+                mark.Address == context.Address &&
+                mark.VisualId == visualId &&
+                mark.Layer == VisualLayerClass.LandmarkOrSubject) &&
+            plan.Marks.Any(mark =>
+                mark.Address == context.Address &&
+                mark.VisualId == "emphasis.danger.river-ward" &&
+                mark.Layer == VisualLayerClass.TemporaryAction) == dangerVisible,
+            "The shared visual plan must render the Core-owned Cairn subject over unchanged Soil/Stone and only show ward danger while threatened.");
+    }
+
+    private void VerifyGoal4CIntactCairnPresentation()
+    {
+        var plan = RequireActiveVisualPlan();
+        var cairnAddress = new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3);
+        VerifyAcceptance(
+            _worldArea is not null &&
+            _worldArea.Cells.Single(cell => cell.Address == cairnAddress).DurableIdentity ==
+            FirstConflictSubjects.RivenCairnIdentity &&
+            plan.Marks.Any(mark =>
+                mark.Address == cairnAddress &&
+                mark.VisualId == "subject.riven-cairn-river-ward" &&
+                mark.Layer == VisualLayerClass.LandmarkOrSubject) &&
+            !plan.Marks.Any(mark => mark.VisualId == "emphasis.danger.river-ward"),
+            "The no-action branch must leave the intact Riven Cairn material subject without a stale danger animation or overlay.");
+    }
+
+    private void VerifyGoal4CControls()
+    {
+        var codexPanel = _equipFlyButton.GetParent() as Control ?? throw new InvalidOperationException(
+            "Goal 4C Loadout controls require the existing Codex panel.");
+        var controls = new[]
+        {
+            _equipFlyButton,
+            _equipFoundButton,
+            _equipSmashButton,
+            _fitStoneButton,
+            _clearFirstSlotButton,
+        };
+        VerifyAcceptance(
+            controls.All(button =>
+                button.Visible &&
+                button.Position.X >= 0 &&
+                button.Position.Y >= 0 &&
+                button.Position.X + button.Size.X <= codexPanel.Size.X &&
+                button.Position.Y + button.Size.Y <= codexPanel.Size.Y) &&
+            ControlsDoNotOverlap(controls),
+            "Fly, Found, Smash, Stone, and clear-slot controls must remain compact siblings in the existing Codex panel without overlap. " +
+            $"panel={codexPanel.Size}; controls={string.Join(",", controls.Select(control =>
+                $"{control.Text}:{control.Visible}:{control.Position}+{control.Size}"))}");
+        foreach (var control in controls)
+        {
+            VerifyControlFits(control, control.Text);
+        }
+
+        VerifyChronicleReadoutLayout();
     }
 
     private void VerifyGoal4BHearthstonePresentation(HomeState home)
@@ -2820,6 +3489,29 @@ public partial class ChronicleApp : Node
         VerifyAcceptance(
             upper.Position.Y + upper.Size.Y <= lower.Position.Y,
             $"{upperName} must not overlap {lowerName}.");
+    }
+
+    private static bool ControlsDoNotOverlap(IReadOnlyList<Control> controls)
+    {
+        for (var firstIndex = 0; firstIndex < controls.Count; firstIndex++)
+        {
+            var first = controls[firstIndex];
+            for (var secondIndex = firstIndex + 1; secondIndex < controls.Count; secondIndex++)
+            {
+                var second = controls[secondIndex];
+                var separate =
+                    first.Position.X + first.Size.X <= second.Position.X ||
+                    second.Position.X + second.Size.X <= first.Position.X ||
+                    first.Position.Y + first.Size.Y <= second.Position.Y ||
+                    second.Position.Y + second.Size.Y <= first.Position.Y;
+                if (!separate)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private void LogState(string prefix)

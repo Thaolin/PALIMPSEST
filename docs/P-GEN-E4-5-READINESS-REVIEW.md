@@ -10,8 +10,8 @@ This record captures Palimpsest's read-only review of the separate P-GEN
 authoring compiler. It records evidence and future integration questions
 without expanding the active gameplay slice or changing the governing
 [Chronicle Visual Engine specification](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md)
-and historical
-[E0–E4 build handoff](CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md).
+and archived historical
+[E0–E4 build handoff](archive/prompts/CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md).
 
 ## Evidence reproduced
 

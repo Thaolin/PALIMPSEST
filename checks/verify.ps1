@@ -25,6 +25,8 @@ $goal4ARuntimeName = "godot-goal4a-verify-$([Guid]::NewGuid().ToString("N"))"
 $goal4ARuntimeRoot = Join-Path $repoRoot ".tools\$goal4ARuntimeName"
 $goal4BRuntimeName = "godot-goal4b-verify-$([Guid]::NewGuid().ToString("N"))"
 $goal4BRuntimeRoot = Join-Path $repoRoot ".tools\$goal4BRuntimeName"
+$goal4CRuntimeName = "godot-goal4c-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal4CRuntimeRoot = Join-Path $repoRoot ".tools\$goal4CRuntimeName"
 
 $originalEnvironment = @{
     AppData = $env:APPDATA
@@ -231,7 +233,7 @@ function Invoke-GodotGoal4BRun {
 
     if ($Phase -eq "Restart")
     {
-        $marker = "GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone route=physical view=50x36 save=3"
+        $marker = "GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone route=physical view=50x36 save=4"
         if (-not $text.Contains($marker, [StringComparison]::Ordinal))
         {
             throw "Godot did not complete the exact Goal 4B acceptance journey."
@@ -252,15 +254,73 @@ function Assert-Goal4BSave {
     }
 
     $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
-    if ([int]$save.Version -ne 3)
+    if ([int]$save.Version -ne 4)
     {
-        throw "Goal 4B acceptance did not save envelope version 3."
+        throw "Goal 4B acceptance did not save envelope version 4."
     }
 
     $savedHome = $save.Chronicle.PSObject.Properties["Home"]
     if ($null -eq $savedHome -or $null -eq $savedHome.Value)
     {
         throw "Goal 4B acceptance did not save its explicit Home."
+    }
+}
+
+function Invoke-GodotGoal4CRun {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("Initial", "Restart", "Resolved", "Failure")]
+        [string] $Phase
+    )
+
+    $argument = switch ($Phase)
+    {
+        "Initial" { "--verify-4c" }
+        "Restart" { "--verify-4c-restart" }
+        "Resolved" { "--verify-4c-resolved" }
+        "Failure" { "--verify-4c-failure" }
+    }
+    $marker = switch ($Phase)
+    {
+        "Initial" { "GOAL4C THREATENED SAVE READY address=surface:1,3 pending=Smash save=4" }
+        "Restart" { "GOAL4C SUCCESS RESOLVED address=surface:1,3 result=shattered save=4" }
+        "Resolved" { "GOAL4C SUCCESS RESTART PASS address=surface:1,3 result=shattered save=4" }
+        "Failure" { "GOAL4C FAILURE ACCEPTANCE PASS tick=1 replacement=2 smash=retained loadout=empty ward=intact" }
+    }
+
+    Write-Host "`n==> Drive Goal 4C $Phase conflict journey through Godot controls"
+    $output = @(& $godot --headless --path $godotProjectDirectory -- $argument "--visual-cell-size=20" 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Goal 4C $Phase journey failed with exit code $exitCode."
+    }
+
+    if (-not $text.Contains($marker, [StringComparison]::Ordinal))
+    {
+        throw "Godot did not complete the exact Goal 4C $Phase journey."
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during the Goal 4C $Phase journey."
+    }
+}
+
+function Assert-Goal4CSave {
+    $savePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\slice0_chronicle.json"
+    if (-not (Test-Path -LiteralPath $savePath -PathType Leaf))
+    {
+        throw "Goal 4C acceptance did not create its isolated Chronicle save."
+    }
+
+    $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
+    if ([int]$save.Version -ne 4)
+    {
+        throw "Goal 4C acceptance did not save envelope version 4."
     }
 }
 
@@ -785,6 +845,14 @@ try
     Assert-PlayerSaveAbsent "Goal 4A acceptance before launch"
     Invoke-GodotGoal4ARun "Partial"
     Invoke-GodotGoal4ARestart "Partial"
+
+    # A normal restart may legitimately deliver a Slow clock pulse after
+    # proving that the partial pursuit restored. Continue the acceptance
+    # journey from a second exact Stone=5 fixture instead of depending on
+    # frame timing or rewinding the first runtime.
+    Set-IsolatedGodotRuntime $goal4ARuntimeRoot "StudyContinuation"
+    Assert-PlayerSaveAbsent "Goal 4A continuation before launch"
+    Invoke-GodotGoal4ARun "Partial"
     Invoke-GodotGoal4ARun "Complete"
     Invoke-GodotGoal4ARestart "Complete"
 
@@ -795,7 +863,20 @@ try
     Invoke-GodotGoal4BRun "Restart"
     Assert-Goal4BSave
 
-    Write-Host "`nPASS: Goal 4B Home and restart acceptance, Goal 4A Study choice, every Goal 2 regression, Gate 3A Inspector, and Gate 3B visual acceptance verified."
+    Set-IsolatedGodotRuntime $goal4CRuntimeRoot "Success"
+    Assert-PlayerSaveAbsent "Goal 4C success acceptance before launch"
+    Invoke-GodotGoal4CRun "Initial"
+    Assert-Goal4CSave
+    Invoke-GodotGoal4CRun "Restart"
+    Assert-Goal4CSave
+    Invoke-GodotGoal4CRun "Resolved"
+    Assert-Goal4CSave
+
+    Set-IsolatedGodotRuntime $goal4CRuntimeRoot "Failure"
+    Assert-PlayerSaveAbsent "Goal 4C failure acceptance before launch"
+    Invoke-GodotGoal4CRun "Failure"
+
+    Write-Host "`nPASS: Goal 4C conflict restart and failure acceptance, Goal 4B Home and restart acceptance, Goal 4A Study choice, every Goal 2 regression, Gate 3A Inspector, and Gate 3B visual acceptance verified."
 }
 finally
 {
@@ -815,4 +896,5 @@ finally
     Remove-VerificationRuntimeRoot $gate3bPlayerRuntimeRoot (Join-Path $repoRoot ".tools\godot-gate3b-player-verify-")
     Remove-VerificationRuntimeRoot $goal4ARuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4a-verify-")
     Remove-VerificationRuntimeRoot $goal4BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4b-verify-")
+    Remove-VerificationRuntimeRoot $goal4CRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4c-verify-")
 }

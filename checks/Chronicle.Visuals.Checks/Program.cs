@@ -7,8 +7,232 @@ VerifyGate3BManualPacksResolveRequiredVisualVocabulary();
 VerifyGate3BCompositionCropsAndLayersTheSharedSkySnapshot();
 VerifyVisualCompositionAtNumericWorldEdges();
 VerifyHomeHearthstoneComposesOverItsSurfaceRidge();
+VerifyGoal4CManualPackAndStaticDangerSeam();
+VerifyGoal4CCairnSubjectsComposeOverCoreSemantics();
 Console.WriteLine(
     "PASS: Gate 3B compiled visual packs, deterministic composition, connected features, and overlap verified.");
+
+static void VerifyGoal4CManualPackAndStaticDangerSeam()
+{
+    var state = ChronicleState.Begin(41_337);
+    var semanticBounds = new WorldRectangle(MinX: 18, MinY: 18, Width: 5, Height: 5);
+    var visibleBounds = new WorldRectangle(MinX: 19, MinY: 19, Width: 3, Height: 3);
+    var dangerAddress = new WorldAddress(SkyStratum.StratumName, 20, 20);
+    var semanticArea = WorldArea.Generate(state, SkyStratum.StratumName, semanticBounds);
+    var semanticBeforeComposition = semanticArea.Cells.ToArray();
+
+    foreach (var cellSize in new[] { 16, 20 })
+    {
+        var pack = ManualVisualPack.CreateGate3B(cellSize);
+        var rivenCairn = pack.Resolve("subject.riven-cairn-river-ward");
+        var shatteredCairn = pack.Resolve("subject.shattered-cairn");
+        var danger = pack.Resolve("emphasis.danger.river-ward");
+
+        Assert(
+            rivenCairn.LayerClass == VisualLayerClass.LandmarkOrSubject &&
+            shatteredCairn.LayerClass == VisualLayerClass.LandmarkOrSubject &&
+            danger.LayerClass == VisualLayerClass.TemporaryAction,
+            "Goal 4C pack marks must keep both Cairn identities beneath actors and danger as transient emphasis.");
+        Assert(
+            rivenCairn.AtlasRect != shatteredCairn.AtlasRect &&
+            rivenCairn.AtlasRect != danger.AtlasRect &&
+            shatteredCairn.AtlasRect != danger.AtlasRect,
+            "Goal 4C intact, shattered, and danger marks must use distinct authored atlas tiles.");
+        Assert(
+            new[] { rivenCairn, shatteredCairn, danger }.All(definition =>
+                ReadTilePixels(pack, definition).Any(index => pack.Palette[index].Alpha != 0)),
+            "Every Goal 4C manual-pack mark must contain visible pixels at both native sizes.");
+
+        var input = new VisualCompositionInput(
+            semanticArea,
+            visibleBounds,
+            state.Seed,
+            pack,
+            VisualStyleVersion: pack.StyleVersion,
+            IncarnationAddress: null,
+            TargetAddresses: [],
+            SelectedAddresses: [],
+            DangerAddresses: [dangerAddress, dangerAddress]);
+        var withDanger = VisualGrammar.Compose(input);
+        var reorderedDanger = VisualGrammar.Compose(input with { DangerAddresses = [dangerAddress] });
+        var withoutDanger = VisualGrammar.Compose(input with { DangerAddresses = [] });
+
+        var dangerMarks = withDanger.Marks
+            .Where(mark => mark.VisualId == "emphasis.danger.river-ward")
+            .ToArray();
+        Assert(
+            dangerMarks.Length == 1 &&
+            dangerMarks[0].Address == dangerAddress &&
+            dangerMarks[0].Layer == VisualLayerClass.TemporaryAction,
+            "A Core-derived danger address must compose exactly one transient River-Ward emphasis mark.");
+        Assert(
+            withDanger.Digest == reorderedDanger.Digest &&
+            withDanger.Marks.SequenceEqual(reorderedDanger.Marks),
+            "Duplicate or caller-order variation in danger addresses must not change a render plan.");
+        Assert(
+            withDanger.Marks
+                .Where(mark => mark.VisualId != "emphasis.danger.river-ward")
+                .SequenceEqual(withoutDanger.Marks),
+            "Static danger emphasis must add presentation only; it cannot replace semantic terrain or subjects.");
+
+        var laterTickArea = WorldArea.Generate(
+            state with { Tick = state.Tick + 1 },
+            SkyStratum.StratumName,
+            semanticBounds);
+        var laterTickPlan = VisualGrammar.Compose(input with { SemanticArea = laterTickArea });
+        Assert(
+            semanticArea.Cells.SequenceEqual(laterTickArea.Cells) &&
+            withDanger.Digest == laterTickPlan.Digest &&
+            withDanger.Marks.SequenceEqual(laterTickPlan.Marks),
+            "Without a Core state transition, danger emphasis remains static across Chronicle ticks and has no wall-clock animation path.");
+    }
+
+    Assert(
+        semanticArea.Cells.SequenceEqual(semanticBeforeComposition),
+        "Goal 4C visual composition must not mutate its Core-generated semantic snapshot.");
+}
+
+static void VerifyGoal4CCairnSubjectsComposeOverCoreSemantics()
+{
+    var intactState = ChronicleState.Begin(41_337);
+    var semanticBounds = new WorldRectangle(MinX: -1, MinY: 1, Width: 5, Height: 5);
+    var visibleBounds = new WorldRectangle(MinX: 0, MinY: 2, Width: 3, Height: 3);
+    var intactArea = WorldArea.Generate(
+        intactState,
+        SurfacePatch.SurfaceStratum,
+        semanticBounds);
+    var intactBeforeComposition = intactArea.Cells.ToArray();
+    var rivenCairn = intactArea.Cells.Single(cell =>
+        string.Equals(
+            cell.DurableIdentity,
+            FirstConflictSubjects.RivenCairnIdentity,
+            StringComparison.Ordinal));
+    var grammarTwoCell = WorldArea.Generate(
+            intactState with { WorldGrammarVersion = 2 },
+            SurfacePatch.SurfaceStratum,
+            semanticBounds)
+        .Cells.Single(cell => cell.Address == rivenCairn.Address);
+
+    Assert(
+        intactState.WorldGrammarVersion == 3 &&
+        rivenCairn.Ground == grammarTwoCell.Ground &&
+        rivenCairn.Feature == grammarTwoCell.Feature &&
+        rivenCairn.MotifIdentity == grammarTwoCell.MotifIdentity,
+        "The generated Riven Cairn must preserve its prior ground, feature, and motif semantics.");
+
+    var shatteredState = intactState with
+    {
+        FirstConflict = new FirstConflictState(
+            FirstConflictSubjects.RiverWardSubjectId,
+            rivenCairn.Address,
+            ThreatenedTick: 3,
+            PendingAction: new LoadoutSlot(WordIds.Smash),
+            Outcome: FirstConflictOutcome.Shattered,
+            ResolvedTick: 4,
+            ResolvingIncarnationId: intactState.IncarnationId),
+    };
+    var shatteredArea = WorldArea.Generate(
+        shatteredState,
+        SurfacePatch.SurfaceStratum,
+        semanticBounds);
+    var shatteredBeforeComposition = shatteredArea.Cells.ToArray();
+    var shatteredCairn = shatteredArea.Cells.Single(cell => cell.Address == rivenCairn.Address);
+
+    Assert(
+        string.Equals(
+            shatteredCairn.DurableIdentity,
+            FirstConflictSubjects.ShatteredCairnIdentity,
+            StringComparison.Ordinal) &&
+        shatteredCairn.Ground == rivenCairn.Ground &&
+        shatteredCairn.Feature == rivenCairn.Feature &&
+        shatteredCairn.MotifIdentity == rivenCairn.MotifIdentity,
+        "The Core-resolved Shattered Cairn must replace only the Cairn identity over unchanged material semantics.");
+
+    var overlapBounds = new WorldRectangle(
+        rivenCairn.Address.X,
+        rivenCairn.Address.Y,
+        Width: 1,
+        Height: 1);
+
+    foreach (var cellSize in new[] { 16, 20 })
+    {
+        var pack = ManualVisualPack.CreateGate3B(cellSize);
+        var intactInput = new VisualCompositionInput(
+            intactArea,
+            visibleBounds,
+            intactState.Seed,
+            pack,
+            VisualStyleVersion: pack.StyleVersion,
+            IncarnationAddress: null,
+            TargetAddresses: [],
+            SelectedAddresses: [],
+            DangerAddresses: [rivenCairn.Address]);
+        var intactPlan = VisualGrammar.Compose(intactInput);
+        var intactRepeat = VisualGrammar.Compose(intactInput);
+        var intactOverlap = VisualGrammar.Compose(intactInput with { VisibleBounds = overlapBounds });
+        var shatteredInput = intactInput with
+        {
+            SemanticArea = shatteredArea,
+            DangerAddresses = [],
+        };
+        var shatteredPlan = VisualGrammar.Compose(shatteredInput);
+        var shatteredRepeat = VisualGrammar.Compose(shatteredInput);
+        var shatteredOverlap = VisualGrammar.Compose(
+            shatteredInput with { VisibleBounds = overlapBounds });
+
+        Assert(
+            intactPlan.Marks.Any(mark =>
+                mark.Address == rivenCairn.Address &&
+                mark.VisualId == "subject.riven-cairn-river-ward" &&
+                mark.Layer == VisualLayerClass.LandmarkOrSubject) &&
+            intactPlan.Marks.Any(mark =>
+                mark.Address == rivenCairn.Address &&
+                mark.VisualId == "emphasis.danger.river-ward" &&
+                mark.Layer == VisualLayerClass.TemporaryAction),
+            "An intact Core Riven Cairn must compose its authored River-Ward subject and its Core-fed danger emphasis.");
+        Assert(
+            shatteredPlan.Marks.Any(mark =>
+                mark.Address == rivenCairn.Address &&
+                mark.VisualId == "subject.shattered-cairn" &&
+                mark.Layer == VisualLayerClass.LandmarkOrSubject) &&
+            !shatteredPlan.Marks.Any(mark =>
+                mark.Address == rivenCairn.Address &&
+                (mark.VisualId == "subject.riven-cairn-river-ward" ||
+                 mark.VisualId == "emphasis.danger.river-ward")),
+            "A resolved Core Shattered Cairn must replace the intact subject mark and remove transient danger emphasis.");
+
+        var intactFeature = intactPlan.Marks.Single(mark =>
+            mark.Address == rivenCairn.Address &&
+            mark.Layer == VisualLayerClass.EnvironmentalFeature);
+        var shatteredFeature = shatteredPlan.Marks.Single(mark =>
+            mark.Address == rivenCairn.Address &&
+            mark.Layer == VisualLayerClass.EnvironmentalFeature);
+        Assert(
+            intactPlan.Marks.Any(mark =>
+                mark.Address == rivenCairn.Address &&
+                mark.Layer == VisualLayerClass.GroundField) &&
+            intactFeature.VisualId == shatteredFeature.VisualId &&
+            intactFeature.AtlasRect == shatteredFeature.AtlasRect,
+            "Cairn subject visuals must layer over, never replace, the stable underlying terrain and ridge mark.");
+        Assert(
+            intactPlan.Digest == intactRepeat.Digest &&
+            intactPlan.Marks.SequenceEqual(intactRepeat.Marks) &&
+            shatteredPlan.Digest == shatteredRepeat.Digest &&
+            shatteredPlan.Marks.SequenceEqual(shatteredRepeat.Marks),
+            "Intact and shattered Cairn composition must produce stable deterministic render plans.");
+        Assert(
+            VisualIdsAt(intactPlan, rivenCairn.Address)
+                .SequenceEqual(VisualIdsAt(intactOverlap, rivenCairn.Address)) &&
+            VisualIdsAt(shatteredPlan, rivenCairn.Address)
+                .SequenceEqual(VisualIdsAt(shatteredOverlap, rivenCairn.Address)),
+            "Overlapping visible queries must preserve every intact and shattered Cairn mark at its absolute address.");
+    }
+
+    Assert(
+        intactArea.Cells.SequenceEqual(intactBeforeComposition) &&
+        shatteredArea.Cells.SequenceEqual(shatteredBeforeComposition),
+        "Cairn composition must not mutate either Core-generated semantic area.");
+}
 
 static void VerifyVisualCompositionAtNumericWorldEdges()
 {
@@ -169,7 +393,10 @@ static void VerifyGate3BManualPacksResolveRequiredVisualVocabulary()
         "terrain.sky.cloud",
         "landmark.bell-that-fell-up",
         "subject.loose-stone",
+        "subject.riven-cairn-river-ward",
+        "subject.shattered-cairn",
         "actor.incarnation",
+        "emphasis.danger.river-ward",
         "emphasis.target.valid",
         "emphasis.selection",
         "glyph.codex",
@@ -596,6 +823,23 @@ static IReadOnlyList<byte> ReadEdgePixels(
         _ => throw new ArgumentOutOfRangeException(nameof(direction)),
     };
 }
+
+static IReadOnlyList<byte> ReadTilePixels(
+    CompiledVisualPack pack,
+    VisualDefinition definition) =>
+    Enumerable.Range(0, definition.AtlasRect.Height)
+        .SelectMany(y => Enumerable.Range(0, definition.AtlasRect.Width)
+            .Select(x => pack.AtlasIndices[
+                (definition.AtlasRect.Y + y) * pack.AtlasWidth + definition.AtlasRect.X + x]))
+        .ToArray();
+
+static IReadOnlyList<string> VisualIdsAt(
+    VisualRenderPlan plan,
+    WorldAddress address) =>
+    plan.Marks
+        .Where(mark => mark.Address == address)
+        .Select(mark => mark.VisualId)
+        .ToArray();
 
 static bool IsWithin(WorldAddress address, WorldRectangle bounds) =>
     address.X >= bounds.MinX &&

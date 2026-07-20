@@ -21,6 +21,11 @@ fixed-tick Chronicle state + persistence + Word Catalogue + World Grammar
 ## Simulation shape
 
 - A continuous fixed-tick Chronicle Clock supports pause and speed controls.
+- Autonomous object state changes only on Chronicle ticks. While paused, Core
+  subjects do not move, react, or change phase, and Godot freezes their
+  time-driven presentation. Inspection, Loadout configuration, deliberate
+  Incarnation movement, and action preparation remain commands; any action
+  specified to resolve on a tick stays pending until that tick is delivered.
 - A World Address ultimately identifies every persistent location by World,
   Stratum, and coordinate across linked two-dimensional layers. Slice 0–3 state
   has one implicit World; multi-World work must introduce explicit World
@@ -52,15 +57,24 @@ fixed-tick Chronicle state + persistence + Word Catalogue + World Grammar
 - Study Source snapshots are regenerated from pinned World Grammar semantics,
   durable identity, and World Address. Only canonical Codex membership,
   word-specific Understanding, and the active source/word pursuit are saved.
-- Strict current save envelope v3 serializes canonical Chronicle state,
-  including optional singular Home and durable deltas. Literal v2, v1, and
-  pre-envelope saves deserialize through private predecessor shapes before
-  constructing current state. Current `WordId` parsing remains string-only, so
-  colliding old numeric values never cross into the unified identity model.
+- Strict current save envelope v4 serializes canonical Chronicle state,
+  including optional singular Home, the narrow first-conflict delta, and other
+  durable deltas. Literal v3, v2, v1, and pre-envelope saves deserialize
+  through private predecessor shapes before constructing current state. Their
+  exact supported World Grammar pins remain unchanged, so older Chronicles do
+  not gain later generated subjects retroactively. Current `WordId` parsing
+  remains string-only, so colliding old numeric values never cross into the
+  unified identity model.
 - Singular Home and its durable Hearthstone identity are Core state. Core also
   derives the read-only physical Return Route: it reports X-before-Y ordinary
   steps toward Home but never moves an Incarnation, teleports, or owns a Godot
   navigation rule.
+- The first conflict is one Core-owned, one-exchange state transition rather
+  than a general combat system. Entering its unresolved generated place pauses
+  the Chronicle Clock; an exact Loadout action may be prepared while paused,
+  and the first delivered tick resolves either the material consequence or the
+  Incarnation's end. Godot only presents the read-only conflict context and
+  translates commands.
 - Slice 0 proves this model with a deliberately tiny generated surface patch.
   Slice 1 adds the first linked sky Stratum; neither slice attempts a whole
   planet or a voxel world.

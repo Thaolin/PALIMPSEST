@@ -14,7 +14,8 @@ public sealed record VisualCompositionInput(
     int VisualStyleVersion,
     WorldAddress? IncarnationAddress,
     IReadOnlyList<WorldAddress> TargetAddresses,
-    IReadOnlyList<WorldAddress> SelectedAddresses);
+    IReadOnlyList<WorldAddress> SelectedAddresses,
+    IReadOnlyList<WorldAddress>? DangerAddresses = null);
 
 public readonly record struct VisualRenderMark(
     WorldAddress Address,
@@ -57,6 +58,10 @@ public static class VisualGrammar
         var cells = input.SemanticArea.Cells.ToDictionary(cell => cell.Address);
         var targets = input.TargetAddresses.ToHashSet();
         var selections = input.SelectedAddresses.ToHashSet();
+        // This optional presentation input is populated from Core-owned conflict
+        // state. It deliberately contains no wall-clock phase: static emphasis
+        // stays identical while Core has paused the Chronicle Clock.
+        var dangers = input.DangerAddresses?.ToHashSet() ?? new HashSet<WorldAddress>();
         var layers = Enumerable.Range(0, Enum.GetValues<VisualLayerClass>().Length)
             .Select(_ => new List<VisualRenderMark>())
             .ToArray();
@@ -70,6 +75,11 @@ public static class VisualGrammar
             AddAdjacency(input, cell, cells, layers);
             AddFeature(input, cell, cells, layers);
             AddDurableSubject(input, cell, layers);
+
+            if (dangers.Contains(cell.Address))
+            {
+                Add(input, cell.Address, "emphasis.danger.river-ward", layers);
+            }
 
             if (input.IncarnationAddress == cell.Address)
             {
@@ -249,6 +259,20 @@ public static class VisualGrammar
                      StringComparison.Ordinal))
         {
             Add(input, cell.Address, "subject.home-hearthstone", layers);
+        }
+        else if (string.Equals(
+                     cell.DurableIdentity,
+                     FirstConflictSubjects.RivenCairnIdentity,
+                     StringComparison.Ordinal))
+        {
+            Add(input, cell.Address, "subject.riven-cairn-river-ward", layers);
+        }
+        else if (string.Equals(
+                     cell.DurableIdentity,
+                     FirstConflictSubjects.ShatteredCairnIdentity,
+                     StringComparison.Ordinal))
+        {
+            Add(input, cell.Address, "subject.shattered-cairn", layers);
         }
         else if (string.Equals(
                      cell.DurableIdentity,

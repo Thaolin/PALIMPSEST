@@ -25,6 +25,7 @@ public static class WordIds
 {
     public static readonly WordId Fly = new("word.fly");
     public static readonly WordId Found = new("word.found");
+    public static readonly WordId Smash = new("word.smash");
     public static readonly WordId Stone = new("word.stone");
     public static readonly WordId Bell = new("word.bell");
 }
@@ -59,6 +60,13 @@ public static class WordCatalogue
             "Found",
             WordKind.Verb,
             "Establish one place as Home by giving its matter a durable mark.",
+            0,
+            Array.Empty<WordId>()),
+        new(
+            WordIds.Smash,
+            "Smash",
+            WordKind.Verb,
+            "Break a resisting material at the current site by direct force.",
             0,
             Array.Empty<WordId>()),
         new(

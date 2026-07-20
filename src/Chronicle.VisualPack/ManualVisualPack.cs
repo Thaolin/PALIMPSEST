@@ -54,6 +54,7 @@ public static class ManualVisualPack
         AddEmphasis(builder);
         AddGlyphs(builder);
         AddHearthstone(builder);
+        AddGoal4CSubjectsAndEmphasis(builder);
 
         return builder.Build(
             packId: "chronicle.gate3b.manual",
@@ -291,6 +292,34 @@ public static class ManualVisualPack
             Gold,
             [StoneDark, Stone, StoneLight, GoldDark, Gold, GoldBright],
             PaintHearthstone);
+    }
+
+    private static void AddGoal4CSubjectsAndEmphasis(AtlasBuilder builder)
+    {
+        builder.Add(
+            "subject.riven-cairn-river-ward",
+            "subject.riven-cairn-river-ward",
+            0,
+            VisualLayerClass.LandmarkOrSubject,
+            Cyan,
+            [StoneDark, Stone, StoneLight, WaterDeep, Cyan],
+            PaintRivenCairnRiverWard);
+        builder.Add(
+            "subject.shattered-cairn",
+            "subject.shattered-cairn",
+            0,
+            VisualLayerClass.LandmarkOrSubject,
+            StoneLight,
+            [SoilDark, StoneDark, Stone, StoneLight],
+            PaintShatteredCairn);
+        builder.Add(
+            "emphasis.danger.river-ward",
+            "emphasis.danger.river-ward",
+            0,
+            VisualLayerClass.TemporaryAction,
+            Actor,
+            [ActorDark, Actor, ActorLight],
+            PaintRiverWardDanger);
     }
 
     private static void AddEmphasis(AtlasBuilder builder)
@@ -737,6 +766,63 @@ public static class ManualVisualPack
         canvas.Vertical(center, s / 2, s - 4, ActorLight);
         canvas.Pixel(center - 1, 4, ActorDark);
         canvas.Pixel(center + 1, 4, ActorDark);
+    }
+
+    private static void PaintRivenCairnRiverWard(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        var baseY = s - (s == 20 ? 3 : 2);
+        var halfWidth = s == 20 ? 6 : 5;
+        const int peakY = 3;
+
+        canvas.Triangle(center - halfWidth, baseY, center, peakY, center + halfWidth, baseY, StoneDark);
+        canvas.Triangle(
+            center - halfWidth + 2,
+            baseY - 1,
+            center,
+            peakY + 2,
+            center + halfWidth - 2,
+            baseY - 1,
+            Stone);
+        canvas.Horizontal(center - halfWidth + 3, center + halfWidth - 3, baseY - 2, StoneLight);
+
+        var wardY = center + (s == 20 ? 1 : 0);
+        var wardRadius = s == 20 ? 3 : 2;
+        canvas.Diamond(center, wardY, wardRadius, WaterDeep);
+        canvas.Diamond(center, wardY, wardRadius - 1, Cyan);
+        canvas.Vertical(center, wardY - wardRadius, wardY + wardRadius, Cyan);
+        canvas.Pixel(center - wardRadius - 1, wardY, Cyan);
+        canvas.Pixel(center + wardRadius + 1, wardY, Cyan);
+    }
+
+    private static void PaintShatteredCairn(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        var baseY = s - (s == 20 ? 3 : 2);
+        var shard = Math.Max(2, s / 5);
+
+        canvas.Diamond(center - s / 4, baseY - 1, shard + 1, StoneDark);
+        canvas.Diamond(center - s / 4, baseY - 2, shard, Stone);
+        canvas.Diamond(center + s / 4, baseY - 2, shard + 1, StoneDark);
+        canvas.Diamond(center + s / 4, baseY - 3, shard, Stone);
+        canvas.Diamond(center, center + 1, shard, StoneDark);
+        canvas.Triangle(center - shard, center + 2, center + 1, center - shard, center + shard + 1, center + 3, Stone);
+        canvas.Line(center - shard, center + 2, center + 1, center - shard, StoneLight);
+        canvas.Pixel(center - s / 3, baseY - shard - 1, SoilDark);
+        canvas.Pixel(center + s / 3, baseY - shard, SoilDark);
+    }
+
+    private static void PaintRiverWardDanger(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var arm = Math.Max(3, s / 4);
+        PaintCorners(canvas, Actor, inset: 1, arm);
+        canvas.Pixel(s / 2, 1, ActorLight);
+        canvas.Pixel(s / 2, s - 2, ActorLight);
+        canvas.Pixel(1, s / 2, ActorLight);
+        canvas.Pixel(s - 2, s / 2, ActorLight);
     }
 
     private static void PaintCorners(PixelCanvas canvas, byte color, int inset, int arm)

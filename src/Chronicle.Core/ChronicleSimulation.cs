@@ -12,6 +12,23 @@ public sealed class ChronicleSimulation
     public StudySourceSnapshot? CurrentStudySource =>
         StudySourceGrammar.At(State, State.Address);
 
+    public ConflictContextSnapshot? ConflictContext => State.FirstConflict is { } conflict
+        ? new ConflictContextSnapshot(
+            conflict.Outcome == FirstConflictOutcome.Shattered
+                ? FirstConflictSubjects.ShatteredCairnIdentity
+                : FirstConflictSubjects.RivenCairnIdentity,
+            FirstConflictSubjects.RiverWardIdentity,
+            FirstConflictSubjects.History,
+            FirstConflictSubjects.Warning,
+            conflict.Address,
+            conflict.ThreatenedTick,
+            conflict.PendingAction == new LoadoutSlot(WordIds.Smash),
+            conflict.PendingAction,
+            conflict.Outcome,
+            conflict.ResolvedTick,
+            conflict.ResolvingIncarnationId)
+        : null;
+
     public HomeContextSnapshot HomeContext
     {
         get
@@ -96,6 +113,10 @@ public sealed class ChronicleSimulation
             ChooseHereIntent => State.Intent == OpeningIntent.Unchosen
                 ? State.WithIntent(OpeningIntent.Here)
                 : State,
+            ChooseAgainstIntent => State.Intent == OpeningIntent.Unchosen &&
+                                   State.WorldGrammarVersion == 3
+                ? State.WithIntent(OpeningIntent.Against)
+                : State,
             EndIncarnationAtBell => State.EndIncarnationAtBell(),
             CreateReplacementIncarnation => State.CreateReplacementIncarnation(),
             MoveIncarnation move when !IsCardinal(move.DeltaX, move.DeltaY) => throw new ArgumentException(
@@ -130,7 +151,8 @@ public sealed class ChronicleSimulation
         var slot = State.ActiveLoadout[slotIndex];
         if (!slot.IsFlyStone ||
             State.LooseStoneAddress is not { } stoneAddress ||
-            !IsAdjacent(State.Address, stoneAddress))
+            !IsAdjacent(State.Address, stoneAddress) ||
+            State.Home?.Address == FlyStoneDestination(stoneAddress))
         {
             return [];
         }
@@ -272,13 +294,18 @@ public sealed class ChronicleSimulation
                 return ChronicleCommandResult.Rejected("Fly has nowhere to go from this Stratum.");
             }
 
-            State = State.TravelTo(destination);
+            State = EnterFirstConflictIfNeeded(State.TravelTo(destination));
             return ChronicleCommandResult.Succeeded($"Flew to {destination}.");
         }
 
         if (slot.IsIntrinsicFound)
         {
             return FoundAtCurrentSite(command);
+        }
+
+        if (slot.IsIntrinsicSmash)
+        {
+            return PrepareSmashAtCurrentSite(command, slot);
         }
 
         if (!slot.IsFlyStone)
@@ -301,12 +328,13 @@ public sealed class ChronicleSimulation
             return ChronicleCommandResult.Rejected("The loose Stone must be adjacent.");
         }
 
-        var stoneDestination = stoneAddress.Stratum switch
+        var stoneDestination = FlyStoneDestination(stoneAddress);
+
+        if (State.Home is { Address: var homeAddress } && stoneDestination == homeAddress)
         {
-            SurfacePatch.SurfaceStratum => stoneAddress with { Stratum = SkyStratum.StratumName },
-            SkyStratum.StratumName => stoneAddress with { Stratum = SurfacePatch.SurfaceStratum },
-            _ => throw new InvalidOperationException("The loose Stone occupies an unsupported Stratum."),
-        };
+            return ChronicleCommandResult.Rejected(
+                "Fly[Stone] cannot move the loose Stone onto Home.");
+        }
 
         State = State with { LooseStoneAddress = stoneDestination };
         return ChronicleCommandResult.Succeeded($"Fly[Stone] moved the loose Stone to {stoneDestination}.");
@@ -343,6 +371,43 @@ public sealed class ChronicleSimulation
                 HomeMaterialState.HearthstoneRaised),
         };
         return ChronicleCommandResult.Succeeded($"Founded The First Hearth at {State.Address}.");
+    }
+
+    private ChronicleCommandResult PrepareSmashAtCurrentSite(
+        UseLoadoutSlot command,
+        LoadoutSlot slot)
+    {
+        if (command.Target is not null)
+        {
+            return ChronicleCommandResult.Rejected(
+                "Intrinsic Smash acts on the current site and takes no target.");
+        }
+
+        if (State.FirstConflict is not { Outcome: null } conflict ||
+            State.Address != conflict.Address)
+        {
+            return ChronicleCommandResult.Rejected(
+                "Smash can only be prepared at the unresolved Riven Cairn.");
+        }
+
+        if (State.Speed != ChronicleSpeed.Paused)
+        {
+            return ChronicleCommandResult.Rejected(
+                "The Riven Cairn must be paused before Smash can be prepared.");
+        }
+
+        if (conflict.PendingAction is not null)
+        {
+            return ChronicleCommandResult.Rejected(
+                "Smash is already prepared for the next active Chronicle tick.");
+        }
+
+        State = State with
+        {
+            FirstConflict = conflict with { PendingAction = slot },
+        };
+        return ChronicleCommandResult.Succeeded(
+            "Prepared Smash for the next active Chronicle tick.");
     }
 
     private static bool IsCardinal(int deltaX, int deltaY) =>
@@ -463,6 +528,14 @@ public sealed class ChronicleSimulation
 
     private static bool IsSlotIndex(int index) => index is >= 0 and < LoadoutState.SlotCount;
 
+    private static WorldAddress FlyStoneDestination(WorldAddress stoneAddress) =>
+        stoneAddress.Stratum switch
+        {
+            SurfacePatch.SurfaceStratum => stoneAddress with { Stratum = SkyStratum.StratumName },
+            SkyStratum.StratumName => stoneAddress with { Stratum = SurfacePatch.SurfaceStratum },
+            _ => throw new InvalidOperationException("The loose Stone occupies an unsupported Stratum."),
+        };
+
     private static bool IsAdjacent(WorldAddress first, WorldAddress second) =>
         string.Equals(first.Stratum, second.Stratum, StringComparison.Ordinal) &&
         ((first.X == second.X && AreConsecutive(first.Y, second.Y)) ||
@@ -484,11 +557,32 @@ public sealed class ChronicleSimulation
             State.Address.X + move.DeltaX,
             State.Address.Y + move.DeltaY);
 
-        return State.Address.Stratum switch
+        var moved = State.Address.Stratum switch
         {
             SurfacePatch.SurfaceStratum => State.TravelTo(destination),
             SkyStratum.StratumName => State.TravelTo(destination),
             _ => State,
+        };
+        return EnterFirstConflictIfNeeded(moved);
+    }
+
+    private static ChronicleState EnterFirstConflictIfNeeded(ChronicleState state)
+    {
+        if (!state.HasLivingIncarnation ||
+            state.WorldGrammarVersion != 3 ||
+            state.FirstConflict is not null ||
+            state.Address != WorldArea.GeneratedCairnAddress(state.Seed))
+        {
+            return state;
+        }
+
+        return state with
+        {
+            Speed = ChronicleSpeed.Paused,
+            FirstConflict = new FirstConflictState(
+                FirstConflictSubjects.RiverWardSubjectId,
+                state.Address,
+                state.Tick),
         };
     }
 
@@ -516,6 +610,8 @@ public sealed record SetChronicleSpeed(ChronicleSpeed Speed) : ChronicleCommand;
 public sealed record ChooseUpIntent : ChronicleCommand;
 
 public sealed record ChooseHereIntent : ChronicleCommand;
+
+public sealed record ChooseAgainstIntent : ChronicleCommand;
 
 public sealed record ChooseStudyWord(StudySourceId SourceId, WordId WordId) : ChronicleCommand;
 
