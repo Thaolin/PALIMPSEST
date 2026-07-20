@@ -65,7 +65,11 @@ The parallel candidate compiler is specified in the
 It is pure C# at authoring time with a Godot preview adapter, remains absent
 from the shipped runtime, and does not block Gate 3B. Its separate E0–E4
 [build handoff](CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md) stops before
-Palimpsest integration.
+Palimpsest integration. P-GEN's E4.5 technical proof was independently
+reproduced on 2026-07-20, but it is not adopted or currently drop-in. Its
+[readiness review](P-GEN-E4-5-READINESS-REVIEW.md) records the consumer,
+vocabulary, motif, cosmetic-selection, specification, and visual-proof
+decisions required before a separately authorized E5 gate.
 
 **Accept when:** the inspector makes generated places visibly structured rather
 than random across large bounded requests and query edges; the local player
@@ -75,6 +79,13 @@ Landmarks read clearly without labels.
 Implementation contract: [Slice 3 — A World With Shape](SLICE-3-WORLD-VISUAL-GRAMMAR.md).
 
 ## Goal 4 — Three Openings, One Chronicle
+
+**Status:** Authorized on 2026-07-19. Slice 4A completed implementation,
+automated proof, player UAT, and tracker reconciliation on 2026-07-19. Slice
+4B completed implementation and automated proof on 2026-07-19, then passed
+functional player UAT, its focused Clock/Codex correction recheck, and tracker
+reconciliation on 2026-07-20. Slice 4B is complete. Slice 4C is next but remains
+forbidden until separately authorized.
 
 Begin only after Goal 2 and both Slice 3 gates pass. Deliver three sequential
 UAT slices that turn Combat, Explore, and Build into genuine openings onto the
@@ -103,11 +114,20 @@ Home at one valid site in a currently reachable Stratum. Home has persistent
 identity, one material change, and a physical Return Route. Do not add residents,
 production chains, jobs, Pressure, or free teleportation yet.
 
+**Implementation state:** complete and accepted on 2026-07-20. The fixed Home
+fixture, automated proof, functional player journey, compact Tick/Clock
+correction, focused recheck, and tracker reconciliation all passed. This does
+not authorize 4C. See [Goal 4B UAT](GOAL-4B-UAT.md).
+
 **Accept when:** a builder experiences Home as an authored-by-play place, while
 an explorer can leave it modest and use it as an expedition anchor without
 entering a management mode.
 
 ### 4C — A Consequential Fight
+
+**Authorization state:** next candidate; not yet authorized. Confirm one exact
+fixture, public seams, persistent consequence, automated proof, and UAT
+boundary before changing production code.
 
 Add the Combat Starting Vector and one deterministic, pausable conflict tied to
 a generated place and its history. The encounter uses the same Loadout and
@@ -122,6 +142,9 @@ Expression or action, and see the result persist outside a combat screen.
 each opens a different First Horizon, and all three feed the same Codex, Home,
 generated world, and eventual Incarnations. Each child slice requires its own
 automated proof and player UAT before the next begins.
+
+Implementation contract:
+[Goal 4 — Three Openings, One Chronicle](GOAL-4-THREE-OPENINGS.md).
 
 ## Goal 5 — Home Has People
 

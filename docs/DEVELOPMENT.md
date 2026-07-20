@@ -27,6 +27,40 @@ is not required. Opening the Godot executable directly does not provide that
 environment and causes the C# editor build callback to report `.NET Sdk not
 found`.
 
+## Play launcher and save profiles
+
+Build and launch the game from the repository root with:
+
+```powershell
+& .\play.ps1
+```
+
+That command uses the normal Godot `user://` save and the accepted 20-pixel
+visual pack. The launcher supplies the packaged .NET environment, builds the
+current C# project, launches Godot, and restores the calling shell's
+environment afterward.
+
+Use a named profile to keep a custom Chronicle isolated under
+`.tools/play-profiles/<name>/`:
+
+```powershell
+& .\play.ps1 -Profile goal4b-uat
+```
+
+The first launch of a profile starts without a save. Later launches with the
+same name continue that profile. Profile names may contain letters, numbers,
+dots, underscores, and hyphens.
+
+For a guaranteed new Chronicle, let the launcher create a unique profile:
+
+```powershell
+& .\play.ps1 -Fresh
+```
+
+The launcher prints the generated profile name and the exact command needed to
+resume it. `-Fresh` never deletes or overwrites an existing Chronicle. Use
+`-CellSize 16` only for the retained comparison; 20 remains the default.
+
 For direct command-line work, start a PowerShell session at the repository root
 with:
 
@@ -55,8 +89,8 @@ dependency-free Core and Visuals checks. It starts the developer World Atlas
 Inspector in isolated application-data directories at both 20 px and 16 px,
 proving the semantic and shared Visual Grammar paths, deterministic captures,
 and player-save non-mutation beside both an absent save and a sentinel save.
-It then runs the player acceptance at `20 px / 33 × 23` and
-`16 px / 41 × 29`. Each player launch drives the real Godot buttons through the
+It then runs the player acceptance at the current native densities `20 px /
+51 × 37` and `16 px / 63 × 45`. Each player launch drives the real Godot buttons through the
 complete `UP` → Fly → Bell → Study → pause → partial save/load → learn `Stone`
 → configure/clear the Loadout → move and return the loose Stone with
 `Fly[Stone]` → confirm Bell death → save/load while awaiting replacement →
@@ -67,6 +101,44 @@ plan digests, and review-capture bytes. Godot's editor callback, clean startup,
 save creation, and next-launch restore remain in the gate. All launches use
 temporary isolated application-data directories, so verification neither
 opens a window nor touches the interactive save.
+
+Goal 4A adds an isolated current-grammar journey after those retained
+regressions. One launch uses the real controls to save active `Stone` Study at
+`5/16`; a separate application launch restores that exact source/word pursuit.
+The next launch carries it through death, an empty replacement Loadout,
+deliberate return and completion, then runs an independent `Bell` choice through
+partial save/load and `16/16` completion without advancing `Stone`. A final
+application launch restores the completed Bell-only Chronicle.
+
+The earlier standalone 4A automated gate ended with:
+
+```text
+PASS: Goal 4A Core and Godot Study choice, partial/completed restarts, every Goal 2 regression, Gate 3A Inspector, and Gate 3B visual acceptance verified.
+```
+
+Goal 4B adds an isolated two-process Home gate. The initial process drives the
+fresh seed-`41337` controls through `HERE`, the flooded-Stone rejection at
+`surface (0, 0)`, founding at soil-supported Stone on `surface (0, 3)`, and
+ordinary departure, then writes a strict v3 canonical save. The verifier reads
+that isolated save to require envelope v3 and explicit Home before a second
+process restores it, follows the physical Return Route home, and proves the
+exact Home and Hearthstone facts. Core checks retain literal
+v2/v1/pre-envelope migration and death/replacement coverage.
+
+The current full automated gate ends with:
+
+```text
+GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone route=physical view=50x36 save=3
+PASS: Goal 4B Home and restart acceptance, Goal 4A Study choice, every Goal 2 regression, Gate 3A Inspector, and Gate 3B visual acceptance verified.
+```
+
+That line made the dedicated 4B UAT runnable; it did not replace player
+acceptance. The functional journey passed on 2026-07-20. A later-noticed
+Clock/Codex overlap was corrected by rendering Tick and Clock on one line and
+asserting that the header remains a fitting four-line readout. The focused
+player visual recheck passed and 4B was accepted on 2026-07-20. The complete
+verifier passed again after this correction with zero errors. Its only warning
+was `NU1900` because the NuGet vulnerability feed was unreachable.
 
 To run the individual proof steps instead, restore once, then build and run the
 engine-independent check:
@@ -96,6 +168,15 @@ Surface/Sky snapshots, fixture-seed composition, whole-versus-tiled and overlap
 agreement, query-order independence, adjacency context, named long forms,
 durable Bell and moved-Stone overlays, read-only generation, save omission, and
 render-independent replay.
+
+Goal 4A adds stable catalogue `WordId` values shared by the Catalogue, Codex,
+word-specific Understanding, Study offers, and Loadout. Its Core proof covers
+the exact `Fly`/`Stone`/`Bell` catalogue, the ordered two-offer generated Bell
+source, source qualities and contextual reasons, deliberate selection and
+switching, rejected choices, pause/leave/death/replacement behavior, independent
+Stone and Bell completion, immutable public snapshots, strict version-2 JSON,
+string Loadout identities, explicit numeric predecessor migration, and unchanged
+version-0/version-1 physical World semantics.
 
 The Visuals executable proves both native pack sizes, stable identifiers and
 pack digests, palette/atlas bounds, all connected-feature masks, exact
@@ -205,41 +286,47 @@ acceptance with:
 & $godot --headless --path src\Chronicle.Godot -- --verify-gate3b-player --visual-cell-size=16
 ```
 
-They must report `GATE3B PLAYER VISUAL ACCEPTANCE PASS` with densities `33x23`
-and `41x29` respectively, followed by `SLICE2C ACCEPTANCE PASS`. Prefer the
+They must report `GATE3B PLAYER VISUAL ACCEPTANCE PASS` with densities `51x37`
+and `63x45` respectively, followed by `SLICE2C ACCEPTANCE PASS`. Prefer the
 full verifier for routine use because it creates and removes unique isolated
 runtime roots automatically.
 
 ## Launch and persistence proof
 
-Launch the game directly:
+Use the canonical launcher with the normal interactive save:
 
 ```powershell
-& $godotGui --path src\Chronicle.Godot
+& .\play.ps1
 ```
 
 Gate 3B's accepted baseline is the default 20 px pack. Launch the retained
 comparison explicitly with:
 
 ```powershell
-& $godotGui --path src\Chronicle.Godot -- --visual-cell-size=20
-& $godotGui --path src\Chronicle.Godot -- --visual-cell-size=16
+& .\play.ps1 -CellSize 20
+& .\play.ps1 -CellSize 16
 ```
 
-The runtime canvas is 1280×720. A native 33×23 generated playspace at 20 px or
-41×29 playspace at 16 px fills the left side, while the Chronicle, Codex,
-Loadout, commands, and status occupy the right-hand panel without overlapping.
-The UAT decision and annotated fixture comparison are in
-[Gate 3B Visual UAT](GATE-3B-VISUAL-UAT.md); do not remove either candidate
-until that gate selects one.
+The current runtime canvas is `1600 × 900` with a `1020 × 740` map. Its native
+20-pixel view presents `51 × 37` cells; retained 16-pixel presentation presents
+`63 × 45`. Goal 4B's automated marker deliberately keeps the lower
+`view=50x36` acceptance minimum. The Chronicle, Codex, Loadout, commands, and
+status occupy the right-hand panel without overlapping. The accepted 20-pixel
+baseline and retained visual comparison remain documented in
+[Gate 3B Visual UAT](GATE-3B-VISUAL-UAT.md).
+
+The compact Chronicle header uses four lines. Tick and speed share
+`Tick: … · Clock: …` so the Clock value remains fully above the Codex panel.
 
 Use arrow keys or WASD to move, Space to pause, `1`/`2`/`3` for slow/normal/fast,
 F5 to save, and F9 to load. Fly occupies the first slot in the eight-slot
-on-screen hotbar. At the Bell, the Study button starts understanding its
-sky-stone clapper. The direction, clock, hotbar, Study, save, and load controls
-invoke Core commands. Pause stops Chronicle ticks and Study; deliberate
-commands remain available while paused. Slice 2A passed its player UAT with the
-following reference journey:
+on-screen hotbar. At the Bell, the Study button opens the generated sky-stone
+source: its Core-owned situation, qualities, contribution, and ordered
+`Stone`/`Bell` offers replace the old hidden-Stone action. The direction,
+clock, hotbar, Study choice, save, and load controls invoke Core commands.
+Pause stops Chronicle ticks and Study; deliberate commands remain available
+while paused. Slice 2A passed its player UAT with the following historical
+reference journey:
 
 1. Launch with a Slice 0 or fresh save. Confirm the modal `UP` Intent and that
    movement is unavailable.
@@ -312,13 +399,23 @@ For the current Slice 2C player UAT:
    fitted intrinsic `Fly`, the Codex, Understanding, clock, address, and moved
    Stone restore exactly.
 
+For the accepted Goal 4B player UAT, use the dedicated
+[Goal 4B UAT sheet](GOAL-4B-UAT.md). It begins from a fresh isolated Chronicle,
+uses the actual 20-pixel `51 × 37` view, and stops before 4C. Its functional
+journey and focused Tick/Clock correction recheck passed; 4B was accepted on
+2026-07-20.
+
 Godot keeps the compatible file at `user://slice0_chronicle.json`. A Slice 0
 file without Intent opens as `Unchosen`; a Slice 1 file with `UP` migrates to
 an explicit Codex containing `Fly`; a Slice 2A file gains intrinsic Fly in
 slot one and the loose Stone at `surface (1, 0)`; a Slice 2B file gains living
-Incarnation identity `1` without changing its Loadout or Stone delta. New saves
-use a minimal versioned envelope around inspectable Core state and durable
-deltas. Surface and sky tiles are regenerated from the seed.
+Incarnation identity `1` without changing its Loadout or Stone delta. Literal
+v2, v1, and pre-envelope saves are decoded through predecessor shapes before
+constructing the strict current v3 canonical Chronicle. Current v3 saves use
+stable string Word identities and contain only canonical Chronicle state,
+including optional singular Home, and durable deltas. Surface, sky, Study
+Source, Hearthstone, and route snapshots are regenerated from the seed, pinned
+grammar, durable identity, and World Address.
 
 To open the editor instead:
 
@@ -328,10 +425,13 @@ To open the editor instead:
 
 ## Project boundary
 
-- `Chronicle.Core` owns generation, commands, movement, clock semantics, Codex,
-  Study rules and progress, the eight-slot Loadout, Expression compatibility,
-  target validity, Fly effects, Incarnation death and replacement, the loose
-  Stone delta, Landmark identity, and serialization without referencing Godot.
+- `Chronicle.Core` owns generation, commands, movement, clock semantics, the
+  authored Word Catalogue, generated Study Sources, canonical Codex and
+  word-specific Understanding, the eight-slot Loadout, Expression
+  compatibility, target validity, Fly effects, Incarnation death and
+  replacement, singular Home and its physical Return Route, the loose Stone
+  delta, Landmark identity, and strict canonical persistence without referencing
+  Godot.
 - `Chronicle.VisualPack` owns immutable compiled-pack values and the compact
   manually authored 16 px/20 px reference pack without referencing Core or
   Godot.
@@ -340,6 +440,7 @@ To open the editor instead:
 - `Chronicle.Godot` translates input and wall-clock pulses, renders Core
   snapshots through those plans, expands atlas textures, renders Core-valid
   target highlights and UI glyphs, presents death confirmation and replacement
-  controls, and owns the `user://` file lifecycle.
+  controls, presents nonbinding Starting Vector and mixed-Codex Loadout controls,
+  and owns the `user://` file lifecycle.
 - Godot is an inspection and presentation surface for generated worlds, not a
   hand-authored level source.

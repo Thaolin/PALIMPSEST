@@ -91,6 +91,12 @@ a Chronicle. It may be founded in any World or Stratum and remains Home through
 absence, Incarnation death, damage, or ruin.
 _Avoid_: Mandatory management mode, automatic fast-travel hub, disposable base
 
+**Found**:
+The Build Starting Vector's First Verb. Found establishes the singular Home at
+the Incarnation's current valid place by giving existing supported matter a
+durable Hearthstone identity.
+_Avoid_: Base-management command, remote claim, conjured terrain, extra Holding
+
 **Agent**:
 An autonomous person, mutant, creature, construct, or stranger with continuing
 identity, needs, relationships, and agency in a Chronicle. Agent is a systemic

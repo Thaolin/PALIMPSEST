@@ -21,6 +21,10 @@ $gate3bPlayerRuntimeName = "godot-gate3b-player-verify-$([Guid]::NewGuid().ToStr
 $gate3bPlayerRuntimeRoot = Join-Path $repoRoot ".tools\$gate3bPlayerRuntimeName"
 $runtimeName = "godot-verify-$([Guid]::NewGuid().ToString("N"))"
 $runtimeRoot = Join-Path $repoRoot ".tools\$runtimeName"
+$goal4ARuntimeName = "godot-goal4a-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal4ARuntimeRoot = Join-Path $repoRoot ".tools\$goal4ARuntimeName"
+$goal4BRuntimeName = "godot-goal4b-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal4BRuntimeRoot = Join-Path $repoRoot ".tools\$goal4BRuntimeName"
 
 $originalEnvironment = @{
     AppData = $env:APPDATA
@@ -110,6 +114,153 @@ function Invoke-GodotAcceptance {
     if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
     {
         throw "Godot reported an error during the Slice 2C acceptance journey."
+    }
+}
+
+function Invoke-GodotGoal4ARun {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("Partial", "Complete")]
+        [string] $Phase
+    )
+
+    $argument = if ($Phase -eq "Partial") { "--verify-4a-partial" } else { "--verify-4a" }
+    $marker = if ($Phase -eq "Partial")
+    {
+        "GOAL4A PARTIAL SAVE READY stone=5 bell=0 active=Stone"
+    }
+    else
+    {
+        "GOAL4A ACCEPTANCE PASS stoneBranch=16 bellBranch=16 finalStone=0 finalBell=16"
+    }
+
+    Write-Host "`n==> Drive Goal 4A $Phase journey through Godot controls"
+    $output = @(& $godot --headless --path $godotProjectDirectory -- $argument 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Goal 4A $Phase journey failed with exit code $exitCode."
+    }
+
+    if (-not $text.Contains($marker, [StringComparison]::Ordinal))
+    {
+        throw "Godot did not complete the expected Goal 4A $Phase journey."
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during the Goal 4A $Phase journey."
+    }
+}
+
+function Invoke-GodotGoal4ARestart {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("Partial", "Complete")]
+        [string] $Phase
+    )
+
+    Write-Host "`n==> Restart Godot and restore Goal 4A $Phase Study"
+    $output = @(& $godot --headless --path $godotProjectDirectory --quit-after 2 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Goal 4A $Phase restart failed with exit code $exitCode."
+    }
+
+    $expectedFragments = if ($Phase -eq "Partial")
+    {
+        @(
+            "SLICE2C LOAD",
+            "activeStudy=Stone",
+            "stoneUnderstanding=5/16",
+            "bellUnderstanding=0/16",
+            "codexWords=Fly"
+        )
+    }
+    else
+    {
+        @(
+            "SLICE2C LOAD",
+            "activeStudy=none",
+            "stoneUnderstanding=0/16",
+            "bellUnderstanding=16/16",
+            "codexWords=Fly, Bell"
+        )
+    }
+
+    foreach ($fragment in $expectedFragments)
+    {
+        if (-not $text.Contains($fragment, [StringComparison]::Ordinal))
+        {
+            throw "Goal 4A $Phase restart did not restore expected fragment '$fragment'."
+        }
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during the Goal 4A $Phase restart."
+    }
+}
+
+function Invoke-GodotGoal4BRun {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("Initial", "Restart")]
+        [string] $Phase
+    )
+
+    $argument = if ($Phase -eq "Initial") { "--verify-4b" } else { "--verify-4b-restart" }
+
+    Write-Host "`n==> Drive Goal 4B $Phase Home journey through Godot controls"
+    $output = @(& $godot --headless --path $godotProjectDirectory -- $argument "--visual-cell-size=20" 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Goal 4B $Phase journey failed with exit code $exitCode."
+    }
+
+    if ($Phase -eq "Restart")
+    {
+        $marker = "GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone route=physical view=50x36 save=3"
+        if (-not $text.Contains($marker, [StringComparison]::Ordinal))
+        {
+            throw "Godot did not complete the exact Goal 4B acceptance journey."
+        }
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during the Goal 4B $Phase journey."
+    }
+}
+
+function Assert-Goal4BSave {
+    $savePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\slice0_chronicle.json"
+    if (-not (Test-Path -LiteralPath $savePath -PathType Leaf))
+    {
+        throw "Goal 4B acceptance did not create its isolated Chronicle save."
+    }
+
+    $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
+    if ([int]$save.Version -ne 3)
+    {
+        throw "Goal 4B acceptance did not save envelope version 3."
+    }
+
+    $savedHome = $save.Chronicle.PSObject.Properties["Home"]
+    if ($null -eq $savedHome -or $null -eq $savedHome.Value)
+    {
+        throw "Goal 4B acceptance did not save its explicit Home."
     }
 }
 
@@ -249,7 +400,7 @@ function Invoke-GodotAtlasAcceptance {
     Invoke-GodotAtlasRun "Run the World Atlas Inspector without a player save" $false
     Assert-PlayerSaveAbsent "World Atlas Inspector acceptance after absent-save launch"
 
-    $captureStem = "atlas_s41337_g1_sky_xn256_yn260_w512_h512_z512_o11111"
+    $captureStem = "atlas_s41337_g2_sky_xn256_yn260_w512_h512_z512_o11111"
     $captureDirectory = Join-Path $repoRoot ".tools\atlas-captures"
     $capturePng = Join-Path $captureDirectory "$captureStem.png"
     $captureJson = Join-Path $captureDirectory "$captureStem.json"
@@ -286,8 +437,8 @@ function Invoke-GodotGate3BPlayerRun {
 
     $expectedDensity = switch ($VisualCellSize)
     {
-        20 { "33x23" }
-        16 { "41x29" }
+        20 { "51x37" }
+        16 { "63x45" }
     }
     $expectedMarker =
         "GATE3B PLAYER VISUAL ACCEPTANCE PASS size=$VisualCellSize density=$expectedDensity pack=chronicle.gate3b.manual"
@@ -630,7 +781,21 @@ try
     Invoke-GodotAcceptance
     Invoke-GodotStartup "Start Godot headlessly and restore the completed journey" -RequireLoad
 
-    Write-Host "`nPASS: Gate 3A Core and Atlas Inspector, Gate 3B compiled packs, dual-density player and Atlas visual acceptance, deterministic review artifacts, Godot editor build, full Goal 2 control journey, and next-launch restore verified."
+    Set-IsolatedGodotRuntime $goal4ARuntimeRoot "Study"
+    Assert-PlayerSaveAbsent "Goal 4A acceptance before launch"
+    Invoke-GodotGoal4ARun "Partial"
+    Invoke-GodotGoal4ARestart "Partial"
+    Invoke-GodotGoal4ARun "Complete"
+    Invoke-GodotGoal4ARestart "Complete"
+
+    Set-IsolatedGodotRuntime $goal4BRuntimeRoot "Home"
+    Assert-PlayerSaveAbsent "Goal 4B acceptance before launch"
+    Invoke-GodotGoal4BRun "Initial"
+    Assert-Goal4BSave
+    Invoke-GodotGoal4BRun "Restart"
+    Assert-Goal4BSave
+
+    Write-Host "`nPASS: Goal 4B Home and restart acceptance, Goal 4A Study choice, every Goal 2 regression, Gate 3A Inspector, and Gate 3B visual acceptance verified."
 }
 finally
 {
@@ -648,4 +813,6 @@ finally
     Remove-VerificationRuntimeRoot $atlasRuntimeRoot (Join-Path $repoRoot ".tools\godot-atlas-verify-")
     Remove-VerificationRuntimeRoot $gate3bAtlasRuntimeRoot (Join-Path $repoRoot ".tools\godot-gate3b-atlas-verify-")
     Remove-VerificationRuntimeRoot $gate3bPlayerRuntimeRoot (Join-Path $repoRoot ".tools\godot-gate3b-player-verify-")
+    Remove-VerificationRuntimeRoot $goal4ARuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4a-verify-")
+    Remove-VerificationRuntimeRoot $goal4BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4b-verify-")
 }

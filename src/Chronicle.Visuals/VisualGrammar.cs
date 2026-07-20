@@ -245,6 +245,13 @@ public static class VisualGrammar
         }
         else if (string.Equals(
                      cell.DurableIdentity,
+                     ChronicleState.HomeHearthstoneIdentity,
+                     StringComparison.Ordinal))
+        {
+            Add(input, cell.Address, "subject.home-hearthstone", layers);
+        }
+        else if (string.Equals(
+                     cell.DurableIdentity,
                      SkyStratum.LandmarkName,
                      StringComparison.Ordinal))
         {

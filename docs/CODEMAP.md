@@ -17,6 +17,7 @@ permitted work in the [Active Handoff Contract](HANDOFF.md).
 | See exactly what may be worked on now | [Active Handoff Contract](HANDOFF.md) |
 | Build, test, launch, or open the editor | [Development](DEVELOPMENT.md) |
 | Understand a current slice's exact promise | The contract linked from the Roadmap |
+| Assess the external P-GEN candidate or prepare an E5 decision | [P-GEN E4.5 readiness review](P-GEN-E4-5-READINESS-REVIEW.md) |
 | Understand a hard-to-reverse decision | [ADR 0001](adr/0001-use-godot-with-a-csharp-chronicle-core.md) and [ADR 0002](adr/0002-pin-world-grammar-version-per-chronicle.md) |
 | Check external technical references | [References](REFERENCES.md) |
 
@@ -59,18 +60,23 @@ without Godot.
 
 | Source | Owns | Interface or callers |
 | --- | --- | --- |
-| [`ChronicleSimulation.cs`](../src/Chronicle.Core/ChronicleSimulation.cs) | Command application, clock pulses, movement, Loadout use, target validity, Incarnation death/replacement, and command results | `ChronicleSimulation.Apply`, `AdvanceClockPulse`, `ValidTargetsForSlot`; used by Godot and Core checks |
-| [`ChronicleState.cs`](../src/Chronicle.Core/ChronicleState.cs) | Serializable Chronicle state, addresses, clock and Incarnation lifecycle state, current Slice 2 Study state, deterministic tick advancement, versioned save migration, and JSON codec | `ChronicleState`, `WorldAddress`, `ChronicleSaveCodec` |
-| [`WorldArea.cs`](../src/Chronicle.Core/WorldArea.cs) | Versioned deterministic semantic World Grammar over bounded absolute-address rectangles, adjacency context, motif identity, and durable-subject overlays | `WorldArea.Generate`, `WorldRectangle`, `WorldCell`; used by player views, inspector, and Core checks |
-| [`Loadout.cs`](../src/Chronicle.Core/Loadout.cs) | Current authored word identifiers, eight-slot Loadout state, Expression shape, and Loadout invariants | `ChronicleVerb`, `ChronicleNoun`, `LoadoutSlot`, `LoadoutState` |
+| [`ChronicleSimulation.cs`](../src/Chronicle.Core/ChronicleSimulation.cs) | Command application, current Study Source and Home-context queries, clock pulses, movement, Loadout use, target validity, Incarnation death/replacement, and command results | `ChronicleSimulation.Apply`, `CurrentStudySource`, `HomeContext`, `AdvanceClockPulse`, `ValidTargetsForSlot`; used by Godot and Core checks |
+| [`ChronicleState.cs`](../src/Chronicle.Core/ChronicleState.cs) | Serializable Chronicle state, singular Home, addresses, clock and Incarnation lifecycle state, deterministic tick advancement, strict current v3 canonical persistence, and explicit v2/v1/pre-envelope predecessor migration | `ChronicleState`, `WorldAddress`, `ChronicleSaveCodec` |
+| [`Home.cs`](../src/Chronicle.Core/Home.cs) | Singular Home identity/material facts, current-site eligibility snapshot, and derived physical Return Route snapshot | `HomeState`, `HomeContextSnapshot`, `HomeSiteSnapshot`, `ReturnRouteSnapshot` |
+| [`WordCatalogue.cs`](../src/Chronicle.Core/WordCatalogue.cs) | Stable Word identities and the authored read-only `Fly`, `Found`, `Stone`, and `Bell` definitions, kinds, meanings, thresholds, and compatibility | `WordIds`, `WordCatalogue.Words`, `WordCatalogue.Get`; used by Core rules, Godot presentation, and Core checks |
+| [`LanguageState.cs`](../src/Chronicle.Core/LanguageState.cs) | Canonical ordered Codex membership, word-specific Understanding, one active source/word pursuit, and their strict current/legacy JSON shapes | `CodexState`, `StudyState`, `WordUnderstanding` |
+| [`StudySources.cs`](../src/Chronicle.Core/StudySources.cs) | Generated Bell Study Source identity, qualities, contextual offers, word-specific yield, and regenerated public snapshot | `StudySourceSnapshot` and `StudyOfferSnapshot` through `ChronicleSimulation.CurrentStudySource` |
+| [`WorldArea.cs`](../src/Chronicle.Core/WorldArea.cs) | Versioned deterministic semantic World Grammar over bounded absolute-address rectangles, adjacency context, motif identity, and loose-Stone/Hearthstone durable-subject overlays | `WorldArea.Generate`, `WorldRectangle`, `WorldCell`; used by player views, inspector, and Core checks |
+| [`Loadout.cs`](../src/Chronicle.Core/Loadout.cs) | Eight-slot Loadout state, `WordId` Expression shape, catalogue-kind/Codex/compatibility validation, and duplicate-Verb invariant | `LoadoutSlot`, `LoadoutState` |
 | [`SurfacePatch.cs`](../src/Chronicle.Core/SurfacePatch.cs) | Retained World Grammar version 0 surface semantics | Legacy regeneration for predecessor Chronicles |
 | [`SkyStratum.cs`](../src/Chronicle.Core/SkyStratum.cs) | Retained World Grammar version 0 sky semantics and The Bell That Fell Up constants | Legacy regeneration plus durable Landmark address and identity |
 | [`DeterministicHash.cs`](../src/Chronicle.Core/DeterministicHash.cs) | Stable seed/address hashing shared by deterministic generation | Internal generation helper; not a gameplay interface |
 
-The current `ChronicleVerb`, `ChronicleNoun`, and `StoneUnderstanding` values are
-small Slice 2 scaffolds. The mature authored Word Catalogue and generated Study
-Sources are product commitments, not permission to grow these enums or the
-Bell-specific state without a vertical-slice contract.
+World Grammar version `2` delegates physical Surface/Sky cells to version `1`
+and adds the two-offer Bell Study Source. Version `0` retains its single-Stone
+compatibility source so predecessor Chronicles can finish already-started
+Study. Generated source snapshots and authored catalogue presentation never
+enter Chronicle saves.
 
 ### `Chronicle.VisualPack`
 
@@ -99,7 +105,7 @@ decision.
 
 | Source | Owns | Must not own |
 | --- | --- | --- |
-| [`ChronicleApp.cs`](../src/Chronicle.Godot/ChronicleApp.cs) | Scene construction, input-to-command translation, death confirmation, replacement UI, clock pulse delivery, save-file I/O, UI readouts, and headless Godot acceptance journey | Movement legality, death eligibility, replacement continuity, Study progress, Loadout compatibility, target validity, generation meaning, or persistence semantics |
+| [`ChronicleApp.cs`](../src/Chronicle.Godot/ChronicleApp.cs) | Scene construction, nonbinding Starting Vector and mixed-Codex Loadout controls, input-to-command translation, Home/Hearthstone/physical-route readouts, death/replacement UI, clock pulse delivery, save-file I/O, and headless Godot acceptance journeys | Movement legality, Home-site eligibility, Return Route calculation or movement, death eligibility, replacement continuity, Study progress, Loadout compatibility, target validity, generation meaning, or persistence semantics |
 | [`WorldVisualView.cs`](../src/Chronicle.Godot/WorldVisualView.cs) | One batched player-view draw surface over a shared `VisualRenderPlan` | Semantic generation, variant selection, or durable world state |
 | [`VisualPackGodotAdapter.cs`](../src/Chronicle.Godot/VisualPackGodotAdapter.cs) | Indexed-atlas expansion, native and overview rasterization, atlas-region textures, and Godot draw adaptation | Pack authorship, semantic mapping, or gameplay rules |
 | [`WorldAtlasInspector.cs`](../src/Chronicle.Godot/WorldAtlasInspector.cs) and [`WorldAtlasInspector.tscn`](../src/Chronicle.Godot/WorldAtlasInspector.tscn) | Direct developer-only bounded World Grammar inspection, semantic diagnostics, shared Visual Grammar preview, and deterministic capture | Player save I/O, Chronicle advancement, generation rules, or a player-facing Atlas |
@@ -116,10 +122,17 @@ variation is deterministic and transient, never serialized simulation state.
 | --- | --- |
 | [`Chronicle.Core.Checks/Program.cs`](../checks/Chronicle.Core.Checks/Program.cs) | Dependency-free Core determinism, commands, ticks, generation, replay, migration, and save/load contracts |
 | [`Chronicle.Visuals.Checks/Program.cs`](../checks/Chronicle.Visuals.Checks/Program.cs) | Pack vocabulary and bounds, exact adjacency-edge compatibility, deterministic variants, mapping, layering, crop, overlap, numeric-address edges, and render-plan digest |
-| [`verify.ps1`](../checks/verify.ps1) | Packaged .NET builds, Core and Visual checks, isolated 16 px and 20 px player/Inspector acceptance, save non-mutation, deterministic review artifacts, Godot editor callback, Goal 2 control journey, and next-launch restoration |
+| [`verify.ps1`](../checks/verify.ps1) | Packaged .NET builds, Core and Visual checks, isolated 16 px and 20 px player/Inspector acceptance, save non-mutation, deterministic review artifacts, Godot editor callback, Goal 2 regressions, the Goal 4A two-choice journey across partial/completed restarts, and the Goal 4B two-process Home save/restart gate with strict v3 save inspection |
 
 Exact supported commands and the packaged executable locations remain in the
 [Development guide](DEVELOPMENT.md).
+
+### Repository entry points
+
+| Source | Owns |
+| --- | --- |
+| [`play.ps1`](../play.ps1) | Canonical game build/launch using the normal Godot save, a named isolated profile, or a generated fresh profile |
+| [`open-editor.ps1`](../open-editor.ps1) | Godot editor launch with the packaged .NET environment |
 
 ## Documentation map
 
@@ -131,11 +144,15 @@ Exact supported commands and the packaged executable locations remain in the
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Runtime seams, ownership, persistence/generation shape, and technical constraints |
 | [`ROADMAP.md`](ROADMAP.md) | Slice sequence, acceptance headlines, and links to implementation contracts |
 | [`GOAL-2-A-WORD-KEPT.md`](GOAL-2-A-WORD-KEPT.md) | Goal 2's three UAT-gated vertical slices |
+| [`GOAL-4-THREE-OPENINGS.md`](GOAL-4-THREE-OPENINGS.md) | Goal 4's sequential 4A Study choice, 4B Home, and 4C conflict contract |
+| [`GOAL-4A-UAT.md`](GOAL-4A-UAT.md) | Exact isolated 20-pixel player journey, acceptance questions, and stop boundary for Slice 4A |
+| [`GOAL-4B-UAT.md`](GOAL-4B-UAT.md) | Exact isolated 20-pixel Home, Hearthstone, physical Return Route, enlarged-playspace journey, and stop boundary for Slice 4B |
 | [`SLICE-1-FIRST-HORIZON.md`](SLICE-1-FIRST-HORIZON.md) | Historical Slice 1 implementation and acceptance contract |
 | [`SLICE-3-WORLD-VISUAL-GRAMMAR.md`](SLICE-3-WORLD-VISUAL-GRAMMAR.md) | World Grammar, developer Atlas Inspector, and Visual Grammar contract |
 | [`GATE-3B-VISUAL-UAT.md`](GATE-3B-VISUAL-UAT.md) | Gate 3B candidate comparison, annotated four-image review sheet, interactive journey, and exact density decision |
 | [`PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md`](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md) | Full pure-C# compiler, compiled-pack, composer, Godot-adapter, conformance, and drop-in contract for the parallel candidate engine |
 | [`CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md`](CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md) | Copy-paste E0–E4 build authority for a separate engine workspace; explicitly forbids Palimpsest integration |
+| [`P-GEN-E4-5-READINESS-REVIEW.md`](P-GEN-E4-5-READINESS-REVIEW.md) | Reproduced external evidence, unresolved E5 ownership questions, vocabulary drift, and the future adoption gate |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Exact build, test, editor, and launch instructions |
 | [`REFERENCES.md`](REFERENCES.md) | Primary external technical references |
 | [`HANDOFF.md`](HANDOFF.md) | Current execution contract: active gate, permitted scope, known proof, stop condition, and forbidden next work |
@@ -165,6 +182,7 @@ Exact supported commands and the packaged executable locations remain in the
 
 - [Slice 1 — First Horizon](SLICE-1-FIRST-HORIZON.md)
 - [Goal 2 — A Word Kept After Death](GOAL-2-A-WORD-KEPT.md)
+- [Goal 4 — Three Openings, One Chronicle](GOAL-4-THREE-OPENINGS.md)
 - [Slice 3 — A World With Shape](SLICE-3-WORLD-VISUAL-GRAMMAR.md)
 - [Gate 3B — Visual UAT](GATE-3B-VISUAL-UAT.md)
 - [Chronicle Visual Engine — Drop-in Specification](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md)

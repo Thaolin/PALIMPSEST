@@ -1207,8 +1207,8 @@ public partial class WorldAtlasInspector : Node
             _seed == expectedSeed &&
             _generationInput.Seed == expectedSeed &&
             _generationInput.Tick == 0 &&
-            _generationInput.WorldGrammarVersion == 1,
-            "Fixture and numeric-seed actions must create only an ephemeral grammar-v1 query input.");
+            _generationInput.WorldGrammarVersion == 2,
+            "Fixture and numeric-seed actions must create only an ephemeral current-grammar query input.");
     }
 
     private void VerifyCaptureMetadata()

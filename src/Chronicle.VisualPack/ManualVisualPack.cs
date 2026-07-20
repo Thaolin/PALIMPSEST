@@ -53,6 +53,7 @@ public static class ManualVisualPack
         AddSubjectsAndActor(builder);
         AddEmphasis(builder);
         AddGlyphs(builder);
+        AddHearthstone(builder);
 
         return builder.Build(
             packId: "chronicle.gate3b.manual",
@@ -278,6 +279,18 @@ public static class ManualVisualPack
             Actor,
             [ActorDark, Actor, ActorLight],
             PaintActor);
+    }
+
+    private static void AddHearthstone(AtlasBuilder builder)
+    {
+        builder.Add(
+            "subject.home-hearthstone",
+            "subject.home-hearthstone",
+            0,
+            VisualLayerClass.LandmarkOrSubject,
+            Gold,
+            [StoneDark, Stone, StoneLight, GoldDark, Gold, GoldBright],
+            PaintHearthstone);
     }
 
     private static void AddEmphasis(AtlasBuilder builder)
@@ -687,6 +700,30 @@ public static class ManualVisualPack
         canvas.Diamond(s / 2, s / 2 + 1, s / 3 - 2, Stone);
         canvas.Triangle(s / 3, s * 2 / 3, s / 2, s / 3, s * 3 / 4, s * 2 / 3, StoneLight);
         canvas.Line(s / 2, s / 3, s * 2 / 3, s / 2, ActorLight);
+    }
+
+    private static void PaintHearthstone(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        var baseY = s - (s == 20 ? 3 : 2);
+        var baseHalf = s == 20 ? 6 : 5;
+        var peakY = s == 20 ? 5 : 4;
+        canvas.Triangle(center - baseHalf, baseY, center, peakY, center + baseHalf, baseY, StoneDark);
+        canvas.Triangle(
+            center - baseHalf + 2,
+            baseY - 1,
+            center,
+            peakY + 2,
+            center + baseHalf - 2,
+            baseY - 1,
+            Stone);
+        canvas.Horizontal(center - baseHalf + 2, center + baseHalf - 2, baseY - 2, StoneLight);
+
+        var hearthRadius = s == 20 ? 3 : 2;
+        canvas.Diamond(center, center, hearthRadius, GoldDark);
+        canvas.Diamond(center, center, hearthRadius - 1, Gold);
+        canvas.Vertical(center, center - 1, center + 1, GoldBright);
     }
 
     private static void PaintActor(PixelCanvas canvas)

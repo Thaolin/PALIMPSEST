@@ -6,6 +6,7 @@ VerifyConnectedSurfaceFeaturesUseExplicitCardinalMasks();
 VerifyGate3BManualPacksResolveRequiredVisualVocabulary();
 VerifyGate3BCompositionCropsAndLayersTheSharedSkySnapshot();
 VerifyVisualCompositionAtNumericWorldEdges();
+VerifyHomeHearthstoneComposesOverItsSurfaceRidge();
 Console.WriteLine(
     "PASS: Gate 3B compiled visual packs, deterministic composition, connected features, and overlap verified.");
 
@@ -73,6 +74,82 @@ static void VerifyVisualCompositionAtNumericWorldEdges()
         VisualViewportBounds.OffsetClamped(long.MinValue, -1) == long.MinValue &&
         VisualViewportBounds.OffsetClamped(long.MaxValue, 1) == long.MaxValue,
         "Visual panning must stop at the numeric storage limit without wrapping.");
+}
+
+static void VerifyHomeHearthstoneComposesOverItsSurfaceRidge()
+{
+    var homeAddress = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 3);
+    var looseStoneAddress = ChronicleState.InitialLooseStoneAddress;
+    var visibleBounds = new WorldRectangle(MinX: 0, MinY: 0, Width: 2, Height: 4);
+    var semanticHaloBounds = new WorldRectangle(MinX: -1, MinY: -1, Width: 4, Height: 6);
+    var state = ChronicleState.Begin(41_337) with
+    {
+        Address = homeAddress,
+        Home = new HomeState(
+            "holding.home",
+            "The First Hearth",
+            homeAddress,
+            FoundedTick: 0,
+            FoundingIncarnationId: 1,
+            HomeMaterialState.HearthstoneRaised),
+    };
+    var stateBeforeComposition = state;
+    var semanticArea = WorldArea.Generate(
+        state,
+        SurfacePatch.SurfaceStratum,
+        semanticHaloBounds);
+    var homeCell = semanticArea.Cells.Single(cell => cell.Address == homeAddress);
+
+    Assert(
+        homeCell.Feature == WorldFeature.Stone &&
+        homeCell.DurableIdentity == "The First Hearthstone",
+        "The confirmed Home fixture must retain its generated Stone ridge and add only The First Hearthstone identity.");
+
+    foreach (var cellSize in new[] { 16, 20 })
+    {
+        var pack = ManualVisualPack.CreateGate3B(cellSize);
+        var input = new VisualCompositionInput(
+            semanticArea,
+            visibleBounds,
+            state.Seed,
+            pack,
+            VisualStyleVersion: 1,
+            IncarnationAddress: null,
+            TargetAddresses: [],
+            SelectedAddresses: []);
+        var first = VisualGrammar.Compose(input);
+        var second = VisualGrammar.Compose(input);
+
+        Assert(
+            first.Marks.Any(mark =>
+                mark.Address == homeAddress &&
+                mark.FamilyId == "feature.surface.ridge" &&
+                mark.Layer == VisualLayerClass.EnvironmentalFeature),
+            "The Hearthstone cell must retain its ridge environmental-feature mark.");
+        Assert(
+            first.Marks.Any(mark =>
+                mark.Address == looseStoneAddress &&
+                mark.VisualId == "subject.loose-stone" &&
+                mark.Layer == VisualLayerClass.LandmarkOrSubject),
+            "The separate loose Stone must retain its subject.loose-stone mapping.");
+        Assert(
+            first.Digest == second.Digest &&
+            first.Marks.SequenceEqual(second.Marks) &&
+            state == stateBeforeComposition,
+            "Hearthstone composition must be deterministic and read-only.");
+
+        var hearthstone = pack.Resolve("subject.home-hearthstone");
+        Assert(
+            hearthstone.VisualId == "subject.home-hearthstone" &&
+            hearthstone.LayerClass == VisualLayerClass.LandmarkOrSubject,
+            "Each compiled pack must provide subject.home-hearthstone at the LandmarkOrSubject layer.");
+        Assert(
+            first.Marks.Any(mark =>
+                mark.Address == homeAddress &&
+                mark.VisualId == "subject.home-hearthstone" &&
+                mark.Layer == VisualLayerClass.LandmarkOrSubject),
+            "The Hearthstone must compose as subject.home-hearthstone over its existing ridge.");
+    }
 }
 
 static void VerifyGate3BManualPacksResolveRequiredVisualVocabulary()

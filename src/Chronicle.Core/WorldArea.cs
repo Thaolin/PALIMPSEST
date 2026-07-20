@@ -130,7 +130,7 @@ public sealed class WorldArea
 
     private static CellSemantics SemanticsAt(ChronicleState state, WorldAddress address)
     {
-        if (state.WorldGrammarVersion is not (0 or 1))
+        if (state.WorldGrammarVersion is not (0 or 1 or 2))
         {
             throw new InvalidOperationException(
                 $"Unsupported World Grammar version '{state.WorldGrammarVersion}'.");
@@ -138,7 +138,7 @@ public sealed class WorldArea
 
         if (string.Equals(address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal))
         {
-            if (state.WorldGrammarVersion == 1)
+            if (state.WorldGrammarVersion is 1 or 2)
             {
                 return OverlayDurableSubject(state, address, Version1SurfaceAt(state.Seed, address));
             }
@@ -165,7 +165,7 @@ public sealed class WorldArea
             return OverlayDurableSubject(state, address, legacySurface);
         }
 
-        CellSemantics sky = state.WorldGrammarVersion == 1
+        CellSemantics sky = state.WorldGrammarVersion is 1 or 2
             ? Version1SkyAt(state.Seed, address)
             : SkyStratum.TerrainAt(state.Seed, address.X, address.Y) switch
             {
@@ -190,14 +190,26 @@ public sealed class WorldArea
     private static CellSemantics OverlayDurableSubject(
         ChronicleState state,
         WorldAddress address,
-        CellSemantics generated) =>
-        state.LooseStoneAddress == address && generated.Feature != WorldFeature.Landmark
-            ? generated with
+        CellSemantics generated)
+    {
+        var withLooseStone =
+            state.LooseStoneAddress == address &&
+            generated.Feature != WorldFeature.Landmark
+                ? generated with
+                {
+                    Feature = WorldFeature.Stone,
+                    DurableIdentity = ChronicleState.LooseStoneIdentity,
+                }
+                : generated;
+
+        return withLooseStone.DurableIdentity is null &&
+               state.Home?.Address == address
+            ? withLooseStone with
             {
-                Feature = WorldFeature.Stone,
-                DurableIdentity = ChronicleState.LooseStoneIdentity,
+                DurableIdentity = ChronicleState.HomeHearthstoneIdentity,
             }
-            : generated;
+            : withLooseStone;
+    }
 
     private static CellSemantics Version1SkyAt(long seed, WorldAddress address)
     {
