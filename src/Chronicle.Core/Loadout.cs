@@ -2,37 +2,51 @@ using System.Text.Json.Serialization;
 
 namespace Chronicle.Core;
 
-public enum ChronicleVerb
-{
-    Fly = 1,
-}
-
-public enum ChronicleNoun
-{
-    Stone = 1,
-}
-
 public readonly record struct LoadoutSlot(
-    ChronicleVerb? Verb = null,
-    ChronicleNoun? Noun = null)
+    WordId? Verb = null,
+    WordId? Noun = null)
 {
     [JsonIgnore]
-    public bool IsEmpty => Verb is null;
+    public bool IsEmpty => Verb is null && Noun is null;
 
     [JsonIgnore]
-    public bool IsIntrinsicFly => Verb == ChronicleVerb.Fly && Noun is null;
+    public bool IsIntrinsicFly => Verb == WordIds.Fly && Noun is null;
 
     [JsonIgnore]
-    public bool IsFlyStone => Verb == ChronicleVerb.Fly && Noun == ChronicleNoun.Stone;
+    public bool IsIntrinsicFound => Verb == WordIds.Found && Noun is null;
 
     [JsonIgnore]
-    public string DisplayName => this switch
+    public bool IsIntrinsicSmash => Verb == WordIds.Smash && Noun is null;
+
+    [JsonIgnore]
+    public bool IsFittedFly => Verb == WordIds.Fly && Noun is not null;
+
+    [JsonIgnore]
+    public string DisplayName
     {
-        { IsIntrinsicFly: true } => "FLY",
-        { IsFlyStone: true } => "FLY[STONE]",
-        _ when IsEmpty => "—",
-        _ => "?",
-    };
+        get
+        {
+            if (IsEmpty)
+            {
+                return "—";
+            }
+
+            if (Verb is not { } verbId ||
+                !WordCatalogue.TryGet(verbId, out var verb))
+            {
+                return "?";
+            }
+
+            if (Noun is not { } nounId)
+            {
+                return verb.DisplayName.ToUpperInvariant();
+            }
+
+            return WordCatalogue.TryGet(nounId, out var noun)
+                ? $"{verb.DisplayName}[{noun.DisplayName}]".ToUpperInvariant()
+                : "?";
+        }
+    }
 }
 
 public readonly record struct LoadoutState(
@@ -76,7 +90,7 @@ public readonly record struct LoadoutState(
     };
 
     internal static LoadoutState InitialFor(CodexState codex) => codex.HasFly
-        ? Empty.WithSlot(0, new LoadoutSlot(ChronicleVerb.Fly))
+        ? Empty.WithSlot(0, new LoadoutSlot(WordIds.Fly))
         : Empty;
 
     internal LoadoutState WithSlot(int index, LoadoutSlot slot) => index switch
@@ -101,30 +115,48 @@ public readonly record struct LoadoutState(
                 throw new InvalidOperationException("A Loadout Noun requires a Verb.");
             }
 
-            if (slot.Verb is { } verb && verb != ChronicleVerb.Fly)
+            if (slot.Verb is not { } verbId)
             {
-                throw new InvalidOperationException($"Unknown Loadout Verb value '{verb}'.");
+                continue;
             }
 
-            if (slot.Noun is { } noun && noun != ChronicleNoun.Stone)
+            if (!WordCatalogue.TryGet(verbId, out var verb) || verb.Kind != WordKind.Verb)
             {
-                throw new InvalidOperationException($"Unknown Loadout Noun value '{noun}'.");
+                throw new InvalidOperationException($"Unknown Loadout Verb identity '{verbId}'.");
             }
 
-            if (slot.Verb == ChronicleVerb.Fly && !codex.HasFly)
+            if (!codex.Contains(verbId))
             {
-                throw new InvalidOperationException("A Loadout cannot contain Fly before it is in the Codex.");
+                throw new InvalidOperationException(
+                    $"A Loadout cannot contain {verb.DisplayName} before it is in the Codex.");
             }
 
-            if (slot.Noun == ChronicleNoun.Stone && !codex.HasStone)
+            if (slot.Noun is not { } nounId)
             {
-                throw new InvalidOperationException("A Loadout cannot contain Stone before it is in the Codex.");
+                continue;
+            }
+
+            if (!WordCatalogue.TryGet(nounId, out var noun) ||
+                noun.Kind != WordKind.Noun ||
+                !verb.CompatibleNouns.Contains(nounId))
+            {
+                throw new InvalidOperationException(
+                    $"Loadout Noun identity '{nounId}' is incompatible with {verb.DisplayName}.");
+            }
+
+            if (!codex.Contains(nounId))
+            {
+                throw new InvalidOperationException(
+                    $"A Loadout cannot contain {noun.DisplayName} before it is in the Codex.");
             }
         }
 
-        if (Slots.Count(slot => slot.Verb == ChronicleVerb.Fly) > 1)
+        if (Slots
+            .Where(slot => slot.Verb is not null)
+            .GroupBy(slot => slot.Verb)
+            .Any(group => group.Count() > 1))
         {
-            throw new InvalidOperationException("Fly cannot occupy more than one Loadout slot.");
+            throw new InvalidOperationException("A Verb cannot occupy more than one Loadout slot.");
         }
     }
 }

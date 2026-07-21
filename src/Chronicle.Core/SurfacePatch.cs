@@ -54,6 +54,6 @@ public sealed class SurfacePatch
         return new SurfacePatch(state.Address, Array.AsReadOnly(tiles));
     }
 
-    private static SurfaceTerrain TerrainAt(long seed, long x, long y) =>
+    internal static SurfaceTerrain TerrainAt(long seed, long x, long y) =>
         (SurfaceTerrain)(DeterministicHash.Coordinates(seed, x, y) & 3u);
 }

@@ -23,15 +23,17 @@ way to meet the world, while every Chronicle can eventually support fighting,
 delving, making, commanding, settlement, and stranger combinations.
 
 The player finds power words embodied in ruins, creatures, artifacts,
-Landmarks, materials, and phenomena. Verbs say what can be done. Nouns say what
-it can be done to or through. Fitting compatible words together creates
-Expressions such as `Command[Animal]`, `Smash[Face]`, or `Burrow[Stone]`.
+Landmarks, materials, and phenomena. Verbs say what magic occurs. Modifiers
+link to a Verb to change how it acts: farther, faster, wider, more precisely,
+at greater scale, or with lasting consequences. The player invokes the
+resulting Expression against an actual Target in the Chronicle rather than
+collecting a Word for every kind of subject.
 
 The meanings are drawn from a large authored Word Catalogue. The Chronicle
-does not invent a new definition for `Fly` or `Stone`; it generates the
-situation through which those words can be understood. A bell that fell upward
-might offer `Invert`, `Bell`, or a rarer word made plausible by that particular
-artifact and its history.
+does not invent a new definition for `Fly`, `Quickly`, or `Lasting`; it
+generates the situation through which those words can be understood. A bell
+that fell upward might offer a movement Verb, a speed Modifier, or a rarer Word
+made plausible by that particular artifact and its history.
 
 Words are more valuable than levels. They enter the durable Codex, but only a
 bounded selection can be active in a body's Loadout. The player therefore
@@ -42,8 +44,10 @@ fixed class tree.
 
 - **Combat** begins through confrontation: surviving dangerous encounters,
   defending people and places, and reaching Study Sources whose risk is part of
-  their value. Combat remains deliberate and consequence-bearing, never a
-  reflex arena detached from the world.
+  their value. Physical actions, equipment, terrain, autonomous Companions, and
+  Invocations buy time and opportunity for one another. Combat remains
+  deliberate and consequence-bearing, never a reflex arena detached from the
+  world.
 - **Explore** begins through reach: crossing terrain, entering ruins and
   dungeons, finding passages between Strata, and discovering the conditions
   under which new words and Worlds become visible.
@@ -87,12 +91,33 @@ seed, and persistent events. New territory is generated as it becomes
 reachable; the authored grammar gives it causes, constraints, and recurring
 visual language instead of featureless noise.
 
+### One world, many Areas
+
+The Chronicle uses one character-scale grid wherever the Incarnation can act.
+Open wilderness, Home, settlements, sprawling dungeons, temples, ruins, caves,
+and stranger nested spaces may be distinct generated Areas, but they share the
+same movement, Combat, building, Heartbeats, and material rules. Passages join
+them without turning entry into a separate game mode.
+
+Scale is expressed through composition. A tree may occupy roughly one cell; a
+mountain is a region of foothills, slopes, cliffs, passes, caves, and peaks.
+Combat can happen in open territory or deep inside a generated site. Creature
+Grammar can produce arbitrarily many deterministic inhabitants from authored
+body plans, materials, traits, capabilities, ecologies, behaviors, and visual
+kits; consequential creatures become persistent Agents rather than disposable
+spawns.
+
 ### Agents are people, not interface pieces
 
 Agents retain identity, needs, relationships, and agency. Command communicates
 high-level intent with more directive force than Suggest. Command can make a
 dangerous request valid without making obedience automatic; an Agent may still
 interpret, negotiate, delay, refuse, leave, or betray.
+
+A Companion fights from its own identity, relationship, and understanding of a
+Directive rather than waiting for a unit order each tick. Taming can develop a
+beast's bond and learned behavior, while leadership can improve a group's
+coordination and willingness; neither removes agency.
 
 ### Absence produces history
 
@@ -107,12 +132,25 @@ The Chronicle runs on a pausable fixed clock. No meaningful decision depends
 on input speed. Danger can be severe, but the game rewards understanding,
 preparation, and strange solutions rather than execution tests.
 
+Invocations of ordinary combat and exploration Expressions remain responsive
+even when deeply linked. In-world minutes, hours, or days are reserved for
+effects whose scale, persistence, or chosen Modifiers justify that commitment;
+safe waiting advances to the next meaningful interruption rather than asking
+the player to watch a timer.
+
+Combat actions need not share one timing shape. Movement, striking, shooting,
+guarding, and equipment use may resolve quickly; an Invocation may require
+interruptible Preparation, release a consequence that resolves later, impose
+Recovery while other actions remain available, or become a true ritual. Every
+delay must expose a choice, reaction, or danger rather than empty waiting.
+
 ### Power scales through consequence
 
-Early Expressions move a body or a stone. Mature Expressions may redirect
-Agents, open Strata, alter settlements, or participate in world-scale change.
-Growth should expand what the player can mean and affect, not merely increase a
-damage number.
+Early Expressions burn one obstacle, smash one resisting subject, or move one
+body. Mature Expressions may redirect Agents, open Strata, alter settlements,
+or make a mountain into a persistent floating base. Growth expands which real
+Targets the player's magic can affect and what consequences it can leave, not
+merely a damage number.
 
 ## The five connected loops
 
@@ -123,8 +161,9 @@ choose what to Study → gain Understanding → keep the learned word in the Cod
 
 ### Build
 
-Choose from the Codex → configure a bounded Loadout → form Expressions → use
-them to change the Chronicle.
+Choose Verbs and Modifiers from the Codex → configure Verb slots and Links
+within shared Load → invoke the resulting Expressions against Chronicle
+Targets → leave material consequences.
 
 ### Death and rebirth
 
@@ -161,6 +200,12 @@ It can be built on a surface, in the sky, beneath a mountain, deep underground,
 or in a stranger World. Its form comes from the place, materials, inhabitants,
 and history rather than from a universal base template.
 
+Home occupies the same character-scale spatial fabric as adventure. Its walls,
+yards, rooms, residents, attackers, and material changes are ordinary Chronicle
+state, not a detached base-management board. Enterable buildings and deeper
+spaces may connect through Passages while remaining part of the same systemic
+world.
+
 Home is an anchor, not a compulsory management game. A player may devote most
 of a Chronicle to construction, production, Agents, and defense. Another may
 keep a modest refuge and spend nearly all their time finding generated ruins,
@@ -180,17 +225,20 @@ The hour counts below are a scale sketch, not a pacing contract.
 
 The player states an Intent, receives a startling First Verb, and sees a First
 Horizon that was inaccessible moments earlier. They encounter at least one
-phenomenon worth studying and make one persistent change. The opening proves
+phenomenon worth studying, see how a Modifier or difficult Target could change
+that Verb's possibilities, and make one persistent change. The opening proves
 that the world contains rules the player did not arrive knowing.
 
 ### Around ten hours
 
-The Codex supports several genuinely different Loadouts. The player has crossed
-multiple Strata, remembers particular Landmarks, and may have survived more
-than one Incarnation. A first Home gives discoveries somewhere material to
-accumulate. Agents, tools, weapons, armor, artifacts, structures, and crafted
-objects begin connecting exploration to settlement rather than forming a
-detached recipe treadmill.
+The Codex supports several genuinely different Loadouts, including competing
+ways to link the same Verb. Shared Load makes the player choose between breadth
+and one or more deep Expressions. The player has crossed multiple Strata,
+remembers particular Landmarks, and may have survived more than one
+Incarnation. A first Home gives discoveries somewhere material to accumulate.
+Agents, tools, weapons, armor, artifacts, structures, and crafted objects begin
+connecting exploration to settlement rather than forming a detached recipe
+treadmill.
 
 ### Around fifty hours
 
@@ -215,8 +263,11 @@ a generic endgame menu.
 
 A player may find a Palimpsest and pursue a World Claim: found a power, remake
 a region, escape the Chronicle, become a catastrophe, or discover another
-conclusion generated by that world's conditions. None is a mandatory victory
-screen, and one Chronicle may contain several incompatible Claims.
+conclusion generated by that world's conditions. This is where the true
+long-horizon chase opens rather than where play must end. A Palimpsest might
+offer mutually exclusive authored transformations such as Awakening a Power
+Word, but its exact affordances remain unsettled. No choice is a mandatory
+victory screen, and one Chronicle may contain several incompatible Claims.
 
 ## Home, Holdings, and making
 
@@ -230,6 +281,19 @@ Making is grounded in Chronicle matter. Resources become tools, weapons,
 armor, structures, and artifacts whose provenance and loss can matter. The
 goal is not a universal crafting checklist; it is to let discovery and material
 history change what a Holding and its people can do.
+
+Home may eventually provide material infrastructure for extreme linked
+Expressions, especially durable or world-scale acts. Ordinary fighting and
+exploration must remain viable without long idle waits or compulsory settlement
+specialization; deep magic may move its price among Load, material power, time,
+notice, instability, and collateral instead of imposing every cost at once.
+
+Some discoveries add small amounts of Load, but most long-term capacity comes
+from vulnerable Load Sources built at Home. Destruction of those Sources
+constrains the next Attunement, including a replacement Incarnation, rather
+than remotely disabling an expedition already in progress. Rebuilding restores
+the lost possibility; continued development eventually supports magic that
+reshapes the World for better or worse.
 
 The player gives Agents intent through capabilities such as Command. Agents
 remain responsible for how they understand and act on it. A successful Holding
@@ -254,15 +318,22 @@ where another World or passage becomes reachable. Burrowing may open an
 underworld, while a rarer deep-travel Verb can cross a lower frontier that
 ordinary digging cannot.
 
-Using a Verb repeatedly should create opportunities rather than a grind meter.
+Using a Word repeatedly should create opportunities rather than a grind meter.
 Flying into difficult heights may expose phenomena, creatures, artifacts, or
-tomes that offer `Soar`; holding the Fly input thousands of times should not
-automatically award it. Discovery remains the source of new language.
+tomes that offer a new Verb or Modifier; holding Fly thousands of times should
+not automatically rank it up or unlock another Link. Discovery remains the
+source of new language.
 
 The Chronicle is unbounded in reach, not simulated everywhere at full detail.
 Generated but untouched territory waits deterministically. Known distant
 places accumulate causal history at an appropriate resolution, while the area
 around the current Incarnation receives full attention.
+
+A World Atlas may eventually let the player read this larger shape through the
+same symbolic visual language as the local world. It reveals geography,
+Landmarks, routes, and history that the Chronicle has made knowable; it is not
+an omniscient miniature tactical scene, a declaration of a finite world edge,
+or automatic fast travel.
 
 ## Palimpsests
 
@@ -275,7 +346,8 @@ Their exact affordances remain intentionally unsettled. One strong direction is
 to let a player inscribe a Decree: a bounded, deterministic, legible rule
 change whose scope, cost, and consequences arise from the Chronicle. Another is
 to steal or redirect the artifact's power toward the current self, faction,
-Home, World, or catastrophe.
+Home, World, or catastrophe. Awakening a Verb or Modifier into an authored
+exception to an ordinary limit is another candidate, not yet a settled promise.
 
 Whatever the final interaction becomes, it must produce durable history rather
 than arbitrary prose, a prompt, or code written by the player. A Palimpsest is
@@ -287,8 +359,10 @@ the only valid reason to continue a Chronicle.
 The world is shown as an orthographic, grid-first, symbolic pixel space between
 pure ASCII and fully illustrated tiles. Limited palettes, strong silhouettes,
 layered marks, and adjacency-aware terrain make dense information readable at
-a glance. Settlements and interiors use the same visual language as the
-wilderness rather than becoming separate presentation modes.
+a glance. Settlements, interiors, wilderness, and generated delves use the same
+visual language and spatial scale rather than becoming separate presentation or
+combat modes. Large subjects use composed multi-cell forms; a one-cell icon
+must not pretend a mountain and an actor have the same physical extent.
 
 Visual Grammar makes generated places feel related without making them
 identical. Actors, materials, structures, passages, and Landmarks must remain

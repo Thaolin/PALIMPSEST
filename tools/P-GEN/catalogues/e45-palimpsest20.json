@@ -1,0 +1,832 @@
+{
+  "schemaVersion": 2,
+  "packId": "chronicle.palimpsest20",
+  "visualStyleVersion": 1,
+  "palettes": [
+    {
+      "id": "chronicle.palimpsest20.palette",
+      "entries": [
+        "00000000",
+        "141f19ff",
+        "2f5b33ff",
+        "527e46ff",
+        "412d1dff",
+        "704e30ff",
+        "123046ff",
+        "1b5b75ff",
+        "53a6a6ff",
+        "11301dff",
+        "256034ff",
+        "538448ff",
+        "2f333cff",
+        "676c77ff",
+        "b1b7beff",
+        "0c1f35ff",
+        "143d58ff",
+        "688694ff",
+        "adc6ccff",
+        "754c14ff",
+        "e1a42dff",
+        "ffe270ff",
+        "271d33ff",
+        "d63d58ff",
+        "fff3d3ff",
+        "70dedcff",
+        "090f18ff",
+        "dfe9ebff"
+      ],
+      "roles": {
+        "actor.dark": 22,
+        "actor.primary": 23,
+        "actor.read": 24,
+        "authoring.grove.dark": 9,
+        "authoring.grove.light": 11,
+        "authoring.grove.primary": 10,
+        "authoring.landmark.dark": 19,
+        "authoring.soil.dark": 4,
+        "authoring.stone.light": 14,
+        "authoring.surface.grass-light": 3,
+        "authoring.ui.dark": 26,
+        "cloud.primary": 18,
+        "cloud.shadow": 17,
+        "emphasis.active": 25,
+        "landmark.bright": 21,
+        "landmark.gold": 20,
+        "sky.deep": 15,
+        "sky.ground": 16,
+        "stone.dark": 12,
+        "stone.primary": 13,
+        "surface.dark": 1,
+        "surface.grass": 2,
+        "surface.soil": 5,
+        "ui.light": 27,
+        "water.deep": 6,
+        "water.primary": 7,
+        "water.shine": 8
+      }
+    }
+  ],
+  "families": [
+    {
+      "id": "terrain.surface.grass",
+      "seed": 41337,
+      "variantCount": 4,
+      "generation": "role-mask",
+      "identity": "variant",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111121111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111311111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111"
+          ],
+          "anchor": [10, 10],
+          "layer": "ground",
+          "paletteRoles": [
+            "surface.grass",
+            "authoring.surface.grass-light",
+            "surface.dark"
+          ],
+          "overviewPaletteRole": "surface.grass"
+        }
+      ]
+    },
+    {
+      "id": "terrain.surface.soil",
+      "seed": 41338,
+      "variantCount": 4,
+      "generation": "role-mask",
+      "identity": "variant",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111121111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111131111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111"
+          ],
+          "anchor": [10, 10],
+          "layer": "ground",
+          "paletteRoles": [
+            "surface.soil",
+            "authoring.soil.dark",
+            "stone.primary"
+          ],
+          "overviewPaletteRole": "surface.soil"
+        }
+      ]
+    },
+    {
+      "id": "terrain.surface.water",
+      "seed": 41339,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22333333333333332222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222211111111222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222"
+          ],
+          "anchor": [10, 10],
+          "layer": "ground",
+          "paletteRoles": [
+            "water.deep",
+            "water.primary",
+            "water.shine"
+          ],
+          "overviewPaletteRole": "water.primary"
+        }
+      ]
+    },
+    {
+      "id": "terrain.sky.open",
+      "seed": 90421,
+      "variantCount": 3,
+      "generation": "role-mask",
+      "identity": "variant",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "22222222222222222222",
+            "11111111111111111111"
+          ],
+          "anchor": [10, 10],
+          "layer": "ground",
+          "paletteRoles": ["sky.deep", "sky.ground"],
+          "overviewPaletteRole": "sky.ground"
+        }
+      ]
+    },
+    {
+      "id": "landmark.bell-that-fell-up",
+      "seed": 901,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000000111000000",
+            "000001222100000",
+            "000012333210000",
+            "000001242100000",
+            "000000121000000",
+            "000001222100000",
+            "000012222210000",
+            "000122222221000",
+            "001222222222100",
+            "012222222222210",
+            "122222222222221",
+            "122222222222221",
+            "012222222222210",
+            "001222222222100",
+            "000133333331000",
+            "000011141110000",
+            "000000111000000",
+            "000000010000000"
+          ],
+          "anchor": [7, 10],
+          "layer": "landmark",
+          "paletteRoles": [
+            "authoring.landmark.dark",
+            "landmark.gold",
+            "landmark.bright",
+            "authoring.ui.dark"
+          ],
+          "overviewPaletteRole": "landmark.gold"
+        }
+      ]
+    },
+    {
+      "id": "subject.loose-stone",
+      "seed": 811,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "0000003000000",
+            "0000033300000",
+            "0000333330000",
+            "0003322333000",
+            "0033222233300",
+            "0332222222330",
+            "3322222222233",
+            "3222222222223",
+            "0111111111110",
+            "0011111111100"
+          ],
+          "anchor": [6, 5],
+          "layer": "landmark",
+          "paletteRoles": [
+            "stone.dark",
+            "stone.primary",
+            "authoring.stone.light",
+            "actor.read"
+          ],
+          "overviewPaletteRole": "authoring.stone.light",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "subject.home-hearthstone",
+      "seed": 823,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "00000000300000000",
+            "00000003230000000",
+            "00000032223000000",
+            "00000322222300000",
+            "00003224442230000",
+            "00032224442223000",
+            "00322224542222300",
+            "03222224542222230",
+            "32222224542222223",
+            "32222224542222223",
+            "03222224542222230",
+            "00322224442222300",
+            "00032224442223000",
+            "00003224442230000",
+            "00000322222300000",
+            "11111111511111111",
+            "01111111111111110"
+          ],
+          "anchor": [8, 9],
+          "layer": "landmark",
+          "paletteRoles": [
+            "stone.dark",
+            "stone.primary",
+            "authoring.stone.light",
+            "authoring.landmark.dark",
+            "landmark.gold"
+          ],
+          "overviewPaletteRole": "landmark.gold"
+        }
+      ]
+    },
+    {
+      "id": "subject.riven-cairn-river-ward",
+      "seed": 827,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "00000000300000000",
+            "00000003230000000",
+            "00000032223000000",
+            "00000322222300000",
+            "00003224442230000",
+            "00032224442223000",
+            "00322224542222300",
+            "03222224542222230",
+            "32222224542222223",
+            "32222224542222223",
+            "03222224542222230",
+            "00322224442222300",
+            "00032224442223000",
+            "00003224442230000",
+            "00000322222300000",
+            "11111111511111111",
+            "01111111111111110"
+          ],
+          "anchor": [8, 9],
+          "layer": "landmark",
+          "paletteRoles": [
+            "stone.dark",
+            "stone.primary",
+            "authoring.stone.light",
+            "water.deep",
+            "emphasis.active"
+          ],
+          "overviewPaletteRole": "emphasis.active"
+        }
+      ]
+    },
+    {
+      "id": "subject.shattered-cairn",
+      "seed": 829,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "00000000300000000",
+            "00000003000000000",
+            "00030032300003000",
+            "00320322230200300",
+            "03232222222323030",
+            "32322223222222323",
+            "32222322232222223",
+            "12222111112222221",
+            "01111100001111110",
+            "00110000000001100",
+            "01000000000000010"
+          ],
+          "anchor": [8, 6],
+          "layer": "landmark",
+          "paletteRoles": [
+            "authoring.soil.dark",
+            "stone.dark",
+            "stone.primary",
+            "authoring.stone.light"
+          ],
+          "overviewPaletteRole": "authoring.stone.light",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.danger.river-ward",
+      "seed": 1307,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "11100000111",
+            "10000000001",
+            "10000200001",
+            "00000000000",
+            "00000000000",
+            "00200000200",
+            "00000000000",
+            "10000200001",
+            "10000000001",
+            "11100000111"
+          ],
+          "anchor": [5, 5],
+          "layer": "effect",
+          "paletteRoles": ["actor.primary", "actor.read"],
+          "overviewPaletteRole": "actor.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "actor.incarnation",
+      "seed": 703,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "0000003000000",
+            "0000033300000",
+            "0000322230000",
+            "0003222223000",
+            "0003222223000",
+            "0000322230000",
+            "0000033300000",
+            "0000012100000",
+            "0000112110000",
+            "0001122211000",
+            "0011222221100",
+            "0011222221100",
+            "0001222221000",
+            "0001122211000",
+            "0001100011000",
+            "0011000001100",
+            "0110000000110",
+            "1100000000011"
+          ],
+          "anchor": [6, 10],
+          "layer": "actor",
+          "paletteRoles": ["actor.dark", "actor.primary", "actor.read"],
+          "overviewPaletteRole": "actor.primary"
+        }
+      ]
+    },
+    {
+      "id": "emphasis.target.valid",
+      "seed": 1301,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "110000011",
+            "100000001",
+            "000000000",
+            "000000000",
+            "000000000",
+            "000000000",
+            "100000001",
+            "110000011"
+          ],
+          "anchor": [4, 4],
+          "layer": "effect",
+          "paletteRoles": ["emphasis.active"],
+          "overviewPaletteRole": "emphasis.active",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.selection",
+      "seed": 1303,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "111000111",
+            "100000001",
+            "100000001",
+            "000000000",
+            "000000000",
+            "100000001",
+            "100000001",
+            "111000111"
+          ],
+          "anchor": [4, 4],
+          "layer": "emphasis",
+          "paletteRoles": ["landmark.bright"],
+          "overviewPaletteRole": "landmark.bright",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "glyph.codex",
+      "seed": 1101,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": ["122221", "120021", "120021", "122221", "111111"],
+          "anchor": [2, 4],
+          "layer": "overlay",
+          "paletteRoles": [
+            "authoring.ui.dark",
+            "ui.light",
+            "landmark.gold"
+          ],
+          "overviewPaletteRole": "ui.light"
+        }
+      ]
+    },
+    {
+      "id": "glyph.loadout",
+      "seed": 1103,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": ["001100", "012210", "122221", "122221", "011110"],
+          "anchor": [2, 4],
+          "layer": "overlay",
+          "paletteRoles": [
+            "authoring.ui.dark",
+            "ui.light",
+            "emphasis.active"
+          ],
+          "overviewPaletteRole": "ui.light"
+        }
+      ]
+    },
+    {
+      "id": "glyph.codex.fly",
+      "seed": 1105,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": ["200002", "220022", "022220", "002200", "002200"],
+          "anchor": [2, 4],
+          "layer": "overlay",
+          "paletteRoles": [
+            "authoring.ui.dark",
+            "emphasis.active",
+            "ui.light"
+          ],
+          "overviewPaletteRole": "emphasis.active"
+        }
+      ]
+    },
+    {
+      "id": "glyph.codex.stone",
+      "seed": 1107,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": ["003300", "032230", "322223", "011110"],
+          "anchor": [2, 3],
+          "layer": "overlay",
+          "paletteRoles": [
+            "stone.dark",
+            "stone.primary",
+            "authoring.stone.light"
+          ],
+          "overviewPaletteRole": "authoring.stone.light"
+        }
+      ]
+    }
+  ],
+  "connectedFamilies": [
+    {
+      "id": "terrain.surface.water.edge",
+      "seed": 41337,
+      "variantCount": 1,
+      "nativeSizes": [20],
+      "layer": "adjacency",
+      "paletteRole": "water.primary",
+      "paletteRoles": ["authoring.soil.dark", "water.deep", "water.shine"],
+      "overviewPaletteRole": "water.primary",
+      "materialTreatment": "water",
+      "identity": "always-two-digit-mask",
+      "requireEdgeContinuity": false
+    },
+    {
+      "id": "feature.surface.grove",
+      "seed": 173,
+      "variantCount": 4,
+      "nativeSizes": [20],
+      "layer": "feature",
+      "paletteRole": "authoring.grove.primary",
+      "paletteRoles": [
+        "authoring.grove.dark",
+        "authoring.grove.primary",
+        "authoring.grove.light",
+        "authoring.soil.dark"
+      ],
+      "overviewPaletteRole": "authoring.grove.primary",
+      "materialTreatment": "grove",
+      "identity": "masked-variant",
+      "requireEdgeContinuity": false
+    },
+    {
+      "id": "feature.surface.ridge",
+      "seed": 181,
+      "variantCount": 4,
+      "nativeSizes": [20],
+      "layer": "feature",
+      "paletteRole": "stone.primary",
+      "paletteRoles": ["stone.dark", "stone.primary", "authoring.stone.light"],
+      "overviewPaletteRole": "stone.primary",
+      "materialTreatment": "ridge",
+      "identity": "masked-variant",
+      "requireEdgeContinuity": false
+    },
+    {
+      "id": "feature.surface.ridge-water-crossing",
+      "seed": 193,
+      "variantCount": 4,
+      "nativeSizes": [20],
+      "layer": "feature",
+      "paletteRole": "authoring.stone.light",
+      "paletteRoles": [
+        "stone.dark",
+        "stone.primary",
+        "authoring.stone.light",
+        "water.deep",
+        "water.shine"
+      ],
+      "overviewPaletteRole": "authoring.stone.light",
+      "materialTreatment": "crossing",
+      "identity": "masked-variant",
+      "requireEdgeContinuity": false
+    },
+    {
+      "id": "terrain.sky.cloud",
+      "seed": 41338,
+      "variantCount": 1,
+      "nativeSizes": [20],
+      "layer": "adjacency",
+      "paletteRole": "cloud.primary",
+      "paletteRoles": ["cloud.shadow", "cloud.primary"],
+      "overviewPaletteRole": "cloud.primary",
+      "materialTreatment": "cloud",
+      "identity": "masked",
+      "requireEdgeContinuity": false
+    },
+    {
+      "id": "structure.wall.stone",
+      "seed": 90421,
+      "variantCount": 1,
+      "nativeSizes": [20],
+      "layer": "structure",
+      "paletteRole": "stone.primary",
+      "paletteRoles": ["stone.dark", "stone.primary", "authoring.stone.light"],
+      "overviewPaletteRole": "stone.primary",
+      "materialTreatment": "wall",
+      "identity": "review-only",
+      "requireEdgeContinuity": true
+    },
+    {
+      "id": "terrain.path.border",
+      "seed": 41339,
+      "variantCount": 1,
+      "nativeSizes": [20],
+      "layer": "adjacency",
+      "paletteRole": "surface.soil",
+      "paletteRoles": ["authoring.soil.dark", "surface.soil"],
+      "overviewPaletteRole": "surface.soil",
+      "materialTreatment": "path",
+      "identity": "review-only",
+      "requireEdgeContinuity": true
+    },
+    {
+      "id": "transition.surface-water",
+      "seed": 41340,
+      "variantCount": 1,
+      "nativeSizes": [20],
+      "layer": "adjacency",
+      "paletteRole": "water.primary",
+      "paletteRoles": ["authoring.soil.dark", "water.deep", "water.shine"],
+      "overviewPaletteRole": "water.primary",
+      "materialTreatment": "transition",
+      "identity": "review-only",
+      "requireEdgeContinuity": false,
+      "transitionOwnership": "primary-ground-plus-one-transition"
+    }
+  ],
+  "motifs": [
+    {
+      "familyId": "motif.grove",
+      "seed": 1730,
+      "variantCount": 2,
+      "footprint": [2, 2],
+      "anchorCell": [0, 1],
+      "occupancyTags": ["grove", "surface"],
+      "clippingBehavior": "clip",
+      "marks": [
+        {
+          "variantOrdinal": 0,
+          "visualId": "feature.surface.grove",
+          "cell": [0, 1],
+          "pixelOffset": [0, 0]
+        },
+        {
+          "variantOrdinal": 0,
+          "visualId": "feature.surface.grove",
+          "cell": [1, 0],
+          "pixelOffset": [1, -1]
+        },
+        {
+          "variantOrdinal": 1,
+          "visualId": "feature.surface.grove",
+          "cell": [0, 0],
+          "pixelOffset": [-1, 1]
+        },
+        {
+          "variantOrdinal": 1,
+          "visualId": "feature.surface.grove",
+          "cell": [1, 1],
+          "pixelOffset": [1, 0]
+        }
+      ]
+    },
+    {
+      "familyId": "motif.stone-ridge",
+      "seed": 1810,
+      "variantCount": 2,
+      "footprint": [3, 2],
+      "anchorCell": [1, 1],
+      "occupancyTags": ["ridge", "surface"],
+      "clippingBehavior": "clip",
+      "marks": [
+        {
+          "variantOrdinal": 0,
+          "visualId": "feature.surface.ridge",
+          "cell": [0, 1],
+          "pixelOffset": [0, 0]
+        },
+        {
+          "variantOrdinal": 0,
+          "visualId": "feature.surface.ridge",
+          "cell": [1, 0],
+          "pixelOffset": [0, -1]
+        },
+        {
+          "variantOrdinal": 0,
+          "visualId": "feature.surface.ridge",
+          "cell": [2, 1],
+          "pixelOffset": [0, 0]
+        },
+        {
+          "variantOrdinal": 1,
+          "visualId": "feature.surface.ridge",
+          "cell": [0, 0],
+          "pixelOffset": [0, 1]
+        },
+        {
+          "variantOrdinal": 1,
+          "visualId": "feature.surface.ridge",
+          "cell": [1, 1],
+          "pixelOffset": [0, 0]
+        },
+        {
+          "variantOrdinal": 1,
+          "visualId": "feature.surface.ridge",
+          "cell": [2, 0],
+          "pixelOffset": [0, -1]
+        }
+      ]
+    }
+  ]
+}

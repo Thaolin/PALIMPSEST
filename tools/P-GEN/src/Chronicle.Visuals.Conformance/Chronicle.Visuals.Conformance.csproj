@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Chronicle.VisualPack/Chronicle.VisualPack.csproj" />
+    <ProjectReference Include="../Chronicle.VisualCompiler/Chronicle.VisualCompiler.csproj" />
+    <EmbeddedResource
+      Include="../../catalogues/e3.json"
+      Link="Fixtures/e3.json"
+      LogicalName="Chronicle.Visuals.Conformance.e3.json" />
+    <EmbeddedResource
+      Include="../../catalogues/e45-palimpsest20.json"
+      Link="Fixtures/palimpsest20.catalogue.json"
+      LogicalName="Chronicle.Visuals.Conformance.palimpsest20.catalogue.json" />
+    <EmbeddedResource
+      Include="../../fixtures/palimpsest20/contract.json"
+      Link="Fixtures/palimpsest20.contract.json"
+      LogicalName="Chronicle.Visuals.Conformance.palimpsest20.contract.json" />
+    <EmbeddedResource
+      Include="../../fixtures/palimpsest20/invalid/cases.json"
+      Link="Fixtures/palimpsest20.invalid.cases.json"
+      LogicalName="Chronicle.Visuals.Conformance.palimpsest20.invalid.cases.json" />
+    <EmbeddedResource
+      Include="../../fixtures/palimpsest20/expected-hashes.json"
+      Link="Fixtures/palimpsest20.expected-hashes.json"
+      LogicalName="Chronicle.Visuals.Conformance.palimpsest20.expected-hashes.json" />
+    <EmbeddedResource
+      Include="../../fixtures/palimpsest20/accepted-reference.json"
+      Link="Fixtures/palimpsest20.accepted-reference.json"
+      LogicalName="Chronicle.Visuals.Conformance.palimpsest20.accepted-reference.json" />
+  </ItemGroup>
+</Project>
