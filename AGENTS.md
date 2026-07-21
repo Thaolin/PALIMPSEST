@@ -63,6 +63,16 @@ that outlive the current body.
 - Procedural generation uses World Grammar plus memorable Landmarks; do not
   build featureless random content, hand-authored levels, or a fixed world
   edge. Generate unbounded territory on demand rather than simulating infinity.
+- Use one character-scale grid across open territory, Holdings, combat,
+  dungeons, temples, ruins, and nested generated Areas. Connect Areas through
+  persistent Passages; do not introduce a symbolic strategic overworld or a
+  separate tactical battle mode. Large geography such as mountains occupies
+  many cells and has meaningful parts.
+- Generate arbitrarily many creature instances on demand from authored body
+  plans, materials, traits, capabilities, ecologies, behaviors, and visual
+  kits. Once an instance becomes consequential, preserve its identity and
+  history; never substitute unconstrained random statistics for Creature
+  Grammar.
 - Palimpsests are extraordinarily rare apex artifacts, with a hard cap of two
   per World. Their exact affordances are not settled; Decrees are one direction,
   not permission to invent arbitrary semantic authoring or a required ending.

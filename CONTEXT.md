@@ -37,17 +37,31 @@ or a stranger place. Persistent passages and Verbs connect Strata and may
 eventually open routes to other Worlds.
 _Avoid_: Flat world map, fully simulated voxel layer
 
+**Area**:
+A connected character-scale playspace within a Stratum. Open territory,
+Holdings, dungeons, temples, ruins, and their nested spaces all use the same
+movement, Combat, building, and Chronicle-time rules even when passages place
+them in distinct generated Areas.
+_Avoid_: Strategic-scale tile, battle instance, fixed authored level
+
+**Passage**:
+A persistent traversable connection between Areas, Strata, or Worlds. A
+Passage may be a door, stair, cave mouth, route, portal, or stranger threshold,
+but entering one never implies a different combat or movement game.
+_Avoid_: Level-select button, unexplained loading portal
+
 **World Address**:
-A stable World, Stratum, and coordinate used to locate a place, Agent, Holding,
-or passage whether or not that area is presently active. A Chronicle retains
-its addresses and changes as it expands.
+A stable World, Stratum, Area, and coordinate used to locate a place, Agent,
+Holding, or Passage whether or not that Area is presently active. A Chronicle
+retains its addresses and changes as it expands.
 _Avoid_: Temporary loaded area, disposable chunk
 
 **World Grammar**:
 The composable authored rules that generate a Chronicle's Worlds, Strata,
-resources, passages, Agents, Pressures, and Landmarks. They create unbounded
-structured territory from seed and persistent history without hand-built
-levels or an authored outer edge.
+Areas, resources, Passages, Agents, Pressures, and Landmarks. They create
+unbounded structured territory and arbitrarily many generated inhabitants from
+seed and persistent history without hand-built levels or an authored outer
+edge.
 _Avoid_: Random-content machine, fixed campaign map, hand-authored level
 
 **Visual Grammar**:
@@ -111,6 +125,13 @@ An autonomous person, mutant, creature, construct, or stranger with continuing
 identity, needs, relationships, and agency in a Chronicle. Agent is a systemic
 category, not a species or a promise of obedience.
 _Avoid_: Worker token, population count, helper species
+
+**Creature Grammar**:
+The authored body plans, materials, traits, capabilities, ecologies, behaviors,
+and visual kits from which World Grammar can generate arbitrarily many distinct
+creature Agents. Generated instances gain durable identity when Chronicle
+history makes them consequential.
+_Avoid_: Infinite authored bestiary, unconstrained random monster, disposable spawn
 
 **Companion**:
 An Agent currently traveling or fighting beside an Incarnation through a

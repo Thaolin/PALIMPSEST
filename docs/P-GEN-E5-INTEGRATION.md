@@ -1,9 +1,9 @@
 # P-GEN E5 — The Authored World Enters the Game
 
 **Authorized:** 2026-07-21
-**Status:** Implementation and automated acceptance complete; player UAT pending
+**Status:** Accepted and closed 2026-07-21 after corrected E5.1 player UAT
 **Pinned P-GEN baseline:** `812bb75c70fc22d78219759b70a9338a26b3ee8b`
-**Canonical aggregate:** `sha256:245cb53df47d7f9866071d75359d272cbd53c56010e3d3f4921d12cf72eaf707`
+**Canonical aggregate:** `sha256:85418f3025f2944d2f58a0a981febb00903bf67edcc23cb84054b3fd9f91eae0`
 
 ## Player-visible hypothesis
 

@@ -60,9 +60,18 @@ explicit comparison fixture. See
   Incarnation movement, and action preparation remain commands; any action
   specified to resolve on a tick stays pending until that tick is delivered.
 - A World Address ultimately identifies every persistent location by World,
-  Stratum, and coordinate across linked two-dimensional layers. Slice 0–3 state
-  has one implicit World; multi-World work must introduce explicit World
-  identity through a deliberate save migration.
+  Stratum, Area, and coordinate across linked two-dimensional layers. Slice
+  0–3 state has one implicit World and one implicit Area per Stratum; explicit
+  World or Area identity requires a deliberate save migration.
+- Areas are topology, not scale changes. Open territory, Holdings, combat,
+  dungeons, temples, ruins, and nested spaces use one character-scale grid and
+  one simulation. Persistent Passages connect them; no strategic overworld or
+  separate tactical battle state may emerge. See
+  [ADR 0005](adr/0005-use-one-character-scale-across-generated-areas.md).
+- Physical scale belongs to semantic composition: a mountain is a multi-cell
+  region with parts, not a one-cell peer of an actor or tree. A visual pack's
+  pixel dimensions and camera density are presentation choices and may not
+  redefine Chronicle distance.
 - Generation is deterministic from a Chronicle seed plus durable deltas.
 - Each Chronicle pins its World Grammar version so later generator changes do
   not silently rewrite untouched territory. See
@@ -77,6 +86,11 @@ explicit comparison fixture. See
 - A Chronicle may expand into additional Worlds and has no authored geographic
   edge. "Infinite" means deterministic generation on demand, never eager
   generation or full-fidelity simulation of unreachable territory.
+- Creature Grammar assembles arbitrarily many deterministic Agent instances
+  from bounded authored body plans, materials, traits, capabilities, ecologies,
+  behaviors, and visual kits. Instances that participate in consequential
+  Chronicle history receive durable identity; inactive possibility is not
+  eagerly simulated.
 
 ### Accepted v5 language runtime
 
@@ -217,6 +231,9 @@ Chronicle save.
   requests, but it may not pre-generate a whole Stratum, mutate player saves,
   or introduce a second generation path. Large overviews use a bounded raster
   or batched draw representation rather than one Godot Node per World Address.
+- Every playable Area uses the same movement, Combat, building, Heartbeat, and
+  persistence rules. Loading through a Passage may change the active bounded
+  snapshot, but never the underlying spatial or tactical model.
 - Any future Palimpsest interaction is a bounded, deterministic Core state
   transition with an inspectable persistent result. Godot never interprets
   arbitrary prose as a simulation rule.

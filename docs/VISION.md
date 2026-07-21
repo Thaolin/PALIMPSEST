@@ -91,6 +91,22 @@ seed, and persistent events. New territory is generated as it becomes
 reachable; the authored grammar gives it causes, constraints, and recurring
 visual language instead of featureless noise.
 
+### One world, many Areas
+
+The Chronicle uses one character-scale grid wherever the Incarnation can act.
+Open wilderness, Home, settlements, sprawling dungeons, temples, ruins, caves,
+and stranger nested spaces may be distinct generated Areas, but they share the
+same movement, Combat, building, Heartbeats, and material rules. Passages join
+them without turning entry into a separate game mode.
+
+Scale is expressed through composition. A tree may occupy roughly one cell; a
+mountain is a region of foothills, slopes, cliffs, passes, caves, and peaks.
+Combat can happen in open territory or deep inside a generated site. Creature
+Grammar can produce arbitrarily many deterministic inhabitants from authored
+body plans, materials, traits, capabilities, ecologies, behaviors, and visual
+kits; consequential creatures become persistent Agents rather than disposable
+spawns.
+
 ### Agents are people, not interface pieces
 
 Agents retain identity, needs, relationships, and agency. Command communicates
@@ -183,6 +199,12 @@ Home is the player's fortress, base, refuge, archive, and remembered address.
 It can be built on a surface, in the sky, beneath a mountain, deep underground,
 or in a stranger World. Its form comes from the place, materials, inhabitants,
 and history rather than from a universal base template.
+
+Home occupies the same character-scale spatial fabric as adventure. Its walls,
+yards, rooms, residents, attackers, and material changes are ordinary Chronicle
+state, not a detached base-management board. Enterable buildings and deeper
+spaces may connect through Passages while remaining part of the same systemic
+world.
 
 Home is an anchor, not a compulsory management game. A player may devote most
 of a Chronicle to construction, production, Agents, and defense. Another may
@@ -337,8 +359,10 @@ the only valid reason to continue a Chronicle.
 The world is shown as an orthographic, grid-first, symbolic pixel space between
 pure ASCII and fully illustrated tiles. Limited palettes, strong silhouettes,
 layered marks, and adjacency-aware terrain make dense information readable at
-a glance. Settlements and interiors use the same visual language as the
-wilderness rather than becoming separate presentation modes.
+a glance. Settlements, interiors, wilderness, and generated delves use the same
+visual language and spatial scale rather than becoming separate presentation or
+combat modes. Large subjects use composed multi-cell forms; a one-cell icon
+must not pretend a mountain and an actor have the same physical extent.
 
 Visual Grammar makes generated places feel related without making them
 identical. Actors, materials, structures, passages, and Landmarks must remain

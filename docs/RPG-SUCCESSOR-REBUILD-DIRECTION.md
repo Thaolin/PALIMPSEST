@@ -55,6 +55,23 @@ These rules remain supported until an authorized migration replaces them. Do
 not delete them speculatively, reinterpret old saves, or layer successor rules
 beside them indefinitely.
 
+## Spatial north star
+
+Open territory is not a symbolic strategic board. The Chronicle uses one
+character-scale grid for wilderness, Holdings, combat, sprawling generated
+dungeons, temples, ruins, caves, and nested stranger spaces. Distinct Areas are
+connected by persistent Passages and share the same movement, Combat,
+Heartbeat, building, Target, and material rules.
+
+Large geography is composed rather than miniaturized: a mountain contains
+foothills, slopes, cliffs, passes, caves, and peaks across many cells. World
+Grammar may generate arbitrarily many creature instances from authored
+Creature Grammar and preserve identity when an instance becomes consequential.
+This direction is recorded by
+[ADR 0005](adr/0005-use-one-character-scale-across-generated-areas.md); its
+production sequence remains pending focused generation research and a bounded
+future contract.
+
 ## Production sequence
 
 ### Gate P-GEN E5 — Integrate the completed authoring pipeline

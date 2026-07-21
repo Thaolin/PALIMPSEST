@@ -32,7 +32,11 @@ static void VerifyCanonicalPGenBundleAndReaderFailures()
         "terrain.surface.water",
         "terrain.sky.open",
         "feature.surface.grove",
+        "feature.surface.grove.v2",
+        "feature.surface.grove.v3",
         "feature.surface.ridge",
+        "feature.surface.ridge.v2",
+        "feature.surface.ridge.v3",
         "feature.surface.ridge-water-crossing",
         "terrain.sky.cloud",
         "landmark.bell-that-fell-up",
@@ -52,9 +56,9 @@ static void VerifyCanonicalPGenBundleAndReaderFailures()
 
     Assert(
         pack.Digest ==
-            "sha256:a63d1cfe147f22a39e84c835a33b77689c8b3b5492b49eb5e5b8fad18108a8fc" &&
+            "sha256:6ff87d0e52c494fe4e0ff79044606dd8694a559aa68fa0d412844ba639167acf" &&
         fromDirectory.Digest == pack.Digest &&
-        pack.Definitions.Count == 185 &&
+        pack.Definitions.Count == 249 &&
         requiredIds.All(id => pack.Resolve(id).VisualId == id),
         "The packaged P-GEN artifact must load through both reader Interfaces and resolve the exact current vocabulary.");
 

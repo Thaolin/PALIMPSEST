@@ -107,6 +107,11 @@ canonical `Palimpsest20` output is the source artifact for the mandatory E5
 reader/conformance gate. Palimpsest never ships or references P-GEN compiler or
 catalogue assemblies; `Chronicle.VisualPack` owns the runtime reader.
 
+E5.1 adds a separate P-GEN authoring workbench at that external seam. The
+existing pack-only preview remains the runtime-artifact oracle; the workbench
+may reference compiler/catalogue code but is never packaged or referenced by
+Palimpsest.
+
 ### `Chronicle.Visuals`
 
 Engine-independent Palimpsest-specific Visual Grammar.
@@ -171,7 +176,8 @@ Exact supported commands and the packaged executable locations remain in the
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Runtime seams, ownership, persistence/generation shape, and technical constraints |
 | [`ROADMAP.md`](ROADMAP.md) | Slice sequence, acceptance headlines, and links to implementation contracts |
 | [`MODIFIER-GRAMMAR-DIRECTION.md`](MODIFIER-GRAMMAR-DIRECTION.md) | Settled successor grammar, rejected assumptions, pressure-test boundary, and open decisions; not production authorization |
-| [`RPG-SUCCESSOR-REBUILD-DIRECTION.md`](RPG-SUCCESSOR-REBUILD-DIRECTION.md) | Retained Slice 0–3 foundation, redesigned gameplay surface, Goal 6–8 sequence, and P-GEN timing; not production authorization |
+| [`RPG-SUCCESSOR-REBUILD-DIRECTION.md`](RPG-SUCCESSOR-REBUILD-DIRECTION.md) | Retained Slice 0–3 foundation, redesigned gameplay surface, same-scale generated-Area north star, Goal 6–8 sequence, and P-GEN timing; not production authorization |
+| [`QUD-GENERATION-ALIGNMENT.md`](QUD-GENERATION-ALIGNMENT.md) | Primary-source comparison of Qud's builders, selective WFC, history, blueprints, populations, and their bounded fit with World Grammar |
 | [`COMBAT-GRAMMAR-PRESSURE-TEST.md`](COMBAT-GRAMMAR-PRESSURE-TEST.md) | Completed isolated prototype question, fixed fixture, player journey, accepted evidence, and forbidden production drift |
 | [`GOAL-4-THREE-OPENINGS.md`](archive/contracts/GOAL-4-THREE-OPENINGS.md) | Archived Goal 4 contract and accepted 4A Study, 4B Home, and 4C conflict proof |
 | [`GOAL-4C-UAT.md`](archive/uat/GOAL-4C-UAT.md) | Archived fresh-Chronicle fight journey, player result, and deferred visual notes |
@@ -181,14 +187,17 @@ Exact supported commands and the packaged executable locations remain in the
 | [`GATE-3B-VISUAL-UAT.md`](GATE-3B-VISUAL-UAT.md) | Gate 3B candidate comparison, annotated four-image review sheet, interactive journey, and exact density decision |
 | [`PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md`](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md) | Governing pure-C# compiler, compiled-pack, composer, Godot-adapter, conformance, and drop-in contract for required P-GEN integration |
 | [`P-GEN-E4-5-READINESS-REVIEW.md`](P-GEN-E4-5-READINESS-REVIEW.md) | Reproduced external evidence and acceptance requirements for the mandatory Palimpsest E5 integration gate |
-| [`P-GEN-E5-INTEGRATION.md`](P-GEN-E5-INTEGRATION.md) | Active bounded contract for the canonical reader, packaged artifact, shared default path, conformance proof, and UAT stop |
-| [`P-GEN-E5-UAT.md`](P-GEN-E5-UAT.md) | Native P-GEN/manual comparison sheet, interactive visual journey, and pending player decision |
+| [`P-GEN-E5-INTEGRATION.md`](P-GEN-E5-INTEGRATION.md) | Accepted canonical reader, packaged artifact, shared default path, conformance proof, and corrected visual UAT result |
+| [`P-GEN-E5-UAT.md`](P-GEN-E5-UAT.md) | Rejected first-candidate P-GEN/manual comparison and recorded visual defects |
+| [`P-GEN-E5-1-VISUAL-AUTHORING-SPIKE.md`](P-GEN-E5-1-VISUAL-AUTHORING-SPIKE.md) | Accepted bounded correction for material-specific rendering, larger silhouettes, representative biome assets, and an authoring-only workbench |
+| [`P-GEN-E5-1-UAT.md`](P-GEN-E5-1-UAT.md) | Accepted corrected captures and workbench journey, including deferred actor-art debt |
 | [`DESIGN-EVALUATION-2026-07-20.md`](DESIGN-EVALUATION-2026-07-20.md) | Dated pre-alpha assessment of playable depth, design risks, latent opportunities, and candidate decision gates; evidence rather than production authority |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Exact build, test, editor, and launch instructions |
 | [`REFERENCES.md`](REFERENCES.md) | Primary external technical references |
 | [`HANDOFF.md`](HANDOFF.md) | Current execution contract: active gate, permitted scope, known proof, stop condition, and forbidden next work |
 | [`adr/0003-use-verbs-linked-modifiers-and-world-targets.md`](adr/0003-use-verbs-linked-modifiers-and-world-targets.md) | Accepted replacement of collectible Nouns with linked Modifiers and contextual world Targets |
 | [`adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md`](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) | Accepted use of P-GEN as the required authoring-time visual compiler behind a Palimpsest-owned reader |
+| [`adr/0005-use-one-character-scale-across-generated-areas.md`](adr/0005-use-one-character-scale-across-generated-areas.md) | Accepted same-scale Area topology, multi-cell geography, and authored on-demand Creature Grammar |
 | [`adr/`](adr/) | Accepted hard-to-reverse decisions and their reasoning |
 | [`archive/`](archive/README.md) | Completed contracts, accepted UAT evidence, and consumed prompts; historical rather than current authority |
 
@@ -220,9 +229,11 @@ Exact supported commands and the packaged executable locations remain in the
 - [P-GEN E4.5 Readiness Review](P-GEN-E4-5-READINESS-REVIEW.md)
 - [Modifier Grammar Course Correction](MODIFIER-GRAMMAR-DIRECTION.md)
 - [RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md)
+- [Caves of Qud Generation Alignment](QUD-GENERATION-ALIGNMENT.md)
 - [Passed Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md)
 - [ADR 0003 — Verbs, linked Modifiers, and world Targets](adr/0003-use-verbs-linked-modifiers-and-world-targets.md)
 - [ADR 0004 — P-GEN visual authoring pipeline](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md)
+- [ADR 0005 — One character scale across generated Areas](adr/0005-use-one-character-scale-across-generated-areas.md)
 - [Documentation Archive](archive/README.md)
 
 Read the [Roadmap](ROADMAP.md), the relevant contract's Status section, and the

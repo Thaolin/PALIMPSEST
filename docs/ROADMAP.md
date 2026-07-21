@@ -253,10 +253,12 @@ Decision record:
 
 ## Gate P-GEN E5 — The Authored World Enters the Game
 
-**Status:** Implementation and complete automated acceptance passed on
-2026-07-21; [player visual UAT](P-GEN-E5-UAT.md) is pending. The bounded
-[E5 contract](P-GEN-E5-INTEGRATION.md) requires that separate result before
-this gate can close.
+**Status:** Accepted and closed 2026-07-21. Player visual UAT rejected the first authored candidate because
+material families read as connected walls and principal sprites occupied too
+little of their cells. The player authorized the bounded
+[E5.1 visual-authoring spike](P-GEN-E5-1-VISUAL-AUTHORING-SPIKE.md) on
+2026-07-21, then accepted its corrected assets and workbench. The actor remains
+explicit non-blocking visual debt for a later authored asset pass.
 P-GEN is built and is the canonical visual authoring pipeline. E5 is not an
 adoption decision: it connects the completed compiler output to Palimpsest's
 existing runtime pack seam before Goal 6A adds new gameplay vocabulary.
@@ -280,6 +282,25 @@ only the compiled artifact; and the full retained gate passes.
 
 Decision record:
 [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md).
+
+### E5.1 — Materials Read as Materials
+
+**Status:** Accepted and closed 2026-07-21. The player accepted the assets and
+workbench while deferring actor-art quality as non-blocking visual debt. See the
+[E5.1 UAT sheet](P-GEN-E5-1-UAT.md).
+
+Correct the authored candidate without changing Chronicle semantics: use
+material-specific water, cloud, grove, ridge, crossing, and transition
+treatments; enlarge current actor and landmark silhouettes; add a small
+representative surface-biome asset pass; and prove a separate authoring-only
+P-GEN workbench for catalogue review and future biome briefs. Retain the
+strict four-file runtime bundle and keep all compiler/workbench code outside
+Palimpsest.
+
+The comparison reference is Qud's `16 × 24` sprite cell and `80 × 25` visible
+zone. Palimpsest retains its native `20 × 20` pack during the spike; first fix
+occupancy, proportion, material identity, and repetition. Any camera-density
+or rectangular-runtime-cell decision requires a later gate.
 
 ## Goal 6 — A Real RPG Loop
 
@@ -324,6 +345,34 @@ crafting or base-management mode.
 Goal 6 deliberately does not add a broad bestiary, inventory, loot economy,
 crafting framework, production chain, anonymous workers, or raid simulation.
 Each child slice requires its own contract, automated proof, and player UAT.
+
+## North-star expansion — One World, Many Areas
+
+**Status:** Product and architecture direction settled; primary-source
+[Caves of Qud alignment research](QUD-GENERATION-ALIGNMENT.md) complete;
+sequencing and production are not authorized.
+
+Use one character-scale grid across open territory, Holdings, combat,
+sprawling generated dungeons, temples, ruins, caves, and nested stranger
+spaces. Persistent Passages connect Areas without creating a symbolic
+strategic overworld or separate tactical battle mode. Mountains and other
+large geography occupy many cells with meaningful parts rather than sharing a
+one-cell physical scale with actors and trees.
+
+World Grammar may generate arbitrarily many creature instances from bounded
+authored Creature Grammar: body plans, materials, traits, capabilities,
+ecologies, behaviors, and visual kits. Generate on demand, simulate at the
+appropriate fidelity, and preserve durable identity once an Agent becomes
+consequential.
+
+Before production, prove one transition from open territory into one generated
+Area using the same movement and Combat rules, one multi-cell landmark whose
+parts matter, deterministic regeneration plus a persistent delta, and a return
+through the same Passage. Do not begin with a general dungeon framework or an
+infinite bestiary.
+
+Decision record:
+[ADR 0005](adr/0005-use-one-character-scale-across-generated-areas.md).
 
 ## Goal 7 — Home Has People
 

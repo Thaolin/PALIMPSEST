@@ -22,6 +22,12 @@
 These are touchstones, not specifications. Do not copy their content, UI, or
 systems wholesale.
 
+Primary technical sources for Qud's layered zone builders, selective WFC,
+generated histories, authored blueprints, populations, and seeded randomness
+are collected and interpreted in
+[Caves of Qud Generation Alignment](QUD-GENERATION-ALIGNMENT.md). That note
+separates verified Qud behavior from Palimpsest design inference.
+
 ## Visual-direction notes for later slices
 
 The user-supplied top-down references point toward:

@@ -10,7 +10,7 @@ authorized future slice contract.
 
 ## Current gate
 
-**P-GEN E5 implemented — player visual UAT pending**
+**P-GEN E5 and E5.1 accepted and closed; no production slice currently authorized**
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -85,9 +85,42 @@ authorized future slice contract.
   ```text
   PASS: P-GEN E5 reader/default packaging plus Slice 5, Goal 4, Goal 2, Gate 3A, and Gate 3B verified.
   ```
-- The [E5 UAT sheet](P-GEN-E5-UAT.md) presents native P-GEN/manual comparison
-  captures and the focused interactive journey. A player visual result is the
-  only remaining E5 acceptance condition.
+- The [E5 UAT sheet](P-GEN-E5-UAT.md) presented native P-GEN/manual comparison
+  captures and the focused interactive journey. The player rejected the first
+  candidate on 2026-07-21: terrain materials read as connected walls and
+  important sprites were too small inside their cells.
+- The player then authorized the bounded
+  [E5.1 visual-authoring spike](P-GEN-E5-1-VISUAL-AUTHORING-SPIKE.md). It owns
+  material-specific rendering, larger current silhouettes, a representative
+  surface-biome asset pass, and a separate authoring-only P-GEN workbench.
+- The player's Qud comparison pins useful review evidence at `16 × 24` sprites
+  and an `80 × 25` visible zone. E5.1 retains the `20 × 20` runtime pack and
+  first corrects occupancy, proportion, material identity, and repetition;
+  rectangular runtime cells or camera-density changes remain unauthorized.
+- E5.1 now compiles 249 definitions. Water uses material boundaries, groves use
+  tree silhouettes, ridges use mountain silhouettes, ridge-water intersections
+  use nonconnecting rocky fords, and clouds form continuous banks; only genuine
+  wall and path families retain generic connectors. Principal subjects occupy
+  10–18 rows, with four grove and ridge variants.
+- P-GEN's separate authoring-only Godot workbench now provides an Asset Lab,
+  Material Matrix, mixed Biome Board, native/tall comparison, filtering, live
+  recompile, and explicit non-overwriting biome-brief export. It is open for
+  player review and remains outside Palimpsest's runtime/package graph.
+- P-GEN's complete verifier passed with canonical aggregate
+  `sha256:85418f3025f2944d2f58a0a981febb00903bf67edcc23cb84054b3fd9f91eae0`
+  and wrapper marker `PGEN_E51_VERIFY_EXIT=0`. The refreshed Palimpsest pack,
+  strict digest fixture, player/Inspector captures, packaging, retained saves,
+  and every retained journey also passed; final marker:
+
+  ```text
+  PASS: P-GEN E5 reader/default packaging plus Slice 5, Goal 4, Goal 2, Gate 3A, and Gate 3B verified.
+  ```
+- Corrected visual and workbench review is recorded in
+  [P-GEN-E5-1-UAT.md](P-GEN-E5-1-UAT.md).
+- The player accepted E5.1 on 2026-07-21: “Accept - assets look okay, actor
+  looks terrible but we can iterate later.” E5.1 and parent E5 are closed. The
+  actor is explicit non-blocking visual debt for a later P-GEN asset pass; it
+  does not reopen material grammar, workbench, reader, or packaging acceptance.
 
 ## Settled successor direction
 
@@ -130,6 +163,20 @@ authorized future slice contract.
   thresholds remain unsettled.
 - Awakening a Power Word is a candidate Palimpsest offer, not a settled
   affordance or required ending.
+- The Chronicle uses one character-scale grid across open territory, Holdings,
+  combat, sprawling generated dungeons, temples, ruins, caves, and nested
+  stranger Areas. Persistent Passages connect topology without introducing a
+  strategic overworld or separate tactical battle mode.
+- Scale is semantic and composed: a mountain spans foothills, slopes, cliffs,
+  passes, caves, and peaks across many cells rather than occupying one actor-
+  sized icon.
+- World Grammar may generate arbitrarily many creature instances from authored
+  Creature Grammar. Consequential instances gain durable Agent identity;
+  untouched possibility is generated on demand rather than simulated eagerly.
+- [ADR 0005](adr/0005-use-one-character-scale-across-generated-areas.md)
+  records the same-scale Area decision. The primary-source
+  [Qud generation alignment](QUD-GENERATION-ALIGNMENT.md) is complete and must
+  inform, but does not authorize, its first production contract.
 
 ## Retained foundation and redesign surface
 
@@ -139,8 +186,10 @@ Retain the accepted foundation through Slice 3:
 - deterministic Heartbeats, pause and speed, seed, World Address, Strata,
   bounded versioned World Grammar, generated Landmarks, and persistent deltas;
 - the developer World Atlas Inspector and shared semantic snapshot path; and
-- the accepted 20-pixel map scale, restrained palette, compiled-pack seam,
-  deterministic Visual Grammar, and Godot rendering adapters.
+- the current 20-pixel compiled pack, restrained palette, compiled-pack seam,
+  deterministic Visual Grammar, and Godot rendering adapters. This preserves a
+  working visual baseline, not a final physical-scale or rectangular-cell
+  decision.
 
 Redesign predecessor gameplay on top of that foundation through one migration,
 not a parallel runtime. Collectible Nouns, fitted `Fly[Stone]` / `Fly[Bell]`,
@@ -176,7 +225,15 @@ for one final vocabulary freeze.
 - how Companions join, leave, interpret combat Directives, and differ under
   taming or leadership without requiring a broad Agent framework first;
 - strict migration of the accepted v5 Codex and `Fly[Stone]`/`Fly[Bell]`
-  Loadouts if the successor reaches production.
+  Loadouts if the successor reaches production;
+- explicit Area identity, Passage addressing, nested generation, and the
+  smallest save migration that preserves old one-Area-per-Stratum Chronicles;
+- whether a genuinely authored `16 × 24` profile, another rectangular profile,
+  or the current `20 × 20` pack best serves the shared character scale. Never
+  answer this by stretching square assets alone; and
+- which researched Qud-aligned techniques—dependency-ordered builders,
+  blueprint-like authored inputs, selective WFC, compact historical facts, and
+  contextual populations—belong in the first bounded Area proof.
 
 After P-GEN E5 passes, Goal 6A's contract must narrow these decisions to one
 dangerous opponent, two competing `Burn` builds, one Weapon, Armor, and
@@ -230,12 +287,11 @@ reported.
 
 ## Current permitted scope
 
-No further production work is authorized while the player performs the
-[P-GEN E5 visual UAT](P-GEN-E5-UAT.md). A narrowly reported E5 visual blocker
-may be corrected inside the existing contract; accepting or rejecting the
-default requires documentation reconciliation. The completed combat prototype
-remains evidence only. No gameplay, save, World Grammar, or successor grammar
-work is authorized.
+E5 and E5.1 are complete and accepted. This reconciliation may update only
+their status and evidence. No gameplay, save, World Grammar, Area topology,
+camera-density, rectangular runtime cells, actor-art iteration, or successor
+grammar production is authorized. Goal 6A is the next permissible contract to
+discuss, but requires explicit authorization before implementation.
 
 ## Retained accepted baseline
 
@@ -256,8 +312,9 @@ work is authorized.
 - New Chronicles use strict save envelope v5 and World Grammar v3. Literal
   v4/v3/v2/v1/pre-envelope compatibility remains verified, and old grammar
   pins `0`, `1`, and `2` do not gain the Cairn retroactively.
-- P-GEN is the completed required external authoring compiler. Its Palimpsest
-  E5 reader/conformance integration is the next separately gated step.
+- P-GEN is the required external authoring compiler. Reader/conformance,
+  packaging, E5.1 automation, and corrected player visual/workbench UAT are
+  complete and accepted. Actor-art quality is retained non-blocking debt.
 
 ## Other retained non-blocking notes
 
@@ -275,8 +332,8 @@ work is authorized.
 - a universal tick surcharge per Link, a generic mana bar, or Home progression
   that makes ordinary combat and exploration wait for settlement development;
 - settled Palimpsest Awakening rules or a power-resource economy by inference;
-- camera zoom, Cairn art, broad visual polish, water traversal, route arrows,
-  visual work outside the bounded P-GEN E5 contract;
+- camera zoom or rectangular runtime cells, water traversal, route arrows, or
+  visual work outside the bounded P-GEN E5.1 contract;
 - health, damage, initiative, combat statistics, bestiary, loot, inventory, or
   a generic production combat framework by extending the accepted 4C fixture;
 - moving prototype HP, equipment, tick attacks, `Burn`, Companion, Target, or
@@ -288,5 +345,7 @@ work is authorized.
 
 ## Stop and hand off
 
-Stop for the player's E5 visual result. Goal 6A remains downstream of accepted
-E5 and requires its own later contract; passing 6A will not authorize 6B.
+Stop after E5/E5.1 acceptance reconciliation. Goal 6A is next in the Roadmap
+but requires its own explicit contract and authorization. Same-scale Area
+production separately requires a later contract informed by the generation
+research; neither direction is authorized by this handoff.

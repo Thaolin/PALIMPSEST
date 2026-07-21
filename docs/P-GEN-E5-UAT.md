@@ -1,7 +1,7 @@
 # P-GEN E5 UAT — The Authored World Enters the Game
 
 **Prepared:** 2026-07-21
-**Status:** Automated acceptance passed; player visual decision pending
+**Status:** First visual candidate rejected on 2026-07-21; superseded by the E5.1 correction
 
 ## What changed
 
@@ -73,3 +73,11 @@ Report one of:
 
 Do not judge successor combat or grammar here; E5 changes authored visual data
 only. Goal 6A remains a separate later authorization.
+
+## Recorded result
+
+The player rejected this first candidate: terrain materials read as one
+connected wall lattice and important sprites were too small inside their
+cells. The reader and packaging proof remain accepted evidence. Corrected
+visual UAT is governed by
+[P-GEN E5.1 — Materials Read as Materials](P-GEN-E5-1-VISUAL-AUTHORING-SPIKE.md).
