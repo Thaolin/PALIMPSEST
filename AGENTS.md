@@ -17,9 +17,10 @@ that outlive the current body.
 - C# is the only production language. Do not add shipped GDScript.
 - Keep Chronicle rules in engine-independent C# projects. Godot Nodes adapt
   inputs and render state; they do not own simulation rules.
-- P-GEN is the required authoring-time visual asset compiler. Palimpsest owns
-  the reader and runtime pack contract; shipped builds contain compiled packs,
-  never P-GEN compiler or source-catalogue dependencies.
+- `tools/P-GEN` is the required in-repository authoring-time visual asset
+  compiler. Palimpsest owns the reader and runtime pack contract; production
+  projects never reference P-GEN assemblies or catalogues, and shipped builds
+  contain only compiled packs. Root verification must prove both sides.
 - The Chronicle advances on deterministic fixed ticks with pause and speed
   controls. Never require reflex-speed input.
 

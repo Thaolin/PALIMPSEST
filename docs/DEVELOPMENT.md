@@ -33,6 +33,18 @@ is not required. Opening the Godot executable directly does not provide that
 environment and causes the C# editor build callback to report `.NET Sdk not
 found`.
 
+P-GEN is owned in this repository at `tools/P-GEN`. Launch its authoring-only
+workbench from the repository root with:
+
+```powershell
+& .\pgen-workbench.ps1
+```
+
+The root `checks/verify.ps1` first runs P-GEN's compiler, conformance, preview,
+and workbench proof, then runs Palimpsest's runtime, packaging, player,
+Inspector, save, and retained-journey gate. This is the one publication check;
+the production solution still has no P-GEN project reference.
+
 ## Play launcher and save profiles
 
 Build and launch the game from the repository root with:

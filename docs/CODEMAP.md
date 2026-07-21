@@ -100,14 +100,15 @@ pack seam and the compact manually authored Gate 3B reference pack.
 | [`CanonicalVisualPackReader.cs`](../src/Chronicle.VisualPack/CanonicalVisualPackReader.cs) | Strict canonical four-file P-GEN bundle validation and construction of the existing runtime pack value | `ReadDirectory`, `ReadCanonical`; filesystem and in-memory Adapter inputs |
 | [`ManualVisualPack.cs`](../src/Chronicle.VisualPack/ManualVisualPack.cs) | Native 16 px and 20 px golden comparison atlases, including intact/shattered Cairn and static danger marks | `ManualVisualPack.CreateGate3B`; retained verification fixture until and after required P-GEN E5 integration |
 
-### External P-GEN authoring pipeline
+### In-repository P-GEN authoring Module
 
-`C:\DEV\P-GEN` is the completed required authoring-time visual compiler. Its
-canonical `Palimpsest20` output is the source artifact for the mandatory E5
-reader/conformance gate. Palimpsest never ships or references P-GEN compiler or
-catalogue assemblies; `Chronicle.VisualPack` owns the runtime reader.
+[`tools/P-GEN`](../tools/P-GEN) is the completed required authoring-time visual
+compiler with its prior history preserved. Its canonical `Palimpsest20` output
+is the source artifact for the accepted E5 reader/conformance gate. Production
+projects never reference P-GEN compiler or catalogue assemblies;
+`Chronicle.VisualPack` owns the runtime reader.
 
-E5.1 adds a separate P-GEN authoring workbench at that external seam. The
+E5.1 adds a separate P-GEN authoring workbench at that seam. The
 existing pack-only preview remains the runtime-artifact oracle; the workbench
 may reference compiler/catalogue code but is never packaged or referenced by
 Palimpsest.
@@ -147,7 +148,7 @@ variation is deterministic and transient, never serialized simulation state.
 | --- | --- |
 | [`Chronicle.Core.Checks/Program.cs`](../checks/Chronicle.Core.Checks/Program.cs) | Dependency-free Core determinism, commands, ticks, generation, shared `Fly[Stone]`/`Fly[Bell]` resolution, first-conflict invariants, replay, literal predecessor migration, and strict v5 save/load contracts |
 | [`Chronicle.Visuals.Checks/Program.cs`](../checks/Chronicle.Visuals.Checks/Program.cs) | Pack vocabulary and bounds, exact adjacency-edge compatibility, deterministic variants, moved-Bell and Cairn/danger mapping, layering, crop, overlap, numeric-address edges, and render-plan digest |
-| [`verify.ps1`](../checks/verify.ps1) | Packaged .NET builds, Core and Visual checks, isolated 16 px and 20 px player/Inspector acceptance, save non-mutation, deterministic review artifacts, Godot editor callback, retained Goal 2/4 phases, and fresh/restarted Slice 5 `Fly[Bell]` proof with strict v5 inspection |
+| [`verify.ps1`](../checks/verify.ps1) | In-repository P-GEN compiler/workbench proof followed by packaged .NET builds, Core and Visual checks, isolated player/Inspector acceptance, packaging isolation, save non-mutation, and retained journeys |
 
 Exact supported commands and the packaged executable locations remain in the
 [Development guide](DEVELOPMENT.md).
@@ -165,6 +166,7 @@ Exact supported commands and the packaged executable locations remain in the
 | --- | --- |
 | [`play.ps1`](../play.ps1) | Canonical game build/launch using the normal Godot save, a named isolated profile, or a generated fresh profile |
 | [`open-editor.ps1`](../open-editor.ps1) | Godot editor launch with the packaged .NET environment |
+| [`pgen-workbench.ps1`](../pgen-workbench.ps1) | Root authoring interface delegating to the `tools/P-GEN` workbench without exposing it to production projects |
 
 ## Documentation map
 
@@ -198,6 +200,7 @@ Exact supported commands and the packaged executable locations remain in the
 | [`adr/0003-use-verbs-linked-modifiers-and-world-targets.md`](adr/0003-use-verbs-linked-modifiers-and-world-targets.md) | Accepted replacement of collectible Nouns with linked Modifiers and contextual world Targets |
 | [`adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md`](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) | Accepted use of P-GEN as the required authoring-time visual compiler behind a Palimpsest-owned reader |
 | [`adr/0005-use-one-character-scale-across-generated-areas.md`](adr/0005-use-one-character-scale-across-generated-areas.md) | Accepted same-scale Area topology, multi-cell geography, and authored on-demand Creature Grammar |
+| [`adr/0006-co-locate-p-gen-without-crossing-the-runtime-seam.md`](adr/0006-co-locate-p-gen-without-crossing-the-runtime-seam.md) | Accepted monorepo ownership of P-GEN while retaining compiler/runtime dependency and packaging isolation |
 | [`adr/`](adr/) | Accepted hard-to-reverse decisions and their reasoning |
 | [`archive/`](archive/README.md) | Completed contracts, accepted UAT evidence, and consumed prompts; historical rather than current authority |
 
@@ -234,6 +237,7 @@ Exact supported commands and the packaged executable locations remain in the
 - [ADR 0003 — Verbs, linked Modifiers, and world Targets](adr/0003-use-verbs-linked-modifiers-and-world-targets.md)
 - [ADR 0004 — P-GEN visual authoring pipeline](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md)
 - [ADR 0005 — One character scale across generated Areas](adr/0005-use-one-character-scale-across-generated-areas.md)
+- [ADR 0006 — Co-locate P-GEN without crossing the runtime seam](adr/0006-co-locate-p-gen-without-crossing-the-runtime-seam.md)
 - [Documentation Archive](archive/README.md)
 
 Read the [Roadmap](ROADMAP.md), the relevant contract's Status section, and the

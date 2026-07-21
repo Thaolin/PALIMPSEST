@@ -1,15 +1,16 @@
 # Chronicle Visual Engine — Drop-in Specification
 
 **Status:** Governing contract for the completed required P-GEN authoring
-pipeline and its pending Palimpsest E5 integration. P-GEN is implemented in its
-separate repository; no compiler implementation belongs in this repository.
-This specification grants no authority to change production code and never
-makes the compiler a shipped runtime dependency.
+pipeline and accepted Palimpsest E5 integration. P-GEN is co-located at
+`tools/P-GEN`; no production project may reference its compiler or catalogue
+implementation. This specification grants no authority to change gameplay and
+never makes the compiler a shipped runtime dependency.
 
 The completed copy-paste implementation handoff is archived as
 [Build the Chronicle Visual Engine](archive/prompts/CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md).
-It authorizes a separate workspace through Stage E4 and forbids Stage E5
-Palimpsest integration.
+It historically authorized a separate workspace through Stage E4 and forbade
+Stage E5 Palimpsest integration. E5/E5.1 were later separately authorized,
+accepted, and imported with their history under `tools/P-GEN`.
 
 ## Decision
 

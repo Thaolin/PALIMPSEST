@@ -2,7 +2,7 @@
 
 **Authorized:** 2026-07-21
 **Status:** Accepted and closed 2026-07-21 after corrected E5.1 player UAT
-**Pinned P-GEN baseline:** `812bb75c70fc22d78219759b70a9338a26b3ee8b`
+**Imported P-GEN head:** `f1287f0` under `tools/P-GEN`
 **Canonical aggregate:** `sha256:85418f3025f2944d2f58a0a981febb00903bf67edcc23cb84054b3fd9f91eae0`
 
 ## Player-visible hypothesis

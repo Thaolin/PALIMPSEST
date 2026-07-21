@@ -312,9 +312,17 @@ discuss, but requires explicit authorization before implementation.
 - New Chronicles use strict save envelope v5 and World Grammar v3. Literal
   v4/v3/v2/v1/pre-envelope compatibility remains verified, and old grammar
   pins `0`, `1`, and `2` do not gain the Cairn retroactively.
-- P-GEN is the required external authoring compiler. Reader/conformance,
+- `tools/P-GEN` is the required in-repository authoring Module with its prior
+  Git history preserved. Reader/conformance,
   packaging, E5.1 automation, and corrected player visual/workbench UAT are
-  complete and accepted. Actor-art quality is retained non-blocking debt.
+  complete and accepted. Root verification invokes its verifier before the
+  runtime gate; production dependency and package isolation remain mandatory.
+  Actor-art quality is retained non-blocking debt.
+- After co-location on 2026-07-21, the unified `checks/verify.ps1` gate passed
+  from the repository root. It reproduced canonical P-GEN aggregate
+  `sha256:85418f3025f2944d2f58a0a981febb00903bf67edcc23cb84054b3fd9f91eae0`,
+  proved the shipped package contains four files and no compiler, passed every
+  retained Palimpsest journey, and exited with `MONOREPO_VERIFY_EXIT=0`.
 
 ## Other retained non-blocking notes
 

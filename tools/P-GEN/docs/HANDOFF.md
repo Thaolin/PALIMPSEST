@@ -117,6 +117,6 @@ from Palimpsest, compiled motif-record export, live swapping, camera-coordinate
 changes, semantic biome generation, or Goal 6A visual vocabulary without a
 later authorized contract.
 
-The exact verified four-file output is synchronized into Palimpsest for its
-corrected E5.1 UAT. No file is staged, committed, published, pushed, or placed
-in a pull request in either repository.
+P-GEN is now co-located at `tools/P-GEN` with its prior Git history preserved.
+The repository-root verifier runs this verifier before the Palimpsest runtime
+gate. E5 and E5.1 are accepted; later work requires a new authorized contract.

@@ -28,8 +28,8 @@ These captures remain deterministic fixture windows, not approval by proxy.
 The refreshed P-GEN workbench is currently open. To reopen it later:
 
 ```powershell
-Set-Location C:\DEV\P-GEN
-.\workbench.ps1
+Set-Location C:\DEV\PALIMPSEST
+.\pgen-workbench.ps1
 ```
 
 Review:

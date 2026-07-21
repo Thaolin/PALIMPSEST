@@ -5,6 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$powershell = (Get-Process -Id $PID).Path
 $dotnetRoot = Join-Path $repoRoot ".tools\dotnet"
 $dotnet = Join-Path $dotnetRoot "dotnet.exe"
 $godot = Join-Path $repoRoot ".tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe"
@@ -13,6 +14,7 @@ $coreChecksProject = Join-Path $repoRoot "checks\Chronicle.Core.Checks\Chronicle
 $visualChecksProject = Join-Path $repoRoot "checks\Chronicle.Visuals.Checks\Chronicle.Visuals.Checks.csproj"
 $godotProject = Join-Path $repoRoot "src\Chronicle.Godot\Chronicle.Godot.csproj"
 $godotProjectDirectory = Join-Path $repoRoot "src\Chronicle.Godot"
+$pgenVerify = Join-Path $repoRoot "tools\P-GEN\tools\verify.ps1"
 $atlasRuntimeName = "godot-atlas-verify-$([Guid]::NewGuid().ToString("N"))"
 $atlasRuntimeRoot = Join-Path $repoRoot ".tools\$atlasRuntimeName"
 $gate3bAtlasRuntimeName = "godot-gate3b-atlas-verify-$([Guid]::NewGuid().ToString("N"))"
@@ -967,6 +969,11 @@ try
     $env:PATH = "$dotnetRoot$([IO.Path]::PathSeparator)$($originalEnvironment.Path)"
     $env:DOTNET_CLI_HOME = Join-Path $repoRoot ".tools\dotnet-cli"
     $env:NUGET_PACKAGES = Join-Path $env:DOTNET_CLI_HOME ".nuget\packages"
+
+    Invoke-CheckedCommand "Run in-repository P-GEN authoring verification" $powershell @(
+        "-NoProfile",
+        "-File", $pgenVerify
+    )
 
     Invoke-CheckedCommand "Restore Chronicle.Core checks" $dotnet @(
         "restore",

@@ -5,10 +5,11 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $root = Split-Path -Parent $PSScriptRoot
+$palimpsestRoot = Split-Path -Parent (Split-Path -Parent $root)
 $dotnetCandidates = @(
     $env:CHRONICLE_DOTNET,
     (Join-Path $root '.tools\dotnet\dotnet.exe'),
-    'C:\DEV\PALIMPSEST\.tools\dotnet\dotnet.exe',
+    (Join-Path $palimpsestRoot '.tools\dotnet\dotnet.exe'),
     (Get-Command dotnet -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
 ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
 $dotnet = $dotnetCandidates | Select-Object -First 1
@@ -26,7 +27,7 @@ $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
 $env:DOTNET_CLI_USE_MSBUILD_SERVER = '0'
 if (-not $env:NUGET_PACKAGES) {
     $localPackages = Join-Path $root '.tools\nuget-packages'
-    $sharedPackages = 'C:\DEV\PALIMPSEST\.tools\nuget-packages'
+    $sharedPackages = Join-Path $palimpsestRoot '.tools\nuget-packages'
     $env:NUGET_PACKAGES = if (Test-Path -LiteralPath $localPackages) {
         $localPackages
     } elseif (Test-Path -LiteralPath $sharedPackages) {

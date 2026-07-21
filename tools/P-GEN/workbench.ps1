@@ -5,10 +5,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$palimpsestRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $godot = if ($env:CHRONICLE_GODOT) {
     $env:CHRONICLE_GODOT
 } else {
-    'C:\DEV\PALIMPSEST\.tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe'
+    Join-Path $palimpsestRoot '.tools\godot\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe'
 }
 
 if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) {

@@ -63,10 +63,10 @@ view. Keep its compiled-pack seam independent of the authoring method so a
 later procedural compiler can be compared against or replace the initial
 manual adapter without changing runtime meaning.
 
-The required external P-GEN compiler is specified in the
+The required in-repository `tools/P-GEN` authoring Module is specified in the
 [Chronicle Visual Engine drop-in contract](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md).
 It is pure C# at authoring time with a Godot preview adapter, remains absent
-from the shipped runtime, and does not block Gate 3B. Its separate E0–E4
+from the shipped runtime, and does not block Gate 3B. Its historical E0–E4
 [historical build handoff](archive/prompts/CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md)
 stops before
 Palimpsest integration. P-GEN's E4.5 technical proof was independently

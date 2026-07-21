@@ -38,13 +38,15 @@ remain supported predecessor behavior until one authorized successor migration
 replaces them. Do not preserve them as parallel successor interfaces or delete
 their literal migration proof prematurely.
 
-P-GEN is the required authoring-time visual compiler. Palimpsest consumes its
-compiled content through a Palimpsest-owned `Chronicle.VisualPack` reader;
+P-GEN is the required authoring-time visual compiler, co-located at
+`tools/P-GEN` so compiler and consumer changes are atomic. Palimpsest consumes
+its compiled content through a Palimpsest-owned `Chronicle.VisualPack` reader;
 P-GEN never owns semantic World Grammar, Chronicle state, Target facts, or
 gameplay generation. E5 makes the packaged P-GEN artifact the normal 20-pixel
 player/Inspector path while the manual pack remains a golden verification and
 explicit comparison fixture. See
-[ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md).
+[ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) and
+[ADR 0006](adr/0006-co-locate-p-gen-without-crossing-the-runtime-seam.md).
 
 ## Simulation shape
 
@@ -187,7 +189,7 @@ explicit comparison fixture. See
 | Versioned compiled-pack values and the authored Gate 3B reference pack | `Chronicle.VisualPack` |
 | Deterministic semantic-to-visual composition and transient render plans | `Chronicle.Visuals` |
 | Texture loading, drawing, visual preview, and UI layout | `Chronicle.Godot` |
-| Authoring-time visual compilation | Pure C# compiler outside the shipped runtime |
+| Authoring-time visual compilation | `tools/P-GEN`; pure C# Module inside the repository and outside every production dependency/package graph |
 | Developer World Grammar inspection and capture | `Chronicle.Godot`, reading the same Core area snapshots as the player view |
 | Tests for domain and visual composition rules | .NET check projects outside Godot |
 

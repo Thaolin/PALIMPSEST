@@ -1,5 +1,9 @@
 # P-GEN
 
+This authoring Module is owned by the Palimpsest monorepo at `tools/P-GEN`.
+Its compiler, catalogue, review evidence, and workbench remain outside every
+production project and shipped package.
+
 P-GEN is a deterministic, offline C# authoring compiler for a candidate
 PALIMPSEST 20px visual contract. It compiles a typed catalogue into one canonical
 `Palimpsest20` pack: one indexed atlas, one palette, concrete string-resolvable
