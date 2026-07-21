@@ -1,7 +1,7 @@
 # Combat Grammar Pressure Test
 
 **Authorized:** 2026-07-21
-**Status:** combat-cycle UAT passed; Slow-heartbeat refinement awaiting player UAT
+**Status:** passed by player UAT on 2026-07-21; prototype closed
 
 ## Question
 
@@ -131,12 +131,15 @@ player said it “feels pretty great” and “feels like a proper RPG combat cy
 That passes the system hypothesis covering physical attacks, HP, Companion
 screening, `Burn`, linked build trade-offs, and Recovery.
 
-One interaction refinement remains active before closing the prototype: replace
-manual tick stepping as the primary experience with a visible Slow heartbeat
-and pause. Engagement should apply player-selected opening behaviors, ready the
-Weapon, call the Companion when selected, and pause before the first hostile
-tick. The player can then resume Slow or choose another skill, alter current
-behavior, or retreat while paused.
+The follow-up refinement replaced manual tick stepping as the primary experience
+with a visible Slow heartbeat and pause. Engagement applies player-selected
+opening behaviors, readies the Weapon, calls the Companion when selected, and
+pauses before the first hostile Heartbeat. The player can then resume Slow or
+choose another skill, alter current behavior, or retreat while paused.
+
+The player passed the refined interaction with: “Yeah this feels great too.
+Like Baldur's Gate!” The Slow heartbeat, Engagement Plan, opening pause, and
+pause-first tactical input therefore pass this pressure test.
 
 ## Forbidden drift
 
@@ -146,11 +149,10 @@ behavior, or retreat while paused.
 - no inventory, loot, crafting, bestiary, healing economy, damage types, or
   general statistics framework;
 - no final balance conclusion from the fixture numbers; and
-- no successor implementation contract until player UAT passes and a separate
-  production slice is authorized.
+- no production successor without a separately authorized vertical-slice
+  contract.
 
 ## Stop condition
 
-When the prototype runs and the retained baseline still passes, stop and hand
-the command and journey to the player. Do not interpret automated execution as
-player acceptance.
+Complete. Preserve this prototype as pressure-test evidence; do not expand it or
+move its fixture rules into production by inertia.

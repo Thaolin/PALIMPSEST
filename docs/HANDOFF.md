@@ -10,7 +10,7 @@ authorized future slice contract.
 
 ## Current gate
 
-**Combat grammar cycle passed — Slow-heartbeat refinement awaiting UAT**
+**Combat grammar pressure test passed — successor slice not authorized**
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -48,7 +48,11 @@ authorized future slice contract.
   model hypothesis. Before closing the prototype, the player requested one
   interaction refinement: Engagement applies selected opening Weapon and
   Companion behaviors, then pauses before a visible Slow heartbeat begins. The
-  refinement is implemented in the isolated prototype and awaits player UAT.
+  refinement was implemented in the isolated prototype.
+- The player passed the refined interaction on 2026-07-21 with: “Yeah this
+  feels great too. Like Baldur's Gate!” The pressure test is closed. Heartbeats,
+  the Engagement Plan, opening pause, and pause-first tactical input are now
+  settled successor direction, not authorization to port fixture rules.
 - Goal 6 and Slice 7 remain later gates.
 
 ## Settled successor direction
@@ -74,6 +78,10 @@ authorized future slice contract.
   another in the same Chronicle state and time. Actions may use Preparation,
   delayed resolution, Recovery, or ritual commitment, but every delay must
   create decisions rather than idle waiting.
+- The Chronicle Clock advances through fixed Heartbeats. Immediate danger is
+  readable at Slow or paused. Engagement applies the selected opening Weapon
+  and Companion behaviors, then pauses before the first hostile Heartbeat;
+  tactical input during Slow pauses before it resolves.
 - Companions remain autonomous Agents. Taming and leadership may improve bond,
   learned behavior, coordination, and willingness without creating per-tick
   unit control. Companions and equipment do not consume Load merely by being
@@ -105,9 +113,9 @@ authorized future slice contract.
   condition or injury model, and exact Preparation and Recovery behavior;
 - exact weapon cadence and commands, damage and Armor arithmetic, Accessory
   effects, healing, HP persistence, and `Burn` behavior;
-- whether Invocation Recovery simply advances on Chronicle ticks everywhere or
-  needs any derived danger state for presentation and auto-pause; a resettable
-  combat-mode boundary is not settled;
+- exact additional auto-pause triggers and available Chronicle Clock speeds;
+- whether Invocation Recovery simply advances on Heartbeats everywhere or
+  needs any derived danger state for presentation;
 - how Companions join, leave, interpret combat Directives, and differ under
   taming or leadership without requiring a broad Agent framework first;
 - strict migration of the accepted v5 Codex and `Fly[Stone]`/`Fly[Bell]`
@@ -158,13 +166,11 @@ reported.
 
 ## Current permitted scope
 
-No production feature or polish work is authorized. The active scope is the
-bounded [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md): its
-contract documentation, one in-memory pure C# combat model, one thin terminal
-shell, and one-command runner. Current work is narrowed to the requested
-Engagement Plan, automatic opening pause, Slow heartbeat, and pause-first
-tactical input. It must remain outside production projects, saves, Godot, and
-the retained verification gate.
+No production feature or polish work is authorized. The bounded
+[Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md) is complete and
+retained only as evidence. Current scope is documentation reconciliation and
+definition of a separately authorized successor vertical slice. The prototype
+must remain outside production projects, saves, Godot, and the retained gate.
 
 ## Retained accepted baseline
 
@@ -216,7 +222,6 @@ the retained verification gate.
 
 ## Stop and hand off
 
-When the Slow-heartbeat refinement runs, stop and hand the revised journey to
-the player. Automated execution is not final UAT acceptance. Do not begin a
-production successor, Goal 6, P-GEN E5, a save migration, or resource-system
-implementation without a separately authorized contract.
+Stop. The player accepted the pressure test. Do not begin a production
+successor, Goal 6, P-GEN E5, a save migration, or resource-system implementation
+without a separately authorized contract.

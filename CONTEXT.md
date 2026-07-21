@@ -18,12 +18,18 @@ into further Worlds through durable passages or extreme traversal.
 _Avoid_: Chronicle, level, disposable map
 
 **Chronicle Clock**:
-The deterministic continuous time of a Chronicle, from which its calendar and
-day–night cycle derive. Pausing freezes autonomous world change and time-driven
-behavior while inspection, Loadout configuration, deliberate movement, and
-action preparation remain responsive. Only suitably large or durable acts
-commit substantial in-world time, and safe waiting skips to meaningful change.
+The deterministic time of a Chronicle, advancing through fixed Heartbeats from
+which its calendar and day–night cycle derive. Pausing freezes autonomous world
+change and time-driven behavior while inspection, Loadout configuration,
+deliberate movement, and action preparation remain responsive. Only suitably
+large or durable acts commit substantial in-world time, and safe waiting skips
+to meaningful change.
 _Avoid_: Hard turn sequence, twitch combat clock
+
+**Heartbeat**:
+One fixed deterministic pulse of the Chronicle Clock. Immediate danger runs at
+a legible Slow pace or remains paused; it never requires reflex-speed input.
+_Avoid_: Action-point turn, hidden timer, mandatory real-time speed
 
 **Stratum**:
 A two-dimensional spatial layer of a World, such as sky, surface, underworld,
@@ -117,6 +123,13 @@ A consequence-bearing Chronicle conflict resolved through positioning,
 physical actions, equipment, autonomous Companions, and Invocations. It remains
 part of ordinary world state and time rather than entering a separate mode.
 _Avoid_: Spellcasting-only duel, reflex arena, isolated battle screen
+
+**Engagement Plan**:
+The small player-configured set of available combat behaviors that activate
+when immediate danger is engaged, such as readying a Weapon or calling a
+Companion. Engagement applies the plan and pauses before the first hostile
+Heartbeat so the player may inspect, invoke, change behavior, or retreat.
+_Avoid_: Combat-mode load screen, scripted opening turn, direct Companion order
 
 **Return Route**:
 A known, physically traversable way from an Incarnation to one of the player's
