@@ -1,7 +1,14 @@
 using Chronicle.Core;
 using Chronicle.VisualPack;
 using Chronicle.Visuals;
+using System.Buffers.Binary;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
+VerifyCanonicalPGenBundleAndReaderFailures();
+VerifyPGenAndManualPacksComposeTheSameSemantics();
 VerifyConnectedSurfaceFeaturesUseExplicitCardinalMasks();
 VerifyGate3BManualPacksResolveRequiredVisualVocabulary();
 VerifyGate3BCompositionCropsAndLayersTheSharedSkySnapshot();
@@ -11,7 +18,240 @@ VerifyGoal4CManualPackAndStaticDangerSeam();
 VerifyGoal4CCairnSubjectsComposeOverCoreSemantics();
 VerifyMovedBellComposesAtItsCoreAddress();
 Console.WriteLine(
-    "PASS: Gate 3B compiled visual packs, deterministic composition, connected features, and overlap verified.");
+    "PASS: E5 canonical P-GEN reader plus Gate 3B deterministic composition, connected features, and overlap verified.");
+
+static void VerifyCanonicalPGenBundleAndReaderFailures()
+{
+    var files = LoadCanonicalFiles();
+    var pack = CanonicalVisualPackReader.ReadCanonical(files);
+    var fromDirectory = LoadPGenPack();
+    var requiredIds = new[]
+    {
+        "terrain.surface.grass",
+        "terrain.surface.soil",
+        "terrain.surface.water",
+        "terrain.sky.open",
+        "feature.surface.grove",
+        "feature.surface.ridge",
+        "feature.surface.ridge-water-crossing",
+        "terrain.sky.cloud",
+        "landmark.bell-that-fell-up",
+        "subject.loose-stone",
+        "subject.home-hearthstone",
+        "subject.riven-cairn-river-ward",
+        "subject.shattered-cairn",
+        "actor.incarnation",
+        "emphasis.danger.river-ward",
+        "emphasis.target.valid",
+        "emphasis.selection",
+        "glyph.codex",
+        "glyph.loadout",
+        "glyph.codex.fly",
+        "glyph.codex.stone",
+    };
+
+    Assert(
+        pack.Digest ==
+            "sha256:a63d1cfe147f22a39e84c835a33b77689c8b3b5492b49eb5e5b8fad18108a8fc" &&
+        fromDirectory.Digest == pack.Digest &&
+        pack.Definitions.Count == 185 &&
+        requiredIds.All(id => pack.Resolve(id).VisualId == id),
+        "The packaged P-GEN artifact must load through both reader Interfaces and resolve the exact current vocabulary.");
+
+    ExpectReaderFailure(
+        files.Where(file => file.RelativePath != "manifest.json"),
+        "PAL20-FMT-002");
+    ExpectReaderFailure(
+        files.Append(new CanonicalVisualPackFile("unexpected.bin", new byte[] { 1 })),
+        "PAL20-FMT-002");
+    ExpectReaderFailure(
+        files.Append(files[0]),
+        "PAL20-FMT-001");
+    ExpectReaderFailure(
+        files.Append(new CanonicalVisualPackFile("../escape", Array.Empty<byte>())),
+        "PAL20-FMT-006");
+
+    var corruptAtlas = CloneFiles(files);
+    corruptAtlas[CanonicalVisualPackReader.AtlasPath][0] ^= 1;
+    ExpectReaderFailure(ToPackFiles(corruptAtlas), "PAL20-HASH-001");
+
+    var incompatible = CloneFiles(files);
+    var validation = JsonNode.Parse(incompatible["validation.json"])!.AsObject();
+    validation["packFormatVersion"] = 2;
+    incompatible["validation.json"] = CanonicalJson(validation);
+    RewriteHashes(incompatible);
+    ExpectReaderFailure(ToPackFiles(incompatible), "PAL20-COMPAT-001");
+
+    var futureReader = CloneFiles(files);
+    validation = JsonNode.Parse(futureReader["validation.json"])!.AsObject();
+    validation["minimumReaderVersion"] = "2.0.0";
+    futureReader["validation.json"] = CanonicalJson(validation);
+    RewriteHashes(futureReader);
+    ExpectReaderFailure(ToPackFiles(futureReader), "PAL20-COMPAT-002");
+
+    var nonCanonical = CloneFiles(files);
+    nonCanonical["manifest.json"] = nonCanonical["manifest.json"]
+        .Concat(new byte[] { (byte)' ' })
+        .ToArray();
+    RewriteHashes(nonCanonical);
+    ExpectReaderFailure(ToPackFiles(nonCanonical), "PAL20-FMT-004");
+
+    var duplicateJson = CloneFiles(files);
+    var manifestText = Encoding.UTF8.GetString(duplicateJson["manifest.json"]);
+    duplicateJson["manifest.json"] = Encoding.UTF8.GetBytes(
+        manifestText.Replace(
+            "{\"packFormatVersion\":1,",
+            "{\"packFormatVersion\":1,\"packFormatVersion\":1,",
+            StringComparison.Ordinal));
+    ExpectReaderFailure(ToPackFiles(duplicateJson), "PAL20-JSON-002");
+}
+
+static void VerifyPGenAndManualPacksComposeTheSameSemantics()
+{
+    var state = ChronicleState.Begin(41_337);
+    var visible = new WorldRectangle(-6, -6, 13, 13);
+    var semantic = WorldArea.Generate(
+        state,
+        SurfacePatch.SurfaceStratum,
+        new WorldRectangle(-7, -7, 15, 15));
+    var pgen = LoadPGenPack();
+    var manual = ManualVisualPack.CreateGate3B(20);
+    var incarnation = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 0);
+    var danger = semantic.Cells.Single(cell =>
+        cell.DurableIdentity == FirstConflictSubjects.RivenCairnIdentity).Address;
+
+    VisualRenderPlan Compose(CompiledVisualPack pack) => VisualGrammar.Compose(
+        new VisualCompositionInput(
+            semantic,
+            visible,
+            state.Seed,
+            pack,
+            pack.StyleVersion,
+            incarnation,
+            [danger],
+            [incarnation],
+            [danger]));
+
+    var pgenPlan = Compose(pgen);
+    var manualPlan = Compose(manual);
+    static object Projection(VisualRenderMark mark) => new
+    {
+        mark.Address,
+        mark.VisualId,
+        mark.FamilyId,
+        mark.VariantOrdinal,
+        mark.Layer,
+        mark.Anchor,
+        mark.OverviewPaletteIndex,
+        mark.Column,
+        mark.Row,
+    };
+
+    Assert(
+        pgenPlan.Marks.Select(Projection).SequenceEqual(
+            manualPlan.Marks.Select(Projection)),
+        "P-GEN and the manual golden pack must compose the same semantic marks, variants, layers, and cells.");
+    Assert(
+        Compose(pgen).Digest == pgenPlan.Digest &&
+        Compose(pgen).Marks.SequenceEqual(pgenPlan.Marks),
+        "Repeated P-GEN composition must remain deterministic.");
+}
+
+static CompiledVisualPack LoadPGenPack() =>
+    CanonicalVisualPackReader.ReadDirectory(Path.Combine(
+        AppContext.BaseDirectory,
+        "visual-packs",
+        "palimpsest20"));
+
+static CanonicalVisualPackFile[] LoadCanonicalFiles()
+{
+    var root = Path.Combine(
+        AppContext.BaseDirectory,
+        "visual-packs",
+        "palimpsest20");
+    return Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+        .Select(path => new CanonicalVisualPackFile(
+            Path.GetRelativePath(root, path).Replace('\\', '/'),
+            File.ReadAllBytes(path)))
+        .OrderBy(static file => file.RelativePath, StringComparer.Ordinal)
+        .ToArray();
+}
+
+static Dictionary<string, byte[]> CloneFiles(
+    IEnumerable<CanonicalVisualPackFile> files) =>
+    files.ToDictionary(
+        static file => file.RelativePath,
+        static file => file.Bytes.ToArray(),
+        StringComparer.Ordinal);
+
+static IEnumerable<CanonicalVisualPackFile> ToPackFiles(
+    IReadOnlyDictionary<string, byte[]> files) =>
+    files.Select(static pair => new CanonicalVisualPackFile(pair.Key, pair.Value));
+
+static void ExpectReaderFailure(
+    IEnumerable<CanonicalVisualPackFile> files,
+    string expectedCode)
+{
+    try
+    {
+        _ = CanonicalVisualPackReader.ReadCanonical(files);
+        throw new InvalidOperationException(
+            $"Canonical reader accepted input expected to fail with {expectedCode}.");
+    }
+    catch (FormatException exception) when (exception.Message.StartsWith(
+               expectedCode,
+               StringComparison.Ordinal))
+    {
+    }
+}
+
+static byte[] CanonicalJson(JsonNode node) =>
+    Encoding.UTF8.GetBytes(node.ToJsonString(new JsonSerializerOptions
+    {
+        WriteIndented = false,
+    }) + "\n");
+
+static void RewriteHashes(IDictionary<string, byte[]> files)
+{
+    var hashes = JsonNode.Parse(files["hashes.json"])!.AsObject();
+    var entries = hashes["files"]!.AsArray();
+    foreach (var entryNode in entries)
+    {
+        var entry = entryNode!.AsObject();
+        var path = entry["path"]!.GetValue<string>();
+        entry["digest"] = Sha256(files[path]);
+    }
+
+    hashes["aggregateDigest"] = AggregateDigest(entries.Select(entryNode =>
+    {
+        var entry = entryNode!.AsObject();
+        return (
+            "file",
+            entry["path"]!.GetValue<string>(),
+            entry["digest"]!.GetValue<string>());
+    }));
+    files["hashes.json"] = CanonicalJson(hashes);
+}
+
+static string AggregateDigest(
+    IEnumerable<(string Kind, string Id, string Digest)> entries)
+{
+    using var stream = new MemoryStream();
+    Span<byte> length = stackalloc byte[sizeof(int)];
+    foreach (var entry in entries)
+    {
+        var bytes = Encoding.UTF8.GetBytes(
+            $"chronicle.visual-pack.v1\0{entry.Kind}\0{entry.Id}\0{entry.Digest}");
+        BinaryPrimitives.WriteInt32LittleEndian(length, bytes.Length);
+        stream.Write(length);
+        stream.Write(bytes);
+    }
+
+    return Sha256(stream.ToArray());
+}
+
+static string Sha256(ReadOnlySpan<byte> bytes) =>
+    $"sha256:{Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant()}";
 
 static void VerifyMovedBellComposesAtItsCoreAddress()
 {

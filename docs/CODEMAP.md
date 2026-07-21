@@ -21,7 +21,7 @@ permitted work in the [Active Handoff Contract](HANDOFF.md).
 | Build, test, launch, or open the editor | [Development](DEVELOPMENT.md) |
 | Understand a current slice's exact promise | The contract linked from the Roadmap |
 | Find completed contracts, accepted UAT, or consumed prompts | [Documentation archive](archive/README.md) |
-| Integrate the required P-GEN authoring pipeline through E5 | [P-GEN E4.5 readiness review](P-GEN-E4-5-READINESS-REVIEW.md) and [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) |
+| Integrate the required P-GEN authoring pipeline through E5 | [Active E5 contract](P-GEN-E5-INTEGRATION.md), [P-GEN E4.5 readiness review](P-GEN-E4-5-READINESS-REVIEW.md), and [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) |
 | Understand a hard-to-reverse decision | [ADR 0001](adr/0001-use-godot-with-a-csharp-chronicle-core.md), [ADR 0002](adr/0002-pin-world-grammar-version-per-chronicle.md), [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md), and [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) |
 | Check external technical references | [References](REFERENCES.md) |
 
@@ -97,6 +97,7 @@ pack seam and the compact manually authored Gate 3B reference pack.
 | Source | Owns | Interface or callers |
 | --- | --- | --- |
 | [`CompiledVisualPack.cs`](../src/Chronicle.VisualPack/CompiledVisualPack.cs) | Pack identity and versions, indexed atlas, palette roles, stable visual definitions, anchors, layer classes, adjacency masks, validation, and digest | `CompiledVisualPack`, `VisualDefinition`; consumed by the pure composer and Godot adapter |
+| [`CanonicalVisualPackReader.cs`](../src/Chronicle.VisualPack/CanonicalVisualPackReader.cs) | Strict canonical four-file P-GEN bundle validation and construction of the existing runtime pack value | `ReadDirectory`, `ReadCanonical`; filesystem and in-memory Adapter inputs |
 | [`ManualVisualPack.cs`](../src/Chronicle.VisualPack/ManualVisualPack.cs) | Native 16 px and 20 px golden comparison atlases, including intact/shattered Cairn and static danger marks | `ManualVisualPack.CreateGate3B`; retained verification fixture until and after required P-GEN E5 integration |
 
 ### External P-GEN authoring pipeline
@@ -126,6 +127,7 @@ decision.
 | [`ChronicleApp.cs`](../src/Chronicle.Godot/ChronicleApp.cs) | Scene construction, nonbinding Starting Vector and mixed-Codex Loadout controls, catalogue-derived composition guidance, input-to-command translation, moved-Bell presentation, Home/route and first-conflict readouts, death/replacement UI, clock pulse delivery, save-file I/O, and headless Godot acceptance journeys | Movement legality, Home-site or conflict eligibility, Return Route calculation or movement, conflict timing/result, death eligibility, replacement continuity, Study progress, Loadout compatibility, target validity, generation meaning, or persistence semantics |
 | [`WorldVisualView.cs`](../src/Chronicle.Godot/WorldVisualView.cs) | One batched player-view draw surface over a shared `VisualRenderPlan` | Semantic generation, variant selection, or durable world state |
 | [`VisualPackGodotAdapter.cs`](../src/Chronicle.Godot/VisualPackGodotAdapter.cs) | Indexed-atlas expansion, native and overview rasterization, atlas-region textures, and Godot draw adaptation | Pack authorship, semantic mapping, or gameplay rules |
+| [`PackagedVisualPackLoader.cs`](../src/Chronicle.Godot/PackagedVisualPackLoader.cs) | One shared P-GEN-default/manual-comparison selection path for player and Inspector | Pack validation or authorship |
 | [`WorldAtlasInspector.cs`](../src/Chronicle.Godot/WorldAtlasInspector.cs) and [`WorldAtlasInspector.tscn`](../src/Chronicle.Godot/WorldAtlasInspector.tscn) | Direct developer-only bounded World Grammar inspection, semantic diagnostics, shared Visual Grammar preview, and deterministic capture | Player save I/O, Chronicle advancement, generation rules, or a player-facing Atlas |
 | [`project.godot`](../src/Chronicle.Godot/project.godot) | Godot project configuration, root scene, display, and input actions | Gameplay state or rules |
 | [`Chronicle.Godot.csproj`](../src/Chronicle.Godot/Chronicle.Godot.csproj) | Godot C# build and references to Core, VisualPack, and Visuals | Domain dependencies flowing back into Core or the engine-independent visual projects |
@@ -179,6 +181,8 @@ Exact supported commands and the packaged executable locations remain in the
 | [`GATE-3B-VISUAL-UAT.md`](GATE-3B-VISUAL-UAT.md) | Gate 3B candidate comparison, annotated four-image review sheet, interactive journey, and exact density decision |
 | [`PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md`](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md) | Governing pure-C# compiler, compiled-pack, composer, Godot-adapter, conformance, and drop-in contract for required P-GEN integration |
 | [`P-GEN-E4-5-READINESS-REVIEW.md`](P-GEN-E4-5-READINESS-REVIEW.md) | Reproduced external evidence and acceptance requirements for the mandatory Palimpsest E5 integration gate |
+| [`P-GEN-E5-INTEGRATION.md`](P-GEN-E5-INTEGRATION.md) | Active bounded contract for the canonical reader, packaged artifact, shared default path, conformance proof, and UAT stop |
+| [`P-GEN-E5-UAT.md`](P-GEN-E5-UAT.md) | Native P-GEN/manual comparison sheet, interactive visual journey, and pending player decision |
 | [`DESIGN-EVALUATION-2026-07-20.md`](DESIGN-EVALUATION-2026-07-20.md) | Dated pre-alpha assessment of playable depth, design risks, latent opportunities, and candidate decision gates; evidence rather than production authority |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Exact build, test, editor, and launch instructions |
 | [`REFERENCES.md`](REFERENCES.md) | Primary external technical references |

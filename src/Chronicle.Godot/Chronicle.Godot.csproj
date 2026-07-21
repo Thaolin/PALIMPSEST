@@ -9,4 +9,10 @@
     <ProjectReference Include="../Chronicle.VisualPack/Chronicle.VisualPack.csproj" />
     <ProjectReference Include="../Chronicle.Visuals/Chronicle.Visuals.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="visual-packs/**/*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

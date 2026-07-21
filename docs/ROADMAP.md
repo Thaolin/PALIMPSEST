@@ -253,7 +253,10 @@ Decision record:
 
 ## Gate P-GEN E5 — The Authored World Enters the Game
 
-**Status:** Required next integration gate; implementation not authorized.
+**Status:** Implementation and complete automated acceptance passed on
+2026-07-21; [player visual UAT](P-GEN-E5-UAT.md) is pending. The bounded
+[E5 contract](P-GEN-E5-INTEGRATION.md) requires that separate result before
+this gate can close.
 P-GEN is built and is the canonical visual authoring pipeline. E5 is not an
 adoption decision: it connects the completed compiler output to Palimpsest's
 existing runtime pack seam before Goal 6A adds new gameplay vocabulary.

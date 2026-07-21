@@ -127,7 +127,7 @@ public partial class ChronicleApp : Node
         _verifySlice5 = arguments.Contains("--verify-slice5", StringComparer.Ordinal);
         _verifySlice5Restart = arguments.Contains("--verify-slice5-restart", StringComparer.Ordinal);
         _visualCellSize = RequestedVisualCellSize(arguments);
-        _visualPack = ManualVisualPack.CreateGate3B(_visualCellSize);
+        _visualPack = PackagedVisualPackLoader.Load(arguments, _visualCellSize);
         _visualAtlasTexture = VisualPackGodotAdapter.CreateAtlasTexture(_visualPack);
         _flyGlyph = VisualPackGodotAdapter.CreateRegionTexture(
             _visualAtlasTexture,
@@ -1725,7 +1725,9 @@ public partial class ChronicleApp : Node
                 ".tools",
                 "gate3b-review"));
         Directory.CreateDirectory(directory);
-        var stem = $"player_s{_simulation.State.Seed}_sky_bell_stone_{_visualCellSize}px";
+        var stem =
+            $"player_s{_simulation.State.Seed}_sky_bell_stone_{_visualCellSize}px_" +
+            PackagedVisualPackLoader.ReviewTag(_visualPack);
         var pngPath = Path.Combine(directory, $"{stem}.png");
         var metadataPath = Path.Combine(directory, $"{stem}.json");
         var image = VisualPackGodotAdapter.RasterizeNative(_visualPack, plan);

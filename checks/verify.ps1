@@ -478,7 +478,9 @@ function Invoke-GodotAtlasRun {
         [bool] $ExpectedExistingSave,
 
         [ValidateSet(0, 16, 20)]
-        [int] $VisualCellSize = 0
+        [int] $VisualCellSize = 0,
+
+        [switch] $ManualComparison
     )
 
     Write-Host "`n==> $Label"
@@ -495,6 +497,10 @@ function Invoke-GodotAtlasRun {
     else
     {
         $commandArguments += @("--verify-gate3b-atlas", "--visual-cell-size=$VisualCellSize")
+    }
+    if ($ManualComparison)
+    {
+        $commandArguments += "--manual-visual-pack"
     }
 
     $output = @(& $godot @commandArguments 2>&1)
@@ -519,8 +525,16 @@ function Invoke-GodotAtlasRun {
 
     if ($VisualCellSize -ne 0)
     {
+        $expectedPack = if ($VisualCellSize -eq 20 -and -not $ManualComparison)
+        {
+            "chronicle.palimpsest20"
+        }
+        else
+        {
+            "chronicle.gate3b.manual"
+        }
         $expectedComposerMarker =
-            "GATE3B SHARED COMPOSER PLAN PASS pack=chronicle.gate3b.manual style=1 size=$VisualCellSize"
+            "GATE3B SHARED COMPOSER PLAN PASS pack=$expectedPack style=1 size=$VisualCellSize"
         if (-not $text.Contains($expectedComposerMarker))
         {
             throw "$Label did not use the expected Gate 3B shared-composer pack and cell size."
@@ -576,7 +590,9 @@ function Invoke-GodotGate3BPlayerRun {
         [string] $Label,
 
         [ValidateSet(16, 20)]
-        [int] $VisualCellSize
+        [int] $VisualCellSize,
+
+        [switch] $ManualComparison
     )
 
     $expectedDensity = switch ($VisualCellSize)
@@ -584,8 +600,16 @@ function Invoke-GodotGate3BPlayerRun {
         20 { "51x37" }
         16 { "63x45" }
     }
+    $expectedPack = if ($VisualCellSize -eq 20 -and -not $ManualComparison)
+    {
+        "chronicle.palimpsest20"
+    }
+    else
+    {
+        "chronicle.gate3b.manual"
+    }
     $expectedMarker =
-        "GATE3B PLAYER VISUAL ACCEPTANCE PASS size=$VisualCellSize density=$expectedDensity pack=chronicle.gate3b.manual"
+        "GATE3B PLAYER VISUAL ACCEPTANCE PASS size=$VisualCellSize density=$expectedDensity pack=$expectedPack"
 
     Write-Host "`n==> $Label"
     $commandArguments = @(
@@ -595,6 +619,10 @@ function Invoke-GodotGate3BPlayerRun {
         "--verify-gate3b-player",
         "--visual-cell-size=$VisualCellSize"
     )
+    if ($ManualComparison)
+    {
+        $commandArguments += "--manual-visual-pack"
+    }
     $output = @(& $godot @commandArguments 2>&1)
     $exitCode = $LASTEXITCODE
     $output | ForEach-Object { Write-Host $_ }
@@ -633,14 +661,26 @@ function Get-Gate3BReviewArtifactStems {
 
     if ($Kind -eq "Player")
     {
-        return @("player_s41337_sky_bell_stone_${CellSize}px")
+        if ($CellSize -eq 20)
+        {
+            return @(
+                "player_s41337_sky_bell_stone_20px_pgen",
+                "player_s41337_sky_bell_stone_20px_manual"
+            )
+        }
+
+        return @("player_s41337_sky_bell_stone_16px_manual")
     }
 
-    return @(
-        "surface_s41337_${CellSize}px",
-        "surface_s41338_${CellSize}px",
-        "surface_s90421_${CellSize}px"
-    )
+    $tags = if ($CellSize -eq 20) { @("pgen", "manual") } else { @("manual") }
+    return @($tags | ForEach-Object {
+        $tag = $_
+        @(
+            "surface_s41337_${CellSize}px_$tag",
+            "surface_s41338_${CellSize}px_$tag",
+            "surface_s90421_${CellSize}px_$tag"
+        )
+    })
 }
 
 function Clear-Gate3BInitialReviewArtifacts {
@@ -706,7 +746,15 @@ function Get-Gate3BReviewArtifactPairs {
             }
 
             $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
-            if ($metadata.PackId -ne "chronicle.gate3b.manual" -or [int]$metadata.CellSize -ne $cellSize)
+            $expectedPack = if ($stem.EndsWith("_pgen", [StringComparison]::Ordinal))
+            {
+                "chronicle.palimpsest20"
+            }
+            else
+            {
+                "chronicle.gate3b.manual"
+            }
+            if ($metadata.PackId -ne $expectedPack -or [int]$metadata.CellSize -ne $cellSize)
             {
                 throw "Gate 3B $Kind review artifact pair '$stem' does not identify its exact pack and native cell size."
             }
@@ -768,6 +816,12 @@ function Invoke-GodotGate3BPlayerAcceptance {
             Assert-PlayerSaveAbsent "Gate 3B player acceptance $pass $cellSize-pixel before launch"
             Invoke-GodotGate3BPlayerRun "Run isolated Gate 3B player acceptance at $cellSize pixels ($pass)" $cellSize
         }
+        Set-IsolatedGodotRuntime $RuntimeRoot "$pass-20-manual"
+        Assert-PlayerSaveAbsent "E5 manual 20-pixel player comparison $pass before launch"
+        Invoke-GodotGate3BPlayerRun `
+            "Run explicit manual 20-pixel player comparison ($pass)" `
+            20 `
+            -ManualComparison
 
         $pairs = @(Get-Gate3BReviewArtifactPairs "Player")
         if ($pass -eq "initial")
@@ -794,6 +848,11 @@ function Invoke-GodotGate3BAtlasAcceptance {
     {
         Invoke-GodotAtlasRun "Run Gate 3B World Atlas Inspector without a player save at $cellSize pixels" $false $cellSize
     }
+    Invoke-GodotAtlasRun `
+        "Run explicit manual 20-pixel World Atlas Inspector comparison without a player save" `
+        $false `
+        20 `
+        -ManualComparison
     Assert-PlayerSaveAbsent "Gate 3B Atlas acceptance after absent-save launch"
     $firstPairs = @(Get-Gate3BReviewArtifactPairs "Surface")
 
@@ -802,6 +861,11 @@ function Invoke-GodotGate3BAtlasAcceptance {
     {
         Invoke-GodotAtlasRun "Run Gate 3B World Atlas Inspector beside an existing player save at $cellSize pixels" $true $cellSize
     }
+    Invoke-GodotAtlasRun `
+        "Run explicit manual 20-pixel World Atlas Inspector comparison beside an existing player save" `
+        $true `
+        20 `
+        -ManualComparison
     Assert-PlayerSaveUnchanged $sentinel "Gate 3B World Atlas Inspector"
 
     $secondPairs = @(Get-Gate3BReviewArtifactPairs "Surface")
@@ -843,6 +907,45 @@ function Invoke-GodotEditorBuild {
     {
         throw "Godot's C# editor callback reported an error."
     }
+}
+
+function Assert-E5PackagedVisualBundle {
+    $outputRoot = Join-Path $godotProjectDirectory ".godot\mono\temp\bin\Debug"
+    $bundleRoot = Join-Path $outputRoot "visual-packs\palimpsest20"
+    $expectedPaths = @(
+        "atlases/palimpsest20.indices",
+        "hashes.json",
+        "manifest.json",
+        "validation.json"
+    )
+    $actualPaths = @(
+        Get-ChildItem -LiteralPath $bundleRoot -File -Recurse |
+            ForEach-Object {
+                $_.FullName.Substring($bundleRoot.Length + 1).Replace("\", "/")
+            } |
+            Sort-Object
+    )
+    if ($actualPaths.Count -ne $expectedPaths.Count -or
+        @(Compare-Object $expectedPaths $actualPaths).Count -ne 0)
+    {
+        throw "E5 packaged output does not contain the exact canonical four-file visual bundle."
+    }
+
+    $forbidden = @(Get-ChildItem -LiteralPath $outputRoot -File -Recurse | Where-Object {
+        $_.Name -match "VisualCompiler|Visuals.Conformance|catalogue|accepted-reference|contract.json"
+    })
+    if ($forbidden.Count -ne 0)
+    {
+        throw "E5 packaged output contains authoring/compiler material '$($forbidden[0].FullName)'."
+    }
+
+    $godotProjectText = Get-Content -LiteralPath $godotProject -Raw
+    if ($godotProjectText -match "VisualCompiler|Visuals.Conformance|P-GEN")
+    {
+        throw "Chronicle.Godot references P-GEN authoring/compiler code instead of only the compiled artifact."
+    }
+
+    Write-Host "E5 PACKAGING PASS files=4 compiler=absent pack=chronicle.palimpsest20"
 }
 
 if (-not (Test-Path -LiteralPath $dotnet -PathType Leaf))
@@ -909,6 +1012,7 @@ try
         "--no-restore",
         $godotProject
     )
+    Assert-E5PackagedVisualBundle
 
     $env:APPDATA = (New-Item -ItemType Directory -Force (Join-Path $atlasRuntimeRoot "Roaming")).FullName
     $env:LOCALAPPDATA = (New-Item -ItemType Directory -Force (Join-Path $atlasRuntimeRoot "Local")).FullName
@@ -967,7 +1071,7 @@ try
     Invoke-GodotSlice5Run "Restart"
     Assert-Slice5Save
 
-    Write-Host "`nPASS: Slice 5 Fly[Bell] composition and restart, Goal 4C conflict, Goal 4B Home, Goal 4A Study choice, Goal 2, Gate 3A, and Gate 3B verified."
+    Write-Host "`nPASS: P-GEN E5 reader/default packaging plus Slice 5, Goal 4, Goal 2, Gate 3A, and Gate 3B verified."
 }
 finally
 {

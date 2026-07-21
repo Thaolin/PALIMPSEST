@@ -1,0 +1,2 @@
+# Canonical P-GEN bundles are hash-checked byte-for-byte at runtime.
+src/Chronicle.Godot/visual-packs/** -text

@@ -95,7 +95,7 @@ public partial class WorldAtlasInspector : Node
         var arguments = OS.GetCmdlineUserArgs();
         _verifyGate3B = arguments.Contains("--verify-gate3b-atlas", StringComparer.Ordinal);
         _visualCellSize = RequestedVisualCellSize(arguments);
-        _visualPack = ManualVisualPack.CreateGate3B(_visualCellSize);
+        _visualPack = PackagedVisualPackLoader.Load(arguments, _visualCellSize);
         BuildInterface();
         _nodeCount = CountNodes(this);
         RebuildArea();
@@ -1158,7 +1158,8 @@ public partial class WorldAtlasInspector : Node
                     state.Address,
                     TargetAddresses: [],
                     SelectedAddresses: []));
-            var stem = $"surface_s{seed}_{_visualCellSize}px";
+            var stem = $"surface_s{seed}_{_visualCellSize}px_" +
+                PackagedVisualPackLoader.ReviewTag(_visualPack);
             var pngPath = Path.Combine(directory, $"{stem}.png");
             var metadataPath = Path.Combine(directory, $"{stem}.json");
             var result = VisualPackGodotAdapter

@@ -10,7 +10,7 @@ authorized future slice contract.
 
 ## Current gate
 
-**P-GEN E5 required — integration not authorized**
+**P-GEN E5 implemented — player visual UAT pending**
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -65,6 +65,29 @@ authorized future slice contract.
   optional candidate. [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md)
   records P-GEN as the canonical authoring-time visual pipeline. The next gate
   is Palimpsest-owned reader integration; Goal 6A follows only after it passes.
+- On 2026-07-21 the player said “make it so,” authorizing the bounded
+  [P-GEN E5 integration contract](P-GEN-E5-INTEGRATION.md). P-GEN's E4.5
+  verifier passed and its clean authoring baseline is pinned at
+  `6d9c749e52e2a5bef99b6f27f23d2163592e37f8`.
+- P-GEN then added the exact four accepted v5 mappings missing from that
+  baseline, passed its complete verifier with zero warnings or errors, and was
+  repinned cleanly at `812bb75c70fc22d78219759b70a9338a26b3ee8b` with canonical
+  aggregate `sha256:245cb53df47d7f9866071d75359d272cbd53c56010e3d3f4921d12cf72eaf707`.
+- Palimpsest now owns the strict canonical reader and shared packaged loader.
+  P-GEN is the default 20-pixel pack in both player and Inspector; manual 20 px
+  is explicit comparison only and manual 16 px remains the retained reference.
+- The complete retained gate passed on 2026-07-21 with zero build warnings or
+  errors. It proved exact vocabulary, precise negative reader failures,
+  P-GEN/manual semantic composer parity, deterministic native captures, four
+  packaged files with compiler/catalogue code absent, all player/Inspector
+  paths, and every retained v5 journey. The final marker was:
+
+  ```text
+  PASS: P-GEN E5 reader/default packaging plus Slice 5, Goal 4, Goal 2, Gate 3A, and Gate 3B verified.
+  ```
+- The [E5 UAT sheet](P-GEN-E5-UAT.md) presents native P-GEN/manual comparison
+  captures and the focused interactive journey. A player visual result is the
+  only remaining E5 acceptance condition.
 
 ## Settled successor direction
 
@@ -207,12 +230,12 @@ reported.
 
 ## Current permitted scope
 
-No production feature or polish work is authorized. The bounded
-[Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md) is complete and
-retained only as evidence. Current scope is documentation reconciliation and,
-if separately requested, drafting the required P-GEN E5 integration contract.
-The prototype must remain outside production projects, saves, Godot, and the
-retained gate.
+No further production work is authorized while the player performs the
+[P-GEN E5 visual UAT](P-GEN-E5-UAT.md). A narrowly reported E5 visual blocker
+may be corrected inside the existing contract; accepting or rejecting the
+default requires documentation reconciliation. The completed combat prototype
+remains evidence only. No gameplay, save, World Grammar, or successor grammar
+work is authorized.
 
 ## Retained accepted baseline
 
@@ -253,7 +276,7 @@ retained gate.
   that makes ordinary combat and exploration wait for settlement development;
 - settled Palimpsest Awakening rules or a power-resource economy by inference;
 - camera zoom, Cairn art, broad visual polish, water traversal, route arrows,
-  P-GEN integration, or E5 without a separately approved gate;
+  visual work outside the bounded P-GEN E5 contract;
 - health, damage, initiative, combat statistics, bestiary, loot, inventory, or
   a generic production combat framework by extending the accepted 4C fixture;
 - moving prototype HP, equipment, tick attacks, `Burn`, Companion, Target, or
@@ -265,6 +288,5 @@ retained gate.
 
 ## Stop and hand off
 
-Stop. The direction and sequence are settled. Do not begin P-GEN E5 without a
-separately authorized integration contract. Goal 6A remains downstream of E5
-and requires its own later contract; passing 6A will not authorize 6B.
+Stop for the player's E5 visual result. Goal 6A remains downstream of accepted
+E5 and requires its own later contract; passing 6A will not authorize 6B.

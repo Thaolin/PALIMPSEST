@@ -41,8 +41,8 @@ Build and launch the game from the repository root with:
 & .\play.ps1
 ```
 
-That command uses the normal Godot `user://` save and the accepted 20-pixel
-visual pack. The launcher supplies the packaged .NET environment, builds the
+That command uses the normal Godot `user://` save and the packaged P-GEN
+20-pixel visual pack. The launcher supplies the packaged .NET environment, builds the
 current C# project, launches Godot, and restores the calling shell's
 environment afterward.
 
@@ -107,6 +107,18 @@ plan digests, and review-capture bytes. Godot's editor callback, clean startup,
 save creation, and next-launch restore remain in the gate. All launches use
 temporary isolated application-data directories, so verification neither
 opens a window nor touches the interactive save.
+
+E5 also exercises the explicit manual 20-pixel golden comparison in both
+player and Inspector. To launch that comparison interactively without changing
+the normal default, use:
+
+```powershell
+& .\play.ps1 -Fresh -ManualVisualPack
+```
+
+The build output must contain only the canonical four-file P-GEN bundle under
+`visual-packs/palimpsest20`; compiler assemblies, catalogues, fixtures, and
+review evidence are forbidden from the shipped dependency graph.
 
 Goal 4A adds an isolated current-grammar journey after those retained
 regressions. One launch uses the real controls to save active `Stone` Study at

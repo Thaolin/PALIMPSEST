@@ -38,12 +38,13 @@ remain supported predecessor behavior until one authorized successor migration
 replaces them. Do not preserve them as parallel successor interfaces or delete
 their literal migration proof prematurely.
 
-P-GEN is the required authoring-time visual compiler. Palimpsest E5 must consume
-its compiled content through a Palimpsest-owned `Chronicle.VisualPack` reader;
+P-GEN is the required authoring-time visual compiler. Palimpsest consumes its
+compiled content through a Palimpsest-owned `Chronicle.VisualPack` reader;
 P-GEN never owns semantic World Grammar, Chronicle state, Target facts, or
-gameplay generation. The accepted manual pack remains a golden verification
-fixture until the required E5 integration replaces it as the default authored
-content path. See [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md).
+gameplay generation. E5 makes the packaged P-GEN artifact the normal 20-pixel
+player/Inspector path while the manual pack remains a golden verification and
+explicit comparison fixture. See
+[ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md).
 
 ## Simulation shape
 
@@ -183,8 +184,10 @@ maps Core snapshots and the pack to a transient render plan; Godot draws that
 plan. See the
 [Chronicle Visual Engine specification](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md).
 
-P-GEN integration must preserve one Palimpsest-owned consumer path.
-`Chronicle.VisualPack` validates and loads the packaged artifact;
+P-GEN integration preserves one Palimpsest-owned consumer path.
+`CanonicalVisualPackReader` validates and constructs the existing
+`CompiledVisualPack`; `PackagedVisualPackLoader` supplies it to both Godot
+consumers;
 `Chronicle.Visuals` owns semantic mapping, motif-placement interpretation, and
 address-complete cosmetic selection; Godot only draws. The shipped game may not
 reference the compiler, parse its catalogue, duplicate hidden authoring rules,

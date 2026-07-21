@@ -10,12 +10,17 @@ Builds and launches Untitled Chronicle RPG with the packaged Godot and .NET tool
 
 .EXAMPLE
 .\play.ps1 -Profile goal4b-uat
+
+.EXAMPLE
+.\play.ps1 -Fresh -ManualVisualPack
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [string] $Profile,
 
     [switch] $Fresh,
+
+    [switch] $ManualVisualPack,
 
     [ValidateSet(16, 20)]
     [int] $CellSize = 20
@@ -102,7 +107,19 @@ else
     Write-Host "Profile: normal Godot user save"
 }
 
-Write-Host "Visual pack: $CellSize px"
+$visualPackLabel = if ($ManualVisualPack)
+{
+    "manual golden comparison"
+}
+elseif ($CellSize -eq 20)
+{
+    "P-GEN packaged default"
+}
+else
+{
+    "manual 16-pixel reference"
+}
+Write-Host "Visual pack: $CellSize px / $visualPackLabel"
 
 $launchDescription = if ($null -eq $profileRoot)
 {
@@ -168,7 +185,12 @@ try
     }
 
     Write-Host "Launching Untitled Chronicle RPG..."
-    & $godot --path $projectDirectory -- "--visual-cell-size=$CellSize"
+    $gameArguments = @("--visual-cell-size=$CellSize")
+    if ($ManualVisualPack)
+    {
+        $gameArguments += "--manual-visual-pack"
+    }
+    & $godot --path $projectDirectory -- @gameArguments
     if ($LASTEXITCODE -ne 0)
     {
         throw "Godot exited with code $LASTEXITCODE."
