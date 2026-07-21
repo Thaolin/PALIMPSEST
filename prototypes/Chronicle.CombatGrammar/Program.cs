@@ -5,21 +5,51 @@ Console.OutputEncoding = Encoding.UTF8;
 Console.CursorVisible = false;
 
 var state = CombatModel.Create();
+const int slowHeartbeatMilliseconds = 800;
+var nextHeartbeat = DateTime.UtcNow.AddMilliseconds(slowHeartbeatMilliseconds);
+var needsRender = true;
 
 try
 {
     while (true)
     {
-        Render(state);
-        var key = char.ToLowerInvariant(Console.ReadKey(intercept: true).KeyChar);
+        if (needsRender)
+        {
+            Render(state);
+            needsRender = false;
+        }
+
+        if (!Console.KeyAvailable)
+        {
+            if (state.Pace == ClockPace.Slow && DateTime.UtcNow >= nextHeartbeat)
+            {
+                state = CombatModel.Apply(state, CombatCommand.AdvanceTick);
+                nextHeartbeat = DateTime.UtcNow.AddMilliseconds(slowHeartbeatMilliseconds);
+                needsRender = true;
+            }
+            else
+            {
+                Thread.Sleep(20);
+            }
+
+            continue;
+        }
+
+        var keyInfo = Console.ReadKey(intercept: true);
+        var key = char.ToLowerInvariant(keyInfo.KeyChar);
 
         if (key == 'q')
         {
             return;
         }
 
-        var command = key switch
+        var command = keyInfo.Key == ConsoleKey.Spacebar
+            ? CombatCommand.TogglePace
+            : key switch
         {
+            '1' => CombatCommand.ToggleOpeningWeapon,
+            '2' => CombatCommand.ToggleOpeningCompanion,
+            'e' => CombatCommand.Engage,
             't' => CombatCommand.AdvanceTick,
             'w' => CombatCommand.ToggleWeapon,
             'b' => CombatCommand.StartBurn,
@@ -28,7 +58,6 @@ try
             'o' => CombatCommand.CycleTarget,
             'c' => CombatCommand.ToggleCompanion,
             'f' => CombatCommand.Retreat,
-            'g' => CombatCommand.Reengage,
             'k' => CombatCommand.SkipSafeRecovery,
             'r' => CombatCommand.Reset,
             _ => (CombatCommand?)null,
@@ -36,12 +65,20 @@ try
 
         if (command is { } selected)
         {
+            if (state.Pace == ClockPace.Slow && selected != CombatCommand.TogglePace)
+            {
+                state = CombatModel.Apply(state, CombatCommand.TogglePace);
+            }
+
             state = CombatModel.Apply(state, selected);
         }
         else
         {
             state = state with { LastEvent = $"Unknown key '{key}'." };
         }
+
+        nextHeartbeat = DateTime.UtcNow.AddMilliseconds(slowHeartbeatMilliseconds);
+        needsRender = true;
     }
 }
 finally
@@ -53,19 +90,27 @@ finally
 
 static void Render(CombatState state)
 {
+    const int slowHeartbeatMilliseconds = 800;
     const string bold = "\x1b[1m";
     const string dim = "\x1b[2m";
     const string reset = "\x1b[0m";
 
     Console.Write("\x1b[2J\x1b[H");
     Console.WriteLine($"{bold}COMBAT GRAMMAR — THROWAWAY PRESSURE TEST{reset}");
-    Console.WriteLine($"{dim}Does physical tempo plus linked Burn create meaningful choices?{reset}");
+    Console.WriteLine($"{dim}Paused decisions inside a Slow deterministic heartbeat.{reset}");
     Console.WriteLine();
 
     Console.WriteLine($"{bold}Chronicle{reset}");
     Console.WriteLine($"  Tick             {state.Tick}");
+    Console.WriteLine($"  Clock            {state.Pace.ToString().ToUpperInvariant()} (Slow heartbeat: {slowHeartbeatMilliseconds} ms)");
     Console.WriteLine($"  Immediate danger {(state.Threatening ? "YES" : "no")}");
     Console.WriteLine($"  Ground           {(state.GroundScorched ? "SCORCHED" : "unchanged")}");
+    Console.WriteLine();
+
+    Console.WriteLine($"{bold}Engagement plan{reset}");
+    Console.WriteLine($"  [1] Ready weapon     {(state.WeaponOnEngage ? "ON" : "off")}");
+    Console.WriteLine($"  [2] Call Companion   {(state.CompanionOnEngage ? "ON" : "off")}");
+    Console.WriteLine($"  Contact behavior     apply plan, then PAUSE before danger advances");
     Console.WriteLine();
 
     Console.WriteLine($"{bold}Incarnation{reset}");
@@ -103,9 +148,11 @@ static void Render(CombatState state)
     Console.WriteLine();
 
     Console.WriteLine($"{bold}Commands{reset}");
-    Console.WriteLine("  [t] tick       [w] weapon on/off   [b] prepare Burn   [x] abandon");
-    Console.WriteLine("  [m] next build [o] next Target     [c] Companion      [r] reset");
-    Console.WriteLine("  [f] retreat    [g] re-engage       [k] skip safe      [q] quit");
+    Console.WriteLine("  [1/2] opening plan   [e] engage     [Space] pause / Slow");
+    Console.WriteLine("  [t] one tick         [w] weapon     [c] call/dismiss Companion");
+    Console.WriteLine("  [b] prepare Burn     [x] abandon    [m] next build   [o] Target");
+    Console.WriteLine("  [f] retreat          [k] skip safe  [r] reset        [q] quit");
+    Console.WriteLine($"{dim}Any tactical command entered during Slow pauses the clock before it acts.{reset}");
 }
 
 static string Bar(int current, int maximum, int width = 20)

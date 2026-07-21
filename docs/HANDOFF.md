@@ -10,7 +10,7 @@ authorized future slice contract.
 
 ## Current gate
 
-**Combat grammar pressure test authorized — isolated prototype only**
+**Combat grammar cycle passed — Slow-heartbeat refinement awaiting UAT**
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -43,6 +43,12 @@ authorized future slice contract.
   [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md) on
   2026-07-21. It may create only a throwaway C# logic model and terminal shell
   outside production projects and saves.
+- The first player pressure-test session reported that the system “feels pretty
+  great” and “feels like a proper RPG combat cycle.” This passes the combat
+  model hypothesis. Before closing the prototype, the player requested one
+  interaction refinement: Engagement applies selected opening Weapon and
+  Companion behaviors, then pauses before a visible Slow heartbeat begins. The
+  refinement is implemented in the isolated prototype and awaits player UAT.
 - Goal 6 and Slice 7 remain later gates.
 
 ## Settled successor direction
@@ -155,8 +161,10 @@ reported.
 No production feature or polish work is authorized. The active scope is the
 bounded [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md): its
 contract documentation, one in-memory pure C# combat model, one thin terminal
-shell, and one-command runner. It must remain outside production projects,
-saves, Godot, and the retained verification gate.
+shell, and one-command runner. Current work is narrowed to the requested
+Engagement Plan, automatic opening pause, Slow heartbeat, and pause-first
+tactical input. It must remain outside production projects, saves, Godot, and
+the retained verification gate.
 
 ## Retained accepted baseline
 
@@ -208,7 +216,7 @@ saves, Godot, and the retained verification gate.
 
 ## Stop and hand off
 
-When the isolated prototype runs, stop and hand the one-command journey to the
-player. Automated execution is not UAT acceptance. Do not begin a production
-successor, Goal 6, P-GEN E5, a save migration, or resource-system implementation
-without a separately authorized contract.
+When the Slow-heartbeat refinement runs, stop and hand the revised journey to
+the player. Automated execution is not final UAT acceptance. Do not begin a
+production successor, Goal 6, P-GEN E5, a save migration, or resource-system
+implementation without a separately authorized contract.

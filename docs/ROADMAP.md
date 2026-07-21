@@ -191,10 +191,11 @@ Accepted player proof: [Slice 5 UAT](archive/uat/SLICE-5-UAT.md).
 
 ## Modifier Grammar Pivot — A Language Worth Building
 
-**Status:** Product direction settled on 2026-07-20. The isolated, non-production
-player pressure test was authorized on 2026-07-21 and is active; the production
-successor remains unauthorized. This gate precedes Goal 6 and any material
-catalogue expansion.
+**Status:** Product direction settled on 2026-07-20. The isolated combat-cycle
+prototype received a positive player verdict on 2026-07-21; a Slow-heartbeat,
+pause, and Engagement-Plan interaction refinement now awaits player UAT before
+the pressure test closes. The production successor remains unauthorized. This
+gate precedes Goal 6 and any material catalogue expansion.
 
 Replace collectible Nouns with contextual Targets from Chronicle state. A
 Power Word is either a Verb that defines the base magic or a Modifier linked to

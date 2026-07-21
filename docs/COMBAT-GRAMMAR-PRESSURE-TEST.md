@@ -1,12 +1,13 @@
 # Combat Grammar Pressure Test
 
 **Authorized:** 2026-07-21
-**Status:** active isolated logic prototype; not production
+**Status:** combat-cycle UAT passed; Slow-heartbeat refinement awaiting player UAT
 
 ## Question
 
-Does a small tick-based fight become fun when physical equipment, autonomous
-help, and a linked `Burn` Expression compete for time, safety, and shared Load?
+Does a small real-time-with-pause fight become fun when physical equipment,
+autonomous help, and a linked `Burn` Expression compete for heartbeat time,
+safety, and shared Load?
 
 The prototype exists to make the player feel the timing decisions directly. It
 does not prove production architecture, final balance, persistence, or content
@@ -60,6 +61,11 @@ These values are pressure-test inputs, not balance promises:
   explains Target facts; it never prescribes a Word recipe.
 - **Load:** 8 available. `Burn` costs 1, `Quickly` costs 6, and `Lasting` costs
   5. Both Modifiers cannot fit together.
+- **Engagement Plan:** before danger begins, the player may arm automatic Weapon
+  attacks and choose whether to call the Ash Hound. Engagement applies those
+  choices, makes attacks ready, and pauses before the first hostile heartbeat.
+- **Clock:** Combat resumes at Slow on a visible heartbeat and may be paused at
+  any time. Choosing a tactical action while Slow pauses before applying it.
 - **Base Burn:** 3 ticks of Preparation, then 4 fire damage for 3 ticks, followed
   by 8 ticks of Recovery.
 - **Burn + Quickly:** 1 tick of Preparation with the base duration and damage.
@@ -73,7 +79,10 @@ completion; retreat never clears or restarts it.
 
 The terminal must let the player:
 
-- advance one Chronicle tick;
+- configure the opening Weapon and Companion toggles before Engagement;
+- engage into a paused decision boundary with the selected behaviors ready;
+- switch between Paused and Slow heartbeat time, with an optional paused
+  single-tick inspection step;
 - start or stop repeated Weapon attacks;
 - start or abandon `Burn` Preparation;
 - cycle the base, `Quickly`, and `Lasting` builds by resetting the fixture;
@@ -88,9 +97,12 @@ state, durable scorch state, and the latest event.
 
 ## Pressure-test journey
 
-1. Fight once with `Burn + Quickly` and no Companion.
-2. Fight once with `Burn + Lasting` and the Companion screening.
-3. During one Preparation, abandon it to resume physical fighting.
+1. Disable the opening Companion toggle, engage, confirm the Weapon is ready and
+   the Clock paused, then fight once with `Burn + Quickly`.
+2. Arm both opening toggles, engage, resume Slow, and fight once with
+   `Burn + Lasting` while the Companion screens.
+3. While Slow, choose `Burn`, confirm the game pauses before Preparation, resume,
+   then abandon a later Preparation to restore physical fighting.
 4. Retreat during Recovery, re-engage before it completes, and confirm the
    remaining Recovery was preserved.
 5. Select the Basalt Cairn and confirm factual rejection without a missing-Word
@@ -111,6 +123,20 @@ The pressure test passes only when the player reports that:
 
 An engineering success or clean terminal interaction is insufficient. Player
 judgment is the gate.
+
+## Player UAT — 2026-07-21
+
+The first manual-tick prototype received a positive combat-cycle verdict: the
+player said it “feels pretty great” and “feels like a proper RPG combat cycle.”
+That passes the system hypothesis covering physical attacks, HP, Companion
+screening, `Burn`, linked build trade-offs, and Recovery.
+
+One interaction refinement remains active before closing the prototype: replace
+manual tick stepping as the primary experience with a visible Slow heartbeat
+and pause. Engagement should apply player-selected opening behaviors, ready the
+Weapon, call the Companion when selected, and pause before the first hostile
+tick. The player can then resume Slow or choose another skill, alter current
+behavior, or retreat while paused.
 
 ## Forbidden drift
 

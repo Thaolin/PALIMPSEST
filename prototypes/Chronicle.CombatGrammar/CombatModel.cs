@@ -13,9 +13,19 @@ public enum BurnTarget
     BasaltCairn,
 }
 
+public enum ClockPace
+{
+    Paused,
+    Slow,
+}
+
 public enum CombatCommand
 {
     AdvanceTick,
+    TogglePace,
+    ToggleOpeningWeapon,
+    ToggleOpeningCompanion,
+    Engage,
     ToggleWeapon,
     StartBurn,
     AbortBurn,
@@ -23,17 +33,19 @@ public enum CombatCommand
     CycleTarget,
     ToggleCompanion,
     Retreat,
-    Reengage,
     SkipSafeRecovery,
     Reset,
 }
 
 public sealed record CombatState(
     int Tick,
+    ClockPace Pace,
     int PlayerHp,
     int EnemyHp,
     int CompanionHp,
     bool CompanionEnabled,
+    bool WeaponOnEngage,
+    bool CompanionOnEngage,
     bool Threatening,
     bool WeaponAttacking,
     int PlayerWeaponReadyIn,
@@ -119,16 +131,20 @@ public static class CombatModel
 
     public static CombatState Create(
         BurnBuild build = BurnBuild.Base,
-        bool companionEnabled = false,
+        bool weaponOnEngage = true,
+        bool companionOnEngage = true,
         BurnTarget target = BurnTarget.MireBrute,
-        string lastEvent = "Fixture ready. Choose how to spend the next tick.") =>
+        string lastEvent = "Opening plan ready. Engage when you want danger to begin.") =>
         new(
             Tick: 0,
+            Pace: ClockPace.Paused,
             PlayerHp: CombatState.PlayerMaxHp,
             EnemyHp: CombatState.EnemyMaxHp,
             CompanionHp: CombatState.CompanionMaxHp,
-            CompanionEnabled: companionEnabled,
-            Threatening: true,
+            CompanionEnabled: false,
+            WeaponOnEngage: weaponOnEngage,
+            CompanionOnEngage: companionOnEngage,
+            Threatening: false,
             WeaponAttacking: false,
             PlayerWeaponReadyIn: 0,
             EnemyWeaponReadyIn: 2,
@@ -144,6 +160,10 @@ public static class CombatModel
     public static CombatState Apply(CombatState state, CombatCommand command) => command switch
     {
         CombatCommand.AdvanceTick => AdvanceTick(state),
+        CombatCommand.TogglePace => TogglePace(state),
+        CombatCommand.ToggleOpeningWeapon => ToggleOpeningWeapon(state),
+        CombatCommand.ToggleOpeningCompanion => ToggleOpeningCompanion(state),
+        CombatCommand.Engage => Engage(state),
         CombatCommand.ToggleWeapon => ToggleWeapon(state),
         CombatCommand.StartBurn => StartBurn(state),
         CombatCommand.AbortBurn => AbortBurn(state),
@@ -151,15 +171,85 @@ public static class CombatModel
         CombatCommand.CycleTarget => CycleTarget(state),
         CombatCommand.ToggleCompanion => ToggleCompanion(state),
         CombatCommand.Retreat => Retreat(state),
-        CombatCommand.Reengage => Reengage(state),
         CombatCommand.SkipSafeRecovery => SkipSafeRecovery(state),
         CombatCommand.Reset => Create(
             state.Build,
-            state.CompanionEnabled,
+            state.WeaponOnEngage,
+            state.CompanionOnEngage,
             state.Target,
-            "Fixture reset with the current build."),
+            "Fixture reset to the opening plan."),
         _ => throw new ArgumentOutOfRangeException(nameof(command)),
     };
+
+    private static CombatState TogglePace(CombatState state)
+    {
+        var pace = state.Pace == ClockPace.Paused
+            ? ClockPace.Slow
+            : ClockPace.Paused;
+
+        return state with
+        {
+            Pace = pace,
+            LastEvent = pace == ClockPace.Slow
+                ? "Slow heartbeat resumed. Press Space or choose a tactical action to pause."
+                : "Chronicle paused before the next heartbeat.",
+        };
+    }
+
+    private static CombatState ToggleOpeningWeapon(CombatState state)
+    {
+        var enabled = !state.WeaponOnEngage;
+        return state with
+        {
+            WeaponOnEngage = enabled,
+            LastEvent = enabled
+                ? "Engagement Plan will ready repeated Weapon attacks."
+                : "Engagement Plan will hold the Weapon until ordered.",
+        };
+    }
+
+    private static CombatState ToggleOpeningCompanion(CombatState state)
+    {
+        var enabled = !state.CompanionOnEngage;
+        return state with
+        {
+            CompanionOnEngage = enabled,
+            LastEvent = enabled
+                ? "Engagement Plan will call the Ash Hound to screen."
+                : "Engagement Plan will begin without the Ash Hound.",
+        };
+    }
+
+    private static CombatState Engage(CombatState state)
+    {
+        if (!state.PlayerAlive || !state.EnemyAlive)
+        {
+            return state with { LastEvent = "Engagement requires both living combatants." };
+        }
+
+        if (state.Threatening)
+        {
+            return state with { LastEvent = "The Mire Brute is already an immediate threat." };
+        }
+
+        var callCompanion = state.CompanionOnEngage && state.CompanionHp > 0;
+        var companionOutcome = !state.CompanionOnEngage
+            ? "held back"
+            : callCompanion
+                ? "called"
+                : "unavailable";
+        return state with
+        {
+            Pace = ClockPace.Paused,
+            Threatening = true,
+            WeaponAttacking = state.WeaponOnEngage,
+            CompanionEnabled = callCompanion,
+            PlayerWeaponReadyIn = 0,
+            CompanionWeaponReadyIn = 0,
+            EnemyWeaponReadyIn = 2,
+            LastEvent = $"Engaged and paused before the first heartbeat. Weapon {(state.WeaponOnEngage ? "ready" : "held")}; Ash Hound {companionOutcome}.",
+        };
+    }
 
     private static CombatState ToggleWeapon(CombatState state)
     {
@@ -243,9 +333,10 @@ public static class CombatModel
 
         return Create(
             next,
-            state.CompanionEnabled,
+            state.WeaponOnEngage,
+            state.CompanionOnEngage,
             state.Target,
-            $"Attuned {expression}; the fixture reset for a clean comparison.");
+            $"Attuned {expression}; returned to the opening plan for a clean comparison.");
     }
 
     private static CombatState CycleTarget(CombatState state)
@@ -265,14 +356,19 @@ public static class CombatModel
 
     private static CombatState ToggleCompanion(CombatState state)
     {
+        if (!state.CompanionEnabled && state.CompanionHp == 0)
+        {
+            return state with { LastEvent = "The Ash Hound is down and cannot be recalled." };
+        }
+
         var enabled = !state.CompanionEnabled;
-        return Create(
-            state.Build,
-            enabled,
-            state.Target,
-            enabled
-                ? "Ash Hound joined and will screen autonomously; the fixture reset."
-                : "Ash Hound removed; the fixture reset.");
+        return state with
+        {
+            CompanionEnabled = enabled,
+            LastEvent = enabled
+                ? "Ash Hound joined and will screen autonomously."
+                : "Ash Hound withdrew from immediate danger.",
+        };
     }
 
     private static CombatState Retreat(CombatState state)
@@ -284,30 +380,14 @@ public static class CombatModel
 
         return state with
         {
+            Pace = ClockPace.Paused,
             Threatening = false,
+            WeaponAttacking = false,
+            CompanionEnabled = false,
             BurnPreparationRemaining = 0,
             LastEvent = state.IsPreparing
                 ? "Retreated beyond immediate threat and abandoned Burn Preparation. Recovery remains unchanged."
                 : "Retreated beyond immediate threat. Recovery continues with Chronicle time.",
-        };
-    }
-
-    private static CombatState Reengage(CombatState state)
-    {
-        if (!state.PlayerAlive || !state.EnemyAlive)
-        {
-            return state with { LastEvent = "Re-engagement requires both living combatants." };
-        }
-
-        if (state.Threatening)
-        {
-            return state with { LastEvent = "The Mire Brute is already an immediate threat." };
-        }
-
-        return state with
-        {
-            Threatening = true,
-            LastEvent = $"Re-engaged. Burn still has {state.BurnRecoveryRemaining} Recovery tick(s).",
         };
     }
 
@@ -348,7 +428,11 @@ public static class CombatModel
     {
         if (!state.PlayerAlive)
         {
-            return state with { LastEvent = "The Incarnation is dead. Reset the fixture to continue." };
+            return state with
+            {
+                Pace = ClockPace.Paused,
+                LastEvent = "The Incarnation is dead. Reset the fixture to continue.",
+            };
         }
 
         var events = new List<string>();
@@ -444,6 +528,7 @@ public static class CombatModel
         {
             next = next with
             {
+                Pace = ClockPace.Paused,
                 Threatening = false,
                 BurnPreparationRemaining = 0,
                 EnemyBurningRemaining = 0,
@@ -455,6 +540,7 @@ public static class CombatModel
         {
             next = next with
             {
+                Pace = ClockPace.Paused,
                 Threatening = false,
                 BurnPreparationRemaining = 0,
             };
