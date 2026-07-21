@@ -18,9 +18,11 @@ read-only PALIMPSEST tool cache.
 
 This is the exact E4.5 acceptance command. It restores without requiring the
 network, builds with zero warnings, runs conformance, performs two independent
-CLI builds, verifies pinned hashes and all emitted bytes, and exercises the
-pack-only Godot proof. On Windows, real viewport capture briefly uses hidden
-off-screen OpenGL windows; a separate headless launch proves scene startup.
+CLI builds, verifies pinned hashes and all emitted bytes, asserts the E4.5
+review bundle, and exercises the pack-only Godot proof. It also scans the
+preview source boundary for compiler, catalogue, and motif-placement
+references. On Windows, real viewport capture briefly uses hidden off-screen
+OpenGL windows; a separate headless launch proves scene startup.
 
 ## Compile manually
 
@@ -34,6 +36,47 @@ dotnet run --project src/Chronicle.VisualCompiler.Cli -c Release -- `
 `artifacts/manual-pal20/pack` contains exactly four canonical files.
 `artifacts/manual-pal20/review` contains noncanonical 20px review evidence.
 The CLI refuses to replace directories without its ownership marker.
+
+## Negative bundle and contract maintenance
+
+The public reader proof is
+`src/Chronicle.Visuals.Conformance/Palimpsest20BundleConformance.cs`; its 50
+version-controlled cases are inventoried in
+`fixtures/palimpsest20/invalid/cases.json`. They exercise exact `PAL20-*`
+diagnostics for file sets, JSON shape, canonical atlas path and serialization,
+hashes, compatibility, dimensions and buffers, palettes, identifiers,
+families, variants, layers, rectangles, anchors, adjacency, overview indexes,
+palette-role indexes, overlap, and empty occupancy through
+`Palimpsest20Codec.ReadCanonical`.
+
+The older Pack-v1 envelope fields are not part of the narrowed four-file
+format. `PackFile` constructor-only path grammar is also not a reader fixture
+because invalid `PackFile` values cannot reach `ReadCanonical`; neither
+category should be mimicked with invented Palimpsest20 fields.
+
+The frozen pre-Goal-4B mapping contract is
+`fixtures/palimpsest20/contract.json`. Update that supplied,
+version-controlled fixture only when an authorized adoption review freezes a
+new accepted vocabulary; never scan the Palimpsest repository. The existing
+conformance path reports the exact ID with stable diagnostics for missing and
+unexpected IDs and family, layer, mask, variant, centered-anchor, overview, or
+palette-role mismatches.
+
+## E4.5 visual review
+
+The full proof emits `review/manual-baseline-20.png` and
+`review/authoring-evidence.json` beside, never inside, the canonical pack.
+Its 64 rows compare every pinned accepted-reference capture with the exact
+candidate family, adjacency mask, and local variant: six individual specimens,
+all water and cloud masks, and the selected grove, ridge, and crossing
+variants. `authoring-evidence.json` records the complete deterministic mapping.
+`native-20.png` and `nearest-20.png` provide native and 4× nearest-neighbour
+evidence; adjacency, shifted-overlap, motif, layer, and variant sheets provide
+additional connected-terrain and feature context.
+
+These artifacts are deterministic review inputs, not visual approval.
+Silhouette recognition, family lineage, contrast, and preference remain
+subjective and require Palimpsest player UAT.
 
 ## Interactive preview
 

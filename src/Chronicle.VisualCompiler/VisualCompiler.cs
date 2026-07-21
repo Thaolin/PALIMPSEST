@@ -425,22 +425,13 @@ public static class VisualCompiler
                         family.Id,
                         family.Generation == GenerationStrategy.RoleMask
                             ? "procedural"
-                            : family.Id.StartsWith(
-                                "baseline.",
-                                StringComparison.Ordinal)
-                                ? "manual-baseline"
-                                : "authored",
+                            : "authored",
                         family.Id,
                         "project",
                         family.Generation == GenerationStrategy.RoleMask
                             ? $"{family.Targets.Length} target parameter sets; " +
                               "0 authored pixel rows"
-                            : family.Id.StartsWith(
-                                "baseline.",
-                                StringComparison.Ordinal)
-                                ? $"{family.Targets.Sum(target => target.Rows.Length)} " +
-                                  $"authored pixel rows across {family.Targets.Length} targets"
-                                : null))
+                            : null))
                     .Concat(catalogue.ConnectedFamilies.Select(static family =>
                         new ProvenanceRecord(
                             family.Id,

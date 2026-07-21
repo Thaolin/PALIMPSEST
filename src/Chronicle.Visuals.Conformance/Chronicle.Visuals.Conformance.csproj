@@ -25,5 +25,9 @@
       Include="../../fixtures/palimpsest20/expected-hashes.json"
       Link="Fixtures/palimpsest20.expected-hashes.json"
       LogicalName="Chronicle.Visuals.Conformance.palimpsest20.expected-hashes.json" />
+    <EmbeddedResource
+      Include="../../fixtures/palimpsest20/accepted-reference.json"
+      Link="Fixtures/palimpsest20.accepted-reference.json"
+      LogicalName="Chronicle.Visuals.Conformance.palimpsest20.accepted-reference.json" />
   </ItemGroup>
 </Project>

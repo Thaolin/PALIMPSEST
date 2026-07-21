@@ -2,6 +2,10 @@
   "cellSize": 20,
   "atlasWidth": 160,
   "atlasHeight": 460,
+  "anchor": {
+    "x": 10,
+    "y": 10
+  },
   "definitionCount": 181,
   "definitions": [
     {

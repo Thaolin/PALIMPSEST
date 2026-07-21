@@ -52,26 +52,11 @@ static class Palimpsest20CompilerConformance
         var pack = result.Pack;
         if (pack.CellSize != contract.CellSize ||
             pack.AtlasWidth != contract.AtlasWidth ||
-            pack.AtlasHeight != contract.AtlasHeight ||
-            pack.Definitions.Count != contract.DefinitionCount)
+            pack.AtlasHeight != contract.AtlasHeight)
         {
             Console.Error.WriteLine(
-                "PAL20-COMPILER-DIMENSIONS: compiled pack dimensions or definition count differ from the independent contract.");
+                "PAL20-COMPILER-DIMENSIONS: compiled pack dimensions differ from the independent contract.");
             return false;
-        }
-
-        foreach (var expected in contract.Definitions)
-        {
-            try
-            {
-                _ = pack.Resolve(expected.Id);
-            }
-            catch (KeyNotFoundException)
-            {
-                Console.Error.WriteLine(
-                    $"PAL20-COMPILER-RESOLVE: expected ID '{expected.Id}' did not resolve.");
-                return false;
-            }
         }
 
         ImmutableArray<MetadataDescriptor> actual;
@@ -94,33 +79,14 @@ static class Palimpsest20CompilerConformance
             return false;
         }
 
-        if (!MetadataMatchesContract(contract.Definitions, actual, out var mismatch))
+        if (!MetadataMatchesContract(contract, actual, out var mismatch))
         {
-            Console.Error.WriteLine($"PAL20-COMPILER-METADATA: {mismatch}");
+            Console.Error.WriteLine(mismatch);
             return false;
         }
 
-        var missing = actual.Skip(1).ToImmutableArray();
-        var extra = actual.Add(new MetadataDescriptor(
-            "test.extra-definition",
-            "test.extra-family",
-            0,
-            Palimpsest20LayerClass.GroundField,
-            null,
-            0,
-            ImmutableArray<int>.Empty));
-        var wrongLayer = actual.SetItem(0, actual[0] with
+        if (!ContractMismatchesAreReported(contract, actual))
         {
-            Layer = actual[0].Layer == Palimpsest20LayerClass.GroundField
-                ? Palimpsest20LayerClass.Actor
-                : Palimpsest20LayerClass.GroundField
-        });
-        if (MetadataMatchesContract(contract.Definitions, missing, out _) ||
-            MetadataMatchesContract(contract.Definitions, extra, out _) ||
-            MetadataMatchesContract(contract.Definitions, wrongLayer, out _))
-        {
-            Console.Error.WriteLine(
-                "PAL20-COMPILER-COMPARATOR: metadata comparison accepted a missing, extra, or wrong-layer descriptor.");
             return false;
         }
 
@@ -132,6 +98,17 @@ static class Palimpsest20CompilerConformance
         {
             Console.Error.WriteLine(
                 "PAL20-COMPILER-FIXTURE: duplicate contract IDs were accepted.");
+            return false;
+        }
+
+        var invalidFixture = contract with
+        {
+            Anchor = new ContractAnchor(0, 0)
+        };
+        if (TryValidateContract(invalidFixture, out _))
+        {
+            Console.Error.WriteLine(
+                "PAL20-COMPILER-FIXTURE: invalid contract anchor was accepted.");
             return false;
         }
 
@@ -225,6 +202,9 @@ static class Palimpsest20CompilerConformance
             contract.AtlasHeight <= 0 ||
             contract.AtlasWidth % contract.CellSize != 0 ||
             contract.AtlasHeight % contract.CellSize != 0 ||
+            contract.Anchor != new ContractAnchor(
+                contract.CellSize / 2,
+                contract.CellSize / 2) ||
             contract.DefinitionCount != contract.Definitions.Length)
         {
             error = "dimensions or definition count are invalid.";
@@ -253,37 +233,131 @@ static class Palimpsest20CompilerConformance
         return true;
     }
 
+    private static bool ContractMismatchesAreReported(
+        ContractDocument contract,
+        ImmutableArray<MetadataDescriptor> actual)
+    {
+        var first = actual[0];
+        var masked = actual.First(static definition => definition.Mask.HasValue);
+        var alternateLayer = first.Layer == Palimpsest20LayerClass.GroundField
+            ? Palimpsest20LayerClass.Actor
+            : Palimpsest20LayerClass.GroundField;
+        var mutations = new (ImmutableArray<MetadataDescriptor> Actual, string Code, string Id)[]
+        {
+            (actual.Skip(1).ToImmutableArray(), "PAL20-COMPILER-CONTRACT-MISSING-ID", first.Id),
+            (actual.Add(new MetadataDescriptor(
+                "test.extra-definition",
+                "test.extra-family",
+                0,
+                Palimpsest20LayerClass.GroundField,
+                null,
+                new Palimpsest20PixelAnchor(10, 10),
+                0,
+                ImmutableArray<int>.Empty)), "PAL20-COMPILER-CONTRACT-UNEXPECTED-ID", "test.extra-definition"),
+            (actual.SetItem(0, first with { FamilyId = "test.wrong-family" }), "PAL20-COMPILER-CONTRACT-FAMILY", first.Id),
+            (actual.SetItem(0, first with { Layer = alternateLayer }), "PAL20-COMPILER-CONTRACT-LAYER", first.Id),
+            (actual.SetItem(actual.IndexOf(masked), masked with { Mask = (masked.Mask!.Value + 1) % 16 }), "PAL20-COMPILER-CONTRACT-MASK", masked.Id),
+            (actual.SetItem(0, first with { VariantOrdinal = first.VariantOrdinal + 1 }), "PAL20-COMPILER-CONTRACT-VARIANT", first.Id),
+            (actual.SetItem(0, first with { Anchor = new Palimpsest20PixelAnchor(9, 10) }), "PAL20-COMPILER-CONTRACT-ANCHOR", first.Id),
+            (actual.SetItem(0, first with { OverviewPaletteIndex = first.OverviewPaletteIndex + 1 }), "PAL20-COMPILER-CONTRACT-OVERVIEW", first.Id),
+            (actual.SetItem(0, first with { PaletteRoleIndexes = ImmutableArray.Create(-1) }), "PAL20-COMPILER-CONTRACT-PALETTE-ROLE", first.Id)
+        };
+
+        foreach (var mutation in mutations)
+        {
+            if (!MetadataMatchesContract(contract, mutation.Actual, out var mismatch) &&
+                mismatch == $"{mutation.Code}: '{mutation.Id}'")
+            {
+                continue;
+            }
+
+            Console.Error.WriteLine(
+                $"PAL20-COMPILER-COMPARATOR: expected {mutation.Code} for '{mutation.Id}', got '{mismatch}'.");
+            return false;
+        }
+
+        return true;
+    }
+
     private static bool MetadataMatchesContract(
-        ImmutableArray<ContractDefinition> expected,
+        ContractDocument expected,
         ImmutableArray<MetadataDescriptor> actual,
         out string mismatch)
     {
-        var expectedById = expected.ToDictionary(
+        var expectedById = expected.Definitions.ToDictionary(
             static definition => definition.Id,
             StringComparer.Ordinal);
         var actualById = actual.ToDictionary(
             static definition => definition.Id,
             StringComparer.Ordinal);
-        if (!expectedById.Keys.ToHashSet(StringComparer.Ordinal)
-                .SetEquals(actualById.Keys))
+        var missingId = expectedById.Keys
+            .Where(id => !actualById.ContainsKey(id))
+            .OrderBy(static id => id, StringComparer.Ordinal)
+            .FirstOrDefault();
+        if (missingId is not null)
         {
-            mismatch = "compiled ID set differs from the contract.";
+            mismatch = $"PAL20-COMPILER-CONTRACT-MISSING-ID: '{missingId}'";
             return false;
         }
 
-        foreach (var expectedDefinition in expected)
+        var unexpectedId = actualById.Keys
+            .Where(id => !expectedById.ContainsKey(id))
+            .OrderBy(static id => id, StringComparer.Ordinal)
+            .FirstOrDefault();
+        if (unexpectedId is not null)
+        {
+            mismatch = $"PAL20-COMPILER-CONTRACT-UNEXPECTED-ID: '{unexpectedId}'";
+            return false;
+        }
+
+        foreach (var expectedDefinition in expectedById.Values.OrderBy(
+                     static definition => definition.Id,
+                     StringComparer.Ordinal))
         {
             var actualDefinition = actualById[expectedDefinition.Id];
-            if (actualDefinition.FamilyId != expectedDefinition.FamilyId ||
-                actualDefinition.VariantOrdinal != expectedDefinition.VariantOrdinal ||
-                actualDefinition.Layer != expectedDefinition.Layer ||
-                actualDefinition.Mask != expectedDefinition.Mask ||
-                actualDefinition.OverviewPaletteIndex !=
-                    expectedDefinition.OverviewPaletteIndex ||
-                !actualDefinition.PaletteRoleIndexes.SequenceEqual(
+            if (actualDefinition.FamilyId != expectedDefinition.FamilyId)
+            {
+                mismatch = $"PAL20-COMPILER-CONTRACT-FAMILY: '{expectedDefinition.Id}'";
+                return false;
+            }
+
+            if (actualDefinition.Layer != expectedDefinition.Layer)
+            {
+                mismatch = $"PAL20-COMPILER-CONTRACT-LAYER: '{expectedDefinition.Id}'";
+                return false;
+            }
+
+            if (actualDefinition.Mask != expectedDefinition.Mask)
+            {
+                mismatch = $"PAL20-COMPILER-CONTRACT-MASK: '{expectedDefinition.Id}'";
+                return false;
+            }
+
+            if (actualDefinition.VariantOrdinal != expectedDefinition.VariantOrdinal)
+            {
+                mismatch = $"PAL20-COMPILER-CONTRACT-VARIANT: '{expectedDefinition.Id}'";
+                return false;
+            }
+
+            if (actualDefinition.Anchor != new Palimpsest20PixelAnchor(
+                    expected.Anchor.X,
+                    expected.Anchor.Y))
+            {
+                mismatch = $"PAL20-COMPILER-CONTRACT-ANCHOR: '{expectedDefinition.Id}'";
+                return false;
+            }
+
+            if (actualDefinition.OverviewPaletteIndex !=
+                expectedDefinition.OverviewPaletteIndex)
+            {
+                mismatch = $"PAL20-COMPILER-CONTRACT-OVERVIEW: '{expectedDefinition.Id}'";
+                return false;
+            }
+
+            if (!actualDefinition.PaletteRoleIndexes.SequenceEqual(
                     expectedDefinition.PaletteRoleIndexes))
             {
-                mismatch = $"metadata differs for '{expectedDefinition.Id}'.";
+                mismatch = $"PAL20-COMPILER-CONTRACT-PALETTE-ROLE: '{expectedDefinition.Id}'";
                 return false;
             }
         }
@@ -300,11 +374,10 @@ static class Palimpsest20CompilerConformance
             definition.AtlasRect.X < 0 ||
             definition.AtlasRect.Y < 0 ||
             definition.AtlasRect.X % Palimpsest20Pack.NativeCellSize != 0 ||
-            definition.AtlasRect.Y % Palimpsest20Pack.NativeCellSize != 0 ||
-            definition.Anchor != new Palimpsest20PixelAnchor(10, 10))
+            definition.AtlasRect.Y % Palimpsest20Pack.NativeCellSize != 0)
         {
             throw new InvalidOperationException(
-                $"PAL20-COMPILER-GEOMETRY: '{definition.VisualId}' is not a centered 20x20 cell.");
+                $"PAL20-COMPILER-GEOMETRY: '{definition.VisualId}' is not an aligned 20x20 cell.");
         }
 
         return new MetadataDescriptor(
@@ -313,6 +386,7 @@ static class Palimpsest20CompilerConformance
             definition.VariantOrdinal,
             definition.LayerClass,
             definition.AdjacencyMask is null ? null : (int)definition.AdjacencyMask.Value,
+            definition.Anchor,
             definition.OverviewPaletteIndex,
             definition.PaletteRoleIndexes.ToImmutableArray());
     }
@@ -332,6 +406,7 @@ static class Palimpsest20CompilerConformance
         [property: JsonRequired, JsonPropertyName("cellSize")] int CellSize,
         [property: JsonRequired, JsonPropertyName("atlasWidth")] int AtlasWidth,
         [property: JsonRequired, JsonPropertyName("atlasHeight")] int AtlasHeight,
+        [property: JsonRequired, JsonPropertyName("anchor")] ContractAnchor Anchor,
         [property: JsonRequired, JsonPropertyName("definitionCount")] int DefinitionCount,
         [property: JsonRequired, JsonPropertyName("definitions")]
         ImmutableArray<ContractDefinition> Definitions);
@@ -347,12 +422,17 @@ static class Palimpsest20CompilerConformance
         [property: JsonRequired, JsonPropertyName("paletteRoleIndexes")]
         ImmutableArray<int> PaletteRoleIndexes);
 
+    private sealed record ContractAnchor(
+        [property: JsonRequired, JsonPropertyName("x")] int X,
+        [property: JsonRequired, JsonPropertyName("y")] int Y);
+
     private sealed record MetadataDescriptor(
         string Id,
         string FamilyId,
         int VariantOrdinal,
         Palimpsest20LayerClass Layer,
         int? Mask,
+        Palimpsest20PixelAnchor Anchor,
         int OverviewPaletteIndex,
         ImmutableArray<int> PaletteRoleIndexes);
 }

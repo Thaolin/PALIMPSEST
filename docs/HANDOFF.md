@@ -1,6 +1,6 @@
 # Handoff
 
-- Status: `E4.5 complete`
+- Status: **E4.5 technically complete — awaiting Palimpsest adoption review.**
 - Active stage: none; implementation is stopped before E5
 - Public artifact: `artifacts/e45/build-a/pack` after
   `tools/verify.ps1`
@@ -16,31 +16,87 @@
 
 The proof restores offline, builds all C# projects with zero warnings, runs
 strict bundle/compiler/motif conformance, compiles two complete outputs and
-compares every byte, checks committed hashes, validates output ownership guards,
-builds the Godot adapter, launches its scene, captures both exports through
-Godot, compares viewport output to the CPU oracle, checks logs, and confirms
-bounded process shutdown. Its isolated Godot app-data directories are removed
-in a `finally` block.
+compares every byte, checks committed hashes, asserts review-only baseline
+separation, validates output ownership guards, proves the Godot project remains
+pack-only, launches its scene, captures both exports through Godot, compares
+viewport output to the CPU oracle, checks logs, and confirms bounded process
+shutdown. Its isolated Godot app-data directories are removed in a `finally`
+block.
 
-The final proof measured the first CLI compile at 1.270 seconds and the two
-headless Godot pack loads at 146.015 ms and 152.434 ms. Both viewport captures
-equal their CPU oracles and each other; the captured pixel digest is
+The 2026-07-20 hardening proof completed in 32.1 seconds with zero warnings and
+errors and measured the first CLI compile at 1.196 seconds. Both canonical
+builds retained aggregate
+`sha256:f41d1e4e4f76b5e6e57921cda35050582368486e87e932d5f1273ff4c2be9bd8`.
+The unchanged viewport plan remains byte-identical to its CPU oracle; its
+recorded captured pixel digest is
 `sha256:aa544d2e426f382cb77f43e3b246fa01212ce329a7bb02f37d08a8b43b52f5e4`.
 
-Review sheets include native and 4× nearest atlas views, adjacency topology,
-shifted overlap, layers, variants, and both variants of grove/ridge motifs.
-Water, cloud, ridge/wall, path/border, crossing, and transition treatments are
-visibly separate. Manual comparison baselines remain outside the canonical pack.
-Motif coordinate selection is delivered as a pinned pure utility; compilation
-has no Chronicle coordinates on which to invoke it, and runtime invocation is
-left at the E5 boundary.
+The invalid-bundle inventory now contains 50 public-reader cases: the original
+16 plus 34 focused cases for the remaining applicable JSON, format, hash,
+compatibility, palette, atlas, definition, metadata, occupancy, and canonical
+serialization rules. Legacy Pack-v1 envelope fields and constructor-only
+`PackFile` path grammar are recorded as not applicable to this narrowed reader.
 
-Remaining risk is visual taste, not contract ambiguity. P-GEN proves a
-source-equivalent artifact, but PALIMPSEST currently has no authorized
-filesystem loader or public construction seam for this directory. Proving
-runtime acceptance or swapping it in requires a separately authorized
-PALIMPSEST production change. That work is E5 and is the precise blocker.
+The supplied 181-definition contract now includes the required centered anchor.
+Its existing conformance path emits deterministic exact-ID reports for missing,
+unexpected, family, layer, mask, variant, anchor, overview, and palette-role
+mismatches without reading the Palimpsest repository.
 
-The PALIMPSEST worktree contained unrelated pre-existing local changes during
-verification. E4.5 access to that repository was read-only, and this task did
-not edit, stage, or commit any PALIMPSEST file.
+Review output now adds `manual-baseline-20.png` and
+`authoring-evidence.json`. Its 64 accepted/candidate rows cover the six
+individual specimens plus all pinned connected-water, cloud, grove, ridge, and
+crossing captures. Comparison construction resolves the exact family, mask,
+and local variant and rejects missing or ambiguous candidates; the evidence
+records all 64 mappings. Native and 4× nearest sheets plus adjacency,
+shifted-overlap, motif, layer, and variant sheets cover broader family lineage.
+Baseline definitions remain outside the four canonical files and the 181
+exported definitions. These images are evidence for human review, not
+Palimpsest visual UAT.
+
+Catalogue motif footprint, anchor, ordered-mark, occupancy, variant, and
+clipping data remains authoring-only; the export is flat. E5 must choose
+composer-owned placement or immutable compiled-pack motif records. The
+selection algorithm is now internal authoring/conformance evidence with pinned
+vectors, not a runtime API; P-GEN makes no decision about Palimpsest's eventual
+typed selector.
+
+## Changed files and proof
+
+- Status and ownership documentation: `README.md`,
+  `docs/ENGINE-SPEC.md`, `docs/ARCHITECTURE.md`, `docs/CODEMAP.md`,
+  `docs/DECISION.md`, `docs/DEVELOPMENT.md`, `docs/HANDOFF.md`,
+  `docs/ROADMAP.md`.
+- Review-only inputs and selection boundary:
+  `catalogues/e45-palimpsest20.json`,
+  `src/Chronicle.VisualCompiler/DeterministicSelection.cs`.
+- Public-seam conformance and supplied fixtures:
+  `src/Chronicle.Visuals.Conformance/Palimpsest20BundleConformance.cs`,
+  `src/Chronicle.Visuals.Conformance/Palimpsest20CompilerConformance.cs`,
+  `fixtures/palimpsest20/invalid/cases.json`,
+  `fixtures/palimpsest20/contract.json`.
+- One-command evidence assertions: `tools/verify.ps1`.
+
+## Remaining Palimpsest blockers
+
+- Goal 4B player visual UAT is pending; Goal 4C and E5 remain unauthorized.
+- Palimpsest has no authorized filesystem reader or production construction
+  seam for this directory.
+- The frozen fixture predates Goal 4B; an authorized E5 review must freeze the
+  then-accepted vocabulary, including any accepted Home mapping.
+- Consumer ownership, motif placement, and a typed World/Stratum cosmetic
+  selection context remain undecided.
+- Player and Inspector composer parity, semantic seed/overlap fixtures, and a
+  human adopt/narrow/defer/reject decision have not been performed.
+- Adopting the narrowed four-file profile would require reconciliation with
+  Palimpsest's governing specification and architecture records.
+
+The next forbidden work is any Palimpsest edit, E5 loader or live swap,
+runtime selector, compiled motif-record export, runtime catalogue parsing,
+`subject.home-hearthstone` addition, Goal 4C/combat vocabulary, or canonical
+hash repin. Stop here until Palimpsest explicitly authorizes a later gate.
+
+The Palimpsest worktree contains unrelated local modifications and untracked
+files. The preceding read-only Palimpsest audit did not edit, stage, commit,
+publish, push, or open a pull request in either repository. This current P-GEN
+E4.5 hardening task intentionally edits the listed P-GEN files while Palimpsest
+remains read-only.

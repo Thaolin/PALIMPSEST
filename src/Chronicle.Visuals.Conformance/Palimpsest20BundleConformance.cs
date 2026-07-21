@@ -26,10 +26,64 @@ static class Palimpsest20BundleConformance
         return CompileTwiceProducesIdenticalCanonicalFiles() && passed;
     }
 
+    private static ImmutableArray<string> RegisteredMutations { get; } =
+        ImmutableArray.Create(
+            "missing",
+            "extra",
+            "duplicate",
+            "unmapped-json",
+            "duplicate-json",
+            "missing-validation-member",
+            "null-manifest-atlas",
+            "null-manifest-definition",
+            "null-hash-files",
+            "null-minimum-reader",
+            "oversized-atlas-dimensions",
+            "manifest-atlas-path",
+            "malformed-json",
+            "empty-json",
+            "invalid-cell-size",
+            "unaligned-atlas-dimension",
+            "atlas-length",
+            "empty-palette",
+            "oversized-palette",
+            "opaque-transparent-index",
+            "invalid-atlas-index",
+            "invalid-palette-role-name",
+            "duplicate-palette-role-name",
+            "palette-role-index-range",
+            "invalid-visual-id",
+            "duplicate-visual-id",
+            "invalid-family-id",
+            "negative-variant",
+            "invalid-layer",
+            "invalid-rectangle-size",
+            "unaligned-rectangle",
+            "out-of-bounds-rectangle",
+            "overlapping-rectangles",
+            "invalid-anchor",
+            "invalid-adjacency",
+            "overview-index-range",
+            "definition-role-index-range",
+            "invisible-definition",
+            "hash-algorithm",
+            "hash-file-digest",
+            "hash-file-order",
+            "hash-aggregate",
+            "manifest-palimpsest-digest",
+            "hashes-palimpsest-digest",
+            "noncanonical-json",
+            "hash-mismatch",
+            "format-boundary",
+            "composer-boundary",
+            "style-boundary",
+            "minimum-reader-boundary");
+
     private static bool RejectMalformedBundles()
     {
-        var canonical = CreateCanonicalFixture();
         var cases = ReadInvalidCases();
+        ValidateCaseRegistry(cases);
+        var canonical = CreateCanonicalFixture();
         var passed = true;
         foreach (var testCase in cases)
         {
@@ -39,6 +93,41 @@ static class Palimpsest20BundleConformance
         }
 
         return passed;
+    }
+
+    private static void ValidateCaseRegistry(ImmutableArray<InvalidCase> fixtureCases)
+    {
+        var fixtureIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var testCase in fixtureCases)
+        {
+            if (string.IsNullOrWhiteSpace(testCase.Id))
+            {
+                throw new InvalidOperationException(
+                    "PAL20-BUNDLE-FIXTURE: invalid case has a blank ID.");
+            }
+            if (!fixtureIds.Add(testCase.Id))
+            {
+                throw new InvalidOperationException(
+                    $"PAL20-BUNDLE-FIXTURE: duplicate case ID '{testCase.Id}'.");
+            }
+            if (!RegisteredMutations.Contains(testCase.Mutation))
+            {
+                throw new InvalidOperationException(
+                    $"PAL20-BUNDLE-FIXTURE: case '{testCase.Id}' references unknown mutation '{testCase.Mutation}'.");
+            }
+        }
+
+        var registeredSet = RegisteredMutations.ToHashSet(StringComparer.Ordinal);
+        var missingFromFixture = registeredSet
+            .Where(mutation => !fixtureCases.Any(
+                testCase => testCase.Mutation == mutation))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (missingFromFixture.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"PAL20-BUNDLE-FIXTURE: registered mutations missing from fixture: {string.Join(", ", missingFromFixture)}.");
+        }
     }
 
     private static bool CompileTwiceProducesIdenticalCanonicalFiles()
@@ -182,6 +271,152 @@ static class Palimpsest20BundleConformance
                 manifest["atlas"]!["width"] = alignedOverflowingDimension;
                 manifest["atlas"]!["height"] = alignedOverflowingDimension;
             }),
+        "manifest-atlas-path" => RewriteManifest(
+            canonical,
+            static manifest => manifest["atlas"]!["path"] = "atlas.indices"),
+        "malformed-json" => ReplaceFile(canonical, "validation.json", "{"u8),
+        "empty-json" => ReplaceFile(
+            canonical,
+            "validation.json",
+            Array.Empty<byte>()),
+        "invalid-cell-size" => RewriteManifest(
+            canonical,
+            static manifest => manifest["cellSize"] = 10),
+        "unaligned-atlas-dimension" => RewriteManifest(
+            canonical,
+            static manifest => manifest["atlas"]!["width"] = 21),
+        "atlas-length" => RewriteHashes(ReplaceFile(
+            canonical,
+            Palimpsest20Codec.AtlasPath,
+            new byte[399])),
+        "empty-palette" => RewriteManifest(
+            canonical,
+            static manifest => manifest["palette"]!["entries"] = new JsonArray()),
+        "oversized-palette" => RewriteManifest(
+            canonical,
+            static manifest =>
+            {
+                var entries = manifest["palette"]!["entries"]!.AsArray();
+                while (entries.Count <= 256)
+                {
+                    entries.Add(new JsonObject
+                    {
+                        ["red"] = 1,
+                        ["green"] = 1,
+                        ["blue"] = 1,
+                        ["alpha"] = 255,
+                    });
+                }
+            }),
+        "opaque-transparent-index" => RewriteManifest(
+            canonical,
+            static manifest => manifest["palette"]!["entries"]!
+                .AsArray()[0]!["alpha"] = 255),
+        "invalid-atlas-index" => RewriteHashes(ReplaceFile(
+            canonical,
+            Palimpsest20Codec.AtlasPath,
+            Enumerable.Repeat((byte)2, 400).ToArray())),
+        "invalid-palette-role-name" => RewriteManifest(
+            canonical,
+            static manifest => manifest["palette"]!["roleIndexes"]!
+                .AsArray()[0]!["name"] = "Surface.Grass"),
+        "duplicate-palette-role-name" => RewriteManifest(
+            canonical,
+            static manifest => manifest["palette"]!["roleIndexes"]!.AsArray().Add(
+                manifest["palette"]!["roleIndexes"]!.AsArray()[0]!.DeepClone())),
+        "palette-role-index-range" => RewriteManifest(
+            canonical,
+            static manifest => manifest["palette"]!["roleIndexes"]!
+                .AsArray()[0]!["index"] = 2),
+        "invalid-visual-id" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["visualId"] = "Terrain.Surface.Grass"),
+        "duplicate-visual-id" => RewriteManifest(
+            canonical,
+            static manifest => AddDefinition(manifest, static _ => { })),
+        "invalid-family-id" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["familyId"] = "Terrain.Surface.Grass"),
+        "negative-variant" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["variantOrdinal"] = -1),
+        "invalid-layer" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["layerClass"] = 99),
+        "invalid-rectangle-size" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["atlasRect"]!["width"] = 19),
+        "unaligned-rectangle" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["atlasRect"]!["x"] = 1),
+        "out-of-bounds-rectangle" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["atlasRect"]!["x"] = 20),
+        "overlapping-rectangles" => RewriteManifest(
+            canonical,
+            static manifest => AddDefinition(
+                manifest,
+                static definition => definition["visualId"] = "terrain.surface.moss")),
+        "invalid-anchor" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["anchor"]!["x"] = 9),
+        "invalid-adjacency" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["adjacencyMask"] = 16),
+        "overview-index-range" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["overviewPaletteIndex"] = 2),
+        "definition-role-index-range" => RewriteManifest(
+            canonical,
+            static manifest => FirstDefinition(manifest)["paletteRoleIndexes"]!
+                .AsArray()[0] = 2),
+        "invisible-definition" => RewriteHashes(ReplaceFile(
+            canonical,
+            Palimpsest20Codec.AtlasPath,
+            new byte[400])),
+        "hash-algorithm" => RewriteJson(
+            canonical,
+            "hashes.json",
+            static hashes => hashes["algorithm"] = "sha512",
+            rewriteHashes: false),
+        "hash-file-digest" => RewriteJson(
+            canonical,
+            "hashes.json",
+            static hashes => hashes["files"]!.AsArray()[0]!["digest"] =
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            rewriteHashes: false),
+        "hash-file-order" => RewriteJson(
+            canonical,
+            "hashes.json",
+            static hashes =>
+            {
+                var files = hashes["files"]!.AsArray();
+                var first = files[0]!.DeepClone();
+                files[0] = files[1]!.DeepClone();
+                files[1] = first;
+            },
+            rewriteHashes: false),
+        "hash-aggregate" => RewriteJson(
+            canonical,
+            "hashes.json",
+            static hashes => hashes["aggregateDigest"] =
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            rewriteHashes: false),
+        "manifest-palimpsest-digest" => RewriteManifest(
+            canonical,
+            static manifest => manifest["palimpsestDigest"] =
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000"),
+        "hashes-palimpsest-digest" => RewriteJson(
+            canonical,
+            "hashes.json",
+            static hashes => hashes["palimpsestDigest"] =
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            rewriteHashes: false),
+        "noncanonical-json" => RewriteHashes(ReplaceFile(
+            canonical,
+            "manifest.json",
+            " "u8.ToArray().Concat(canonical.Single(
+                static file => file.Path == "manifest.json").Bytes).ToArray())),
         "hash-mismatch" => ReplaceFile(
             canonical,
             Palimpsest20Codec.AtlasPath,
@@ -201,6 +436,18 @@ static class Palimpsest20BundleConformance
         _ => throw new InvalidOperationException(
             $"PAL20-BUNDLE-FIXTURE: unknown mutation '{mutation}'.")
     };
+
+    private static JsonObject FirstDefinition(JsonObject manifest) =>
+        manifest["definitions"]!.AsArray()[0]!.AsObject();
+
+    private static void AddDefinition(
+        JsonObject manifest,
+        Action<JsonObject> mutation)
+    {
+        var definition = FirstDefinition(manifest).DeepClone().AsObject();
+        mutation(definition);
+        manifest["definitions"]!.AsArray().Add(definition);
+    }
 
     private static ImmutableArray<PackFile> RewriteManifest(
         ImmutableArray<PackFile> canonical,

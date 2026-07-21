@@ -1,13 +1,15 @@
 # P-GEN
 
-P-GEN is a deterministic, offline C# authoring compiler for PALIMPSEST's
-accepted 20px visual contract. It compiles a typed catalogue into one canonical
+P-GEN is a deterministic, offline C# authoring compiler for a candidate
+PALIMPSEST 20px visual contract. It compiles a typed catalogue into one canonical
 `Palimpsest20` pack: one indexed atlas, one palette, concrete string-resolvable
 definitions, overview indexes, compatibility metadata, and pinned hashes.
 
+Status: **E4.5 technically complete — awaiting Palimpsest adoption review.**
+
 Godot 4.7.1 .NET is presentation and verification only. It reads the exported
-pack; it does not contain compiler rules, variant selection, adjacency fallback,
-or catalogue parsing.
+pack; it does not contain compiler rules, motif definitions, variant selection,
+adjacency fallback, or catalogue parsing.
 
 ## Verify
 
@@ -15,9 +17,10 @@ or catalogue parsing.
 ./tools/verify.ps1
 ```
 
-The proof builds with zero warnings, runs public-contract conformance, compiles
-twice, checks the committed expected hashes, and captures the same exported pack
-twice through Godot.
+The proof builds with zero warnings, runs public-contract and invalid-bundle
+conformance, checks the frozen required-ID fixture, compiles twice, checks the
+committed expected hashes, emits native/manual review evidence, and captures the
+same exported pack twice through Godot.
 
 For a manual build:
 
@@ -28,8 +31,10 @@ dotnet run --project src/Chronicle.VisualCompiler.Cli -c Release -- `
   --output artifacts/manual-pal20
 ```
 
-The canonical four-file artifact is under `artifacts/manual-pal20/pack`; review
-sheets are separate under `artifacts/manual-pal20/review`.
+The canonical four-file artifact is under `artifacts/manual-pal20/pack`;
+baseline definitions and review sheets remain separate under
+`artifacts/manual-pal20/review`.
 
-E4.5 ends at authoring and preview. PALIMPSEST runtime loading, pack swapping,
-and production integration are E5 and require separate authorization.
+E4.5 proves reproducible technical authoring evidence. Human visual review and
+Palimpsest player UAT remain pending; runtime loading, pack swapping, and any
+adoption decision are E5 work requiring separate authorization.

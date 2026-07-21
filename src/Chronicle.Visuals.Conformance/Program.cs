@@ -189,6 +189,11 @@ static class ReferencePackConformance
             return 1;
         }
 
+        if (!AcceptedReferenceConformance.Run())
+        {
+            return 1;
+        }
+
         Console.WriteLine(first.AggregateDigest);
         return 0;
     }

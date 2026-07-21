@@ -161,7 +161,9 @@ static class CompilerConformance
                 .All(static pair =>
                     pair.First.Path == pair.Second.Path &&
                     pair.First.Bytes.AsSpan().SequenceEqual(pair.Second.Bytes.AsSpan())) ||
-            review.ReviewFiles.Any(static file =>
+            review.ReviewFiles
+                .Where(static file => file.Path.EndsWith(".png", StringComparison.Ordinal))
+                .Any(static file =>
                 !file.Bytes.AsSpan()[..8].SequenceEqual(
                     new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 })))
         {

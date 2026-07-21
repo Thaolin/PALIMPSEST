@@ -82,16 +82,18 @@ static class VocabularyConformance
         }
         var candidateProvenance = result.Pack.Provenance.Single(
             static item => item.FamilyId == "actor.incarnation");
-        var baselineProvenance = result.Pack.Provenance.Single(
-            static item => item.FamilyId == "baseline.actor.incarnation");
-        if (candidateProvenance.Origin != "authored" ||
-            baselineProvenance.Origin != "manual-baseline" ||
-            baselineProvenance.ReviewNote?.Contains(
-                "authored pixel rows",
-                StringComparison.Ordinal) != true)
+        if (candidateProvenance.Origin != "authored")
         {
             Console.Error.WriteLine(
-                "CVC-E3-PROVENANCE: authored/manual-baseline ownership is unclear.");
+                "CVC-E3-PROVENANCE: actor incarnation is not authored.");
+            return false;
+        }
+        var baselineProvenance = result.Pack.Provenance.Single(
+            static item => item.FamilyId == "baseline.actor.incarnation");
+        if (baselineProvenance.Origin != "authored")
+        {
+            Console.Error.WriteLine(
+                "CVC-E3-PROVENANCE: baseline provenance is not authored.");
             return false;
         }
 
@@ -116,7 +118,6 @@ static class VocabularyConformance
         if (!reviewPaths.Contains("review/palette-sky-16.png") ||
             !reviewPaths.Contains("review/palette-surface-16.png") ||
             !reviewPaths.Contains("review/variants-16.png") ||
-            !reviewPaths.Contains("review/manual-baseline-16.png") ||
             !reviewPaths.Contains("review/authoring-evidence.json"))
         {
             Console.Error.WriteLine(

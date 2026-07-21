@@ -7,8 +7,10 @@
 | E2 | Connected forms and motifs | Complete |
 | E3 | PALIMPSEST-shaped specimen breadth | Complete |
 | E4 | Godot 4.7.1 .NET pack-only preview | Complete |
-| E4.5 | Canonical PALIMPSEST-compatible 20px authoring compiler | Complete |
+| E4.5 | Canonical PALIMPSEST-compatible 20px authoring compiler | Technically complete — awaiting Palimpsest adoption review |
 | E5 | PALIMPSEST runtime loading or swapping | Forbidden without separate authorization |
+
+Current status: **E4.5 technically complete — awaiting Palimpsest adoption review.**
 
 ## E4.5 reconciled gate
 
@@ -23,6 +25,7 @@
 - deterministic signed/large-coordinate, seed, variant, mask, and motif
   clipping vectors;
 - separate material grammars and nearest-neighbour 20px review sheets;
+- review-only manual-baseline evidence outside the frozen 181-definition pack;
 - a Godot preview that reads only the exported canonical artifact; and
 - safe output ownership plus bounded Godot process cleanup.
 
@@ -37,5 +40,8 @@ Pinned canonical values:
 - canonical aggregate:
   `sha256:f41d1e4e4f76b5e6e57921cda35050582368486e87e932d5f1273ff4c2be9bd8`
 
-The next stage cannot begin in this repository alone. PALIMPSEST exposes no
-authorized filesystem loader or live-swap seam; changing that consumer is E5.
+The next stage cannot begin in this repository alone. Palimpsest exposes no
+authorized filesystem loader or live-swap seam, player visual UAT remains
+pending, the accepted vocabulary must be refreshed after the active slice, and
+consumer, motif-placement, and typed-selection ownership remain undecided.
+Resolving any of those through production changes is E5.

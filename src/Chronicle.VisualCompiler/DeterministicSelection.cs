@@ -6,7 +6,7 @@ using Chronicle.VisualPack;
 
 namespace Chronicle.VisualCompiler;
 
-public static class DeterministicSelection
+internal static class DeterministicSelection
 {
     public static int SelectVariant(
         ulong seed,

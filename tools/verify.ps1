@@ -89,6 +89,30 @@ $hashedPackPaths = @(
     'manifest.json',
     'validation.json'
 )
+$requiredReviewPaths = @(
+    'review/adjacency-20.png',
+    'review/authoring-evidence.json',
+    'review/layers-20.png',
+    'review/manual-baseline-20.png',
+    'review/motifs-20.png',
+    'review/native-20.png',
+    'review/nearest-20.png',
+    'review/shifted-overlap-20.png',
+    'review/variants-20.png'
+)
+$requiredManualBaselineFamilies = @(
+    'baseline.actor.incarnation',
+    'baseline.emphasis.selection',
+    'baseline.emphasis.target.valid',
+    'baseline.glyph.codex',
+    'baseline.landmark.bell-that-fell-up',
+    'baseline.subject.loose-stone'
+)
+
+$acceptedReferenceFixture = Join-Path $root 'fixtures\palimpsest20\accepted-reference.json'
+$requiredReferenceCommit = '15917b3'
+$requiredReferenceVisualIdSetDigest =
+    'sha256:7f2f0c09ddc9e84f483c580513a11ad79a62188c861a973cc01044a9e4e88729'
 
 function Assert-CanonicalPackFiles {
     param(
@@ -171,6 +195,224 @@ function Assert-PinnedPalimpsest20Pack {
     }
 }
 
+function Assert-E45ReviewArtifacts {
+    param(
+        [Parameter(Mandatory)][string]$OutputDirectory,
+        [Parameter(Mandatory)][string]$Label
+    )
+
+    $packDirectory = Join-Path $OutputDirectory 'pack'
+    $packedReviewDirectory = Join-Path $packDirectory 'review'
+    if (Test-Path -LiteralPath $packedReviewDirectory) {
+        throw "$Label incorrectly contains review artifacts inside the canonical pack."
+    }
+
+    foreach ($relativePath in $requiredReviewPaths) {
+        $artifact = Join-Path $OutputDirectory $relativePath
+        if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) {
+            throw "$Label is missing required review artifact '$relativePath'."
+        }
+    }
+
+    $manifest = Get-Content -Raw -LiteralPath (Join-Path $packDirectory 'manifest.json') |
+        ConvertFrom-Json
+    $definitions = @($manifest.definitions)
+    if ($definitions.Count -ne 181) {
+        throw "$Label must export exactly 181 visual definitions, got $($definitions.Count)."
+    }
+    if (@($definitions | Where-Object {
+                $_.visualId -like 'baseline.*' -or $_.familyId -like 'baseline.*'
+            }).Count -ne 0) {
+        throw "$Label incorrectly exports review-only baseline definitions."
+    }
+
+    $authoringEvidence = Get-Content -Raw -LiteralPath (
+        Join-Path $OutputDirectory 'review/authoring-evidence.json') |
+        ConvertFrom-Json
+    $comparisonLayout = $authoringEvidence.comparisonLayout
+    if (-not $comparisonLayout -or
+        $comparisonLayout.columns[0] -cne 'accepted-reference' -or
+        $comparisonLayout.columns[1] -cne 'candidate') {
+        throw "$Label authoring evidence is missing or has incorrect comparison layout."
+    }
+    $refProv = $comparisonLayout.referenceProvenance
+    if ($refProv.sourceCommit -cne $requiredReferenceCommit) {
+        throw "$Label authoring evidence has wrong reference provenance commit."
+    }
+    $acceptedRef = $authoringEvidence.acceptedReference
+    if (-not $acceptedRef -or
+        [string]::IsNullOrWhiteSpace($acceptedRef.aggregateDigest) -or
+        $acceptedRef.visualCount -ne 64 -or
+        $acceptedRef.visualIdSetDigest -cne $requiredReferenceVisualIdSetDigest -or
+        $acceptedRef.comparedVisualCount -ne 64) {
+        throw "$Label authoring evidence is missing accepted reference identity."
+    }
+
+    $comparedVisuals = @($acceptedRef.comparedVisuals)
+    if ($comparedVisuals.Count -ne 64) {
+        throw "$Label authoring evidence does not list all 64 accepted/candidate comparisons."
+    }
+    $comparedIds = [string[]]@(
+        $comparedVisuals | ForEach-Object { [string]$_.referenceVisualId }
+    )
+    [Array]::Sort($comparedIds, [StringComparer]::Ordinal)
+    $comparedIdBytes = [Text.Encoding]::UTF8.GetBytes($comparedIds -join "`n")
+    $comparedIdDigest = 'sha256:' + [Convert]::ToHexString(
+        [Security.Cryptography.SHA256]::HashData($comparedIdBytes)
+    ).ToLowerInvariant()
+    if ($comparedIdDigest -cne $requiredReferenceVisualIdSetDigest) {
+        throw "$Label authoring evidence comparison IDs do not match the accepted reference set."
+    }
+
+    $comparisonPng = [IO.File]::ReadAllBytes(
+        (Join-Path $OutputDirectory 'review/manual-baseline-20.png'))
+    if ($comparisonPng.Length -lt 24) {
+        throw "$Label manual comparison PNG is truncated."
+    }
+    $comparisonWidth =
+        ([int]$comparisonPng[16] -shl 24) -bor
+        ([int]$comparisonPng[17] -shl 16) -bor
+        ([int]$comparisonPng[18] -shl 8) -bor
+        [int]$comparisonPng[19]
+    $comparisonHeight =
+        ([int]$comparisonPng[20] -shl 24) -bor
+        ([int]$comparisonPng[21] -shl 16) -bor
+        ([int]$comparisonPng[22] -shl 8) -bor
+        [int]$comparisonPng[23]
+    if ($comparisonWidth -ne 40 -or $comparisonHeight -ne 1280) {
+        throw "$Label manual comparison PNG must be 40x1280, got ${comparisonWidth}x${comparisonHeight}."
+    }
+}
+
+function Assert-AcceptedReferenceFixture {
+    if (-not (Test-Path -LiteralPath $acceptedReferenceFixture -PathType Leaf)) {
+        throw "Accepted reference fixture is missing."
+    }
+
+    $fixture = Get-Content -Raw -LiteralPath $acceptedReferenceFixture | ConvertFrom-Json
+
+    if ($fixture.provenance.repository -cne 'Palimpsest') {
+        throw "Accepted reference fixture provenance.repository must be 'Palimpsest'."
+    }
+    if ($fixture.provenance.sourceCommit -cne '15917b3') {
+        throw "Accepted reference fixture provenance.sourceCommit must be '15917b3'."
+    }
+    if ($fixture.provenance.sourceFile -cne 'src/Chronicle.VisualPack/ManualVisualPack.cs') {
+        throw "Accepted reference fixture provenance.sourceFile must be 'src/Chronicle.VisualPack/ManualVisualPack.cs'."
+    }
+    if ($fixture.provenance.nativeSize -ne 20) {
+        throw "Accepted reference fixture provenance.nativeSize must be 20."
+    }
+
+    if ($fixture.aggregateDigest -cne 'sha256:16878ef64d5daef65680ccd2a0b3ae335fd725fb76c908a91e30970d6561ff07') {
+        throw "Accepted reference fixture aggregate digest is incorrect."
+    }
+
+    $palette = $fixture.palette
+    if ($palette.Count -ne 28) {
+        throw "Accepted reference fixture must have exactly 28 palette entries, got $($palette.Count)."
+    }
+    $paletteIndices = @($palette | ForEach-Object { $_.index } | Sort-Object)
+    for ($i = 0; $i -lt 28; $i++) {
+        if ($paletteIndices[$i] -ne $i) {
+            throw "Accepted reference fixture palette indices must be 0..27 contiguous."
+        }
+    }
+    $paletteByIndex = @{}
+    foreach ($entry in $palette) {
+        $paletteByIndex["$($entry.index)"] = $entry.rgba
+    }
+
+    $visuals = $fixture.visuals
+    if ($visuals.Count -ne 64) {
+        throw "Accepted reference fixture must have exactly 64 visual entries, got $($visuals.Count)."
+    }
+
+    $visualIds = @($visuals | ForEach-Object { $_.visualId })
+    $uniqueIds = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($id in $visualIds) {
+        if (-not $uniqueIds.Add($id)) {
+            throw "Accepted reference fixture has duplicate visual ID '$id'."
+        }
+    }
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    $utf8 = [System.Text.Encoding]::UTF8
+
+    $sortedVisualIds = [string[]]$visualIds.Clone()
+    [Array]::Sort($sortedVisualIds, [StringComparer]::Ordinal)
+    $computedVisualIdSetDigest = 'sha256:' + [System.Convert]::ToHexString(
+        $sha256.ComputeHash($utf8.GetBytes($sortedVisualIds -join "`n"))
+    ).ToLowerInvariant()
+    if ($computedVisualIdSetDigest -cne $requiredReferenceVisualIdSetDigest) {
+        throw "Accepted reference fixture visual ID set mismatch.`n  Expected: $requiredReferenceVisualIdSetDigest`n  Computed: $computedVisualIdSetDigest"
+    }
+
+    foreach ($visual in $visuals) {
+        $id = $visual.visualId
+        if ([string]::IsNullOrWhiteSpace($id)) {
+            throw "Accepted reference fixture has a visual with a blank ID."
+        }
+
+        $indexedDigest = $visual.indexedDigest
+        if ([string]::IsNullOrWhiteSpace($indexedDigest)) {
+            throw "Accepted reference fixture visual '$id' is missing indexedDigest."
+        }
+
+        $rgbaDigest = $visual.rgbaDigest
+        if ([string]::IsNullOrWhiteSpace($rgbaDigest)) {
+            throw "Accepted reference fixture visual '$id' is missing rgbaDigest."
+        }
+
+        $bufferB64 = $visual.indexedBuffer
+        if ([string]::IsNullOrWhiteSpace($bufferB64)) {
+            throw "Accepted reference fixture visual '$id' is missing indexedBuffer."
+        }
+
+        $indexedBuffer = [System.Convert]::FromBase64String($bufferB64)
+        if ($indexedBuffer.Length -ne 400) {
+            throw "Accepted reference fixture visual '$id' indexedBuffer must be exactly 400 bytes, got $($indexedBuffer.Length)."
+        }
+
+        for ($i = 0; $i -lt 400; $i++) {
+            if ($indexedBuffer[$i] -ge 28) {
+                throw "Accepted reference fixture visual '$id' has palette index $($indexedBuffer[$i]) out of range."
+            }
+        }
+
+        $computedIndexedDigest = 'sha256:' + [System.Convert]::ToHexString(
+            $sha256.ComputeHash($indexedBuffer)).ToLowerInvariant()
+        if ($computedIndexedDigest -cne $indexedDigest) {
+            throw "Accepted reference fixture visual '$id' indexedDigest mismatch.`n  Committed: $indexedDigest`n  Computed:  $computedIndexedDigest"
+        }
+
+        $rgbaBytes = [byte[]]::new(1600)
+        for ($i = 0; $i -lt 400; $i++) {
+            $hex = $paletteByIndex["$($indexedBuffer[$i])"]
+            $offset = $i * 4
+            $rgbaBytes[$offset] = [System.Convert]::ToByte($hex.Substring(0, 2), 16)
+            $rgbaBytes[$offset + 1] = [System.Convert]::ToByte($hex.Substring(2, 2), 16)
+            $rgbaBytes[$offset + 2] = [System.Convert]::ToByte($hex.Substring(4, 2), 16)
+            $rgbaBytes[$offset + 3] = [System.Convert]::ToByte($hex.Substring(6, 2), 16)
+        }
+        $computedRgbaDigest = 'sha256:' + [System.Convert]::ToHexString(
+            $sha256.ComputeHash($rgbaBytes)).ToLowerInvariant()
+        if ($computedRgbaDigest -cne $rgbaDigest) {
+            throw "Accepted reference fixture visual '$id' rgbaDigest mismatch.`n  Committed: $rgbaDigest`n  Computed:  $computedRgbaDigest"
+        }
+    }
+
+    $sortedVisuals = @($visuals | Sort-Object -Property visualId)
+    $concatenatedDigests = ($sortedVisuals | ForEach-Object { $_.indexedDigest }) -join ''
+    $computedAggregateDigest = 'sha256:' + [System.Convert]::ToHexString(
+        $sha256.ComputeHash($utf8.GetBytes($concatenatedDigests))).ToLowerInvariant()
+    if ($computedAggregateDigest -cne $fixture.aggregateDigest) {
+        throw "Accepted reference fixture aggregate digest mismatch.`n  Committed: $($fixture.aggregateDigest)`n  Computed:  $computedAggregateDigest"
+    }
+
+    $sha256.Dispose()
+}
+
 $conformance = Join-Path $root 'src\Chronicle.Visuals.Conformance\Chronicle.Visuals.Conformance.csproj'
 & $dotnet restore $conformance --ignore-failed-sources
 if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
@@ -178,6 +420,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 & $dotnet run --project $conformance --configuration Release --no-build
 if ($LASTEXITCODE -ne 0) { throw 'Conformance failed.' }
+
+Assert-AcceptedReferenceFixture
 
 $cli = Join-Path $root 'src\Chronicle.VisualCompiler.Cli\Chronicle.VisualCompiler.Cli.csproj'
 $catalogue = Join-Path $root 'catalogues\e45-palimpsest20.json'
@@ -277,6 +521,8 @@ $packA = Join-Path $outputA 'pack'
 $packB = Join-Path $outputB 'pack'
 Assert-PinnedPalimpsest20Pack $packA $expectedByPath $expectedHashes 'First E4.5 output pack'
 Assert-PinnedPalimpsest20Pack $packB $expectedByPath $expectedHashes 'Second E4.5 output pack'
+Assert-E45ReviewArtifacts $outputA 'First E4.5 output'
+Assert-E45ReviewArtifacts $outputB 'Second E4.5 output'
 
 $replacementBackup = Resolve-ProofOutputPath ($outputA + '.backup')
 Remove-ProofDirectory $replacementBackup | Out-Null
@@ -358,6 +604,33 @@ $previewProject = Join-Path $previewRoot 'Chronicle.VisualPreview.Godot.csproj'
 $plan = Join-Path $root 'fixtures\preview-plans\e45-palimpsest20.json'
 if (-not (Test-Path -LiteralPath $plan -PathType Leaf)) {
     throw "Missing E4.5 Godot preview plan '$plan'."
+}
+$previewSourceFiles = @(
+    Get-ChildItem -LiteralPath $previewRoot -File -Recurse |
+        Where-Object {
+            $_.Extension -in '.cs', '.csproj', '.tscn', '.godot' -and
+            $_.FullName -notlike '*\.godot\*'
+        }
+)
+if ($previewSourceFiles.Count -eq 0) {
+    throw 'Godot preview source files are missing.'
+}
+$forbiddenPreviewReferences = @(
+    'Chronicle.VisualCompiler',
+    'VisualCatalogue',
+    'MotifPlacement',
+    'catalogue'
+)
+$previewReferenceMatches = @(
+    Select-String -LiteralPath $previewSourceFiles.FullName `
+        -Pattern $forbiddenPreviewReferences -SimpleMatch -CaseSensitive:$false
+)
+if ($previewReferenceMatches.Count -ne 0) {
+    $firstPreviewReference = $previewReferenceMatches[0]
+    throw (
+        'Godot preview must remain pack-only and cannot reference compiler, ' +
+        "catalogue, or motif definitions: $($firstPreviewReference.Path):" +
+        "$($firstPreviewReference.LineNumber).")
 }
 $captureA = Resolve-ProofOutputPath (Join-Path $proofRoot 'godot-a')
 $captureB = Resolve-ProofOutputPath (Join-Path $proofRoot 'godot-b')
