@@ -54,7 +54,7 @@ public static class WordCatalogue
             WordKind.Verb,
             "Move the acting subject between matching surface and sky coordinates.",
             0,
-            Array.AsReadOnly([WordIds.Stone])),
+            Array.AsReadOnly([WordIds.Stone, WordIds.Bell])),
         new(
             WordIds.Found,
             "Found",

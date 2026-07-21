@@ -19,18 +19,34 @@ public readonly record struct LoadoutSlot(
     public bool IsIntrinsicSmash => Verb == WordIds.Smash && Noun is null;
 
     [JsonIgnore]
-    public bool IsFlyStone => Verb == WordIds.Fly && Noun == WordIds.Stone;
+    public bool IsFittedFly => Verb == WordIds.Fly && Noun is not null;
 
     [JsonIgnore]
-    public string DisplayName => this switch
+    public string DisplayName
     {
-        { IsIntrinsicFly: true } => "FLY",
-        { IsIntrinsicFound: true } => "FOUND",
-        { IsIntrinsicSmash: true } => "SMASH",
-        { IsFlyStone: true } => "FLY[STONE]",
-        _ when IsEmpty => "—",
-        _ => "?",
-    };
+        get
+        {
+            if (IsEmpty)
+            {
+                return "—";
+            }
+
+            if (Verb is not { } verbId ||
+                !WordCatalogue.TryGet(verbId, out var verb))
+            {
+                return "?";
+            }
+
+            if (Noun is not { } nounId)
+            {
+                return verb.DisplayName.ToUpperInvariant();
+            }
+
+            return WordCatalogue.TryGet(nounId, out var noun)
+                ? $"{verb.DisplayName}[{noun.DisplayName}]".ToUpperInvariant()
+                : "?";
+        }
+    }
 }
 
 public readonly record struct LoadoutState(

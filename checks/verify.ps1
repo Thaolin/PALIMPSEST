@@ -27,6 +27,8 @@ $goal4BRuntimeName = "godot-goal4b-verify-$([Guid]::NewGuid().ToString("N"))"
 $goal4BRuntimeRoot = Join-Path $repoRoot ".tools\$goal4BRuntimeName"
 $goal4CRuntimeName = "godot-goal4c-verify-$([Guid]::NewGuid().ToString("N"))"
 $goal4CRuntimeRoot = Join-Path $repoRoot ".tools\$goal4CRuntimeName"
+$slice5RuntimeName = "godot-slice5-verify-$([Guid]::NewGuid().ToString("N"))"
+$slice5RuntimeRoot = Join-Path $repoRoot ".tools\$slice5RuntimeName"
 
 $originalEnvironment = @{
     AppData = $env:APPDATA
@@ -57,6 +59,25 @@ function Invoke-CheckedCommand {
     if ($exitCode -ne 0)
     {
         throw "$Label failed with exit code $exitCode."
+    }
+}
+
+function Get-FileSha256 {
+    param(
+        [Parameter(Mandatory)]
+        [string] $LiteralPath
+    )
+
+    $stream = [IO.File]::OpenRead($LiteralPath)
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try
+    {
+        return ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-", "")
+    }
+    finally
+    {
+        $sha.Dispose()
+        $stream.Dispose()
     }
 }
 
@@ -147,7 +168,7 @@ function Invoke-GodotGoal4ARun {
         throw "Godot Goal 4A $Phase journey failed with exit code $exitCode."
     }
 
-    if (-not $text.Contains($marker, [StringComparison]::Ordinal))
+    if (-not $text.Contains($marker))
     {
         throw "Godot did not complete the expected Goal 4A $Phase journey."
     }
@@ -199,7 +220,7 @@ function Invoke-GodotGoal4ARestart {
 
     foreach ($fragment in $expectedFragments)
     {
-        if (-not $text.Contains($fragment, [StringComparison]::Ordinal))
+        if (-not $text.Contains($fragment))
         {
             throw "Goal 4A $Phase restart did not restore expected fragment '$fragment'."
         }
@@ -233,8 +254,8 @@ function Invoke-GodotGoal4BRun {
 
     if ($Phase -eq "Restart")
     {
-        $marker = "GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone route=physical view=50x36 save=4"
-        if (-not $text.Contains($marker, [StringComparison]::Ordinal))
+        $marker = "GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone route=physical view=50x36 save=5"
+        if (-not $text.Contains($marker))
         {
             throw "Godot did not complete the exact Goal 4B acceptance journey."
         }
@@ -254,9 +275,9 @@ function Assert-Goal4BSave {
     }
 
     $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
-    if ([int]$save.Version -ne 4)
+    if ([int]$save.Version -ne 5)
     {
-        throw "Goal 4B acceptance did not save envelope version 4."
+        throw "Goal 4B acceptance did not save envelope version 5."
     }
 
     $savedHome = $save.Chronicle.PSObject.Properties["Home"]
@@ -282,9 +303,9 @@ function Invoke-GodotGoal4CRun {
     }
     $marker = switch ($Phase)
     {
-        "Initial" { "GOAL4C THREATENED SAVE READY address=surface:1,3 pending=Smash save=4" }
-        "Restart" { "GOAL4C SUCCESS RESOLVED address=surface:1,3 result=shattered save=4" }
-        "Resolved" { "GOAL4C SUCCESS RESTART PASS address=surface:1,3 result=shattered save=4" }
+        "Initial" { "GOAL4C THREATENED SAVE READY address=surface:1,3 pending=Smash save=5" }
+        "Restart" { "GOAL4C SUCCESS RESOLVED address=surface:1,3 result=shattered save=5" }
+        "Resolved" { "GOAL4C SUCCESS RESTART PASS address=surface:1,3 result=shattered save=5" }
         "Failure" { "GOAL4C FAILURE ACCEPTANCE PASS tick=1 replacement=2 smash=retained loadout=empty ward=intact" }
     }
 
@@ -299,7 +320,7 @@ function Invoke-GodotGoal4CRun {
         throw "Godot Goal 4C $Phase journey failed with exit code $exitCode."
     }
 
-    if (-not $text.Contains($marker, [StringComparison]::Ordinal))
+    if (-not $text.Contains($marker))
     {
         throw "Godot did not complete the exact Goal 4C $Phase journey."
     }
@@ -318,9 +339,72 @@ function Assert-Goal4CSave {
     }
 
     $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
-    if ([int]$save.Version -ne 4)
+    if ([int]$save.Version -ne 5)
     {
-        throw "Goal 4C acceptance did not save envelope version 4."
+        throw "Goal 4C acceptance did not save envelope version 5."
+    }
+}
+
+function Invoke-GodotSlice5Run {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("Initial", "Restart")]
+        [string] $Phase
+    )
+
+    $argument = if ($Phase -eq "Initial") { "--verify-slice5" } else { "--verify-slice5-restart" }
+    $marker = if ($Phase -eq "Initial")
+    {
+        "SLICE5 SAVE READY bell=surface:0,-4 loadout=Fly[Bell] save=5"
+    }
+    else
+    {
+        "SLICE5 RESTART ACCEPTANCE PASS bell=surface:0,-4 source=attached death=confirmed"
+    }
+
+    Write-Host "`n==> Drive Slice 5 $Phase composition journey through Godot controls"
+    $output = @(& $godot --headless --path $godotProjectDirectory -- $argument "--visual-cell-size=20" 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Slice 5 $Phase journey failed with exit code $exitCode."
+    }
+
+    if (-not $text.Contains($marker))
+    {
+        throw "Godot did not complete the exact Slice 5 $Phase journey."
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during the Slice 5 $Phase journey."
+    }
+}
+
+function Assert-Slice5Save {
+    $savePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\slice0_chronicle.json"
+    if (-not (Test-Path -LiteralPath $savePath -PathType Leaf))
+    {
+        throw "Slice 5 acceptance did not create its isolated Chronicle save."
+    }
+
+    $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
+    $bell = $save.Chronicle.BellAddress
+    $slot = $save.Chronicle.Loadout.Slot1
+    $words = @($save.Chronicle.Codex.Words)
+    if ([int]$save.Version -ne 5 -or
+        $bell.Stratum -ne "surface" -or
+        [long]$bell.X -ne 0 -or
+        [long]$bell.Y -ne -4 -or
+        $slot.Verb -ne "word.fly" -or
+        $slot.Noun -ne "word.bell" -or
+        $words -notcontains "word.bell" -or
+        $words -contains "word.stone")
+    {
+        throw "Slice 5 acceptance did not save the exact moved-Bell branch."
     }
 }
 
@@ -363,7 +447,7 @@ function New-PlayerSaveSentinel {
 
     return [pscustomobject]@{
         Path = $playerSave
-        Hash = (Get-FileHash -LiteralPath $playerSave -Algorithm SHA256).Hash
+        Hash = Get-FileSha256 $playerSave
         WriteTimeUtc = (Get-Item -LiteralPath $playerSave).LastWriteTimeUtc
     }
 }
@@ -378,7 +462,7 @@ function Assert-PlayerSaveUnchanged {
     )
 
     if (-not (Test-Path -LiteralPath $Fingerprint.Path -PathType Leaf) -or
-        (Get-FileHash -LiteralPath $Fingerprint.Path -Algorithm SHA256).Hash -ne $Fingerprint.Hash -or
+        (Get-FileSha256 $Fingerprint.Path) -ne $Fingerprint.Hash -or
         (Get-Item -LiteralPath $Fingerprint.Path).LastWriteTimeUtc -ne $Fingerprint.WriteTimeUtc)
     {
         throw "$Label changed the existing player save."
@@ -437,13 +521,13 @@ function Invoke-GodotAtlasRun {
     {
         $expectedComposerMarker =
             "GATE3B SHARED COMPOSER PLAN PASS pack=chronicle.gate3b.manual style=1 size=$VisualCellSize"
-        if (-not $text.Contains($expectedComposerMarker, [StringComparison]::Ordinal))
+        if (-not $text.Contains($expectedComposerMarker))
         {
             throw "$Label did not use the expected Gate 3B shared-composer pack and cell size."
         }
 
         $expectedPreviewMarker = "GATE3B ATLAS VISUAL PREVIEW PASS size=$VisualCellSize"
-        if (-not $text.Contains($expectedPreviewMarker, [StringComparison]::Ordinal))
+        if (-not $text.Contains($expectedPreviewMarker))
         {
             throw "$Label did not complete the expected Gate 3B Atlas visual preview."
         }
@@ -470,8 +554,8 @@ function Invoke-GodotAtlasAcceptance {
         throw "World Atlas Inspector did not create its deterministic capture pair."
     }
 
-    $firstPngHash = (Get-FileHash -LiteralPath $capturePng -Algorithm SHA256).Hash
-    $firstJsonHash = (Get-FileHash -LiteralPath $captureJson -Algorithm SHA256).Hash
+    $firstPngHash = Get-FileSha256 $capturePng
+    $firstJsonHash = Get-FileSha256 $captureJson
 
     $sentinel = New-PlayerSaveSentinel '{"sentinel":"Gate 3A Inspector must not read or mutate this player save."}'
 
@@ -479,8 +563,8 @@ function Invoke-GodotAtlasAcceptance {
 
     Assert-PlayerSaveUnchanged $sentinel "World Atlas Inspector"
 
-    if ((Get-FileHash -LiteralPath $capturePng -Algorithm SHA256).Hash -ne $firstPngHash -or
-        (Get-FileHash -LiteralPath $captureJson -Algorithm SHA256).Hash -ne $firstJsonHash)
+    if ((Get-FileSha256 $capturePng) -ne $firstPngHash -or
+        (Get-FileSha256 $captureJson) -ne $firstJsonHash)
     {
         throw "Equivalent World Atlas Inspector runs produced different capture bytes."
     }
@@ -521,7 +605,7 @@ function Invoke-GodotGate3BPlayerRun {
         throw "$Label failed with exit code $exitCode."
     }
 
-    if (-not $text.Contains($expectedMarker, [StringComparison]::Ordinal))
+    if (-not $text.Contains($expectedMarker))
     {
         throw "$Label did not report the exact Gate 3B player marker '$expectedMarker'."
     }
@@ -629,8 +713,8 @@ function Get-Gate3BReviewArtifactPairs {
 
             $pairs.Add([pscustomobject]@{
                 Stem = $stem
-                PngHash = (Get-FileHash -LiteralPath $pngPath -Algorithm SHA256).Hash
-                MetadataHash = (Get-FileHash -LiteralPath $metadataPath -Algorithm SHA256).Hash
+                PngHash = Get-FileSha256 $pngPath
+                MetadataHash = Get-FileSha256 $metadataPath
             })
         }
     }
@@ -876,7 +960,14 @@ try
     Assert-PlayerSaveAbsent "Goal 4C failure acceptance before launch"
     Invoke-GodotGoal4CRun "Failure"
 
-    Write-Host "`nPASS: Goal 4C conflict restart and failure acceptance, Goal 4B Home and restart acceptance, Goal 4A Study choice, every Goal 2 regression, Gate 3A Inspector, and Gate 3B visual acceptance verified."
+    Set-IsolatedGodotRuntime $slice5RuntimeRoot "WordMultiplies"
+    Assert-PlayerSaveAbsent "Slice 5 acceptance before launch"
+    Invoke-GodotSlice5Run "Initial"
+    Assert-Slice5Save
+    Invoke-GodotSlice5Run "Restart"
+    Assert-Slice5Save
+
+    Write-Host "`nPASS: Slice 5 Fly[Bell] composition and restart, Goal 4C conflict, Goal 4B Home, Goal 4A Study choice, Goal 2, Gate 3A, and Gate 3B verified."
 }
 finally
 {
@@ -897,4 +988,5 @@ finally
     Remove-VerificationRuntimeRoot $goal4ARuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4a-verify-")
     Remove-VerificationRuntimeRoot $goal4BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4b-verify-")
     Remove-VerificationRuntimeRoot $goal4CRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4c-verify-")
+    Remove-VerificationRuntimeRoot $slice5RuntimeRoot (Join-Path $repoRoot ".tools\godot-slice5-verify-")
 }

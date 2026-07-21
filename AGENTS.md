@@ -22,15 +22,35 @@ that outlive the current body.
 
 ## Product rules
 
-- Preserve the player’s Codex of Verbs and Nouns across Incarnations.
-- A Loadout is bounded and consequential; it is not the entire Codex turned on.
+- Preserve the player’s Codex of Verbs and Modifiers across Incarnations.
+- A Loadout is bounded by active Verb slots, link capacity, and shared Load; it
+  is not the entire Codex turned on.
 - Discovery, Study, the Codex, Loadouts, and Expressions are the primary power
   loop, not supporting terminology around a conventional class system.
 - The Word Catalogue is large and authored. World Grammar generates contextual
-  Study Sources, offered words, and Understanding yield; it does not invent new
-  word semantics.
+  Study Sources, subjects and places that may become Targets, offered Verbs and
+  Modifiers, and Understanding yield; it does not invent new word semantics.
+- Targets are actual Chronicle subjects and places, not collectible Words.
+  Their scale, matter, identity, agency, and other authored facts constrain
+  what happens when an Expression is invoked against them.
 - The initial Starting Vectors are Combat, Explore, and Build. They are
   nonbinding emphases, never permanent classes or exclusive content tracks.
+- Link count is not a universal time surcharge. Keep ordinary combat and
+  exploration responsive; reserve substantial Chronicle-time commitment for
+  effects whose scale, persistence, or chosen Modifiers justify it, and skip
+  safe waiting to the next meaningful change.
+- Combat combines positioning, physical actions, equipment, autonomous
+  Companions, and Invocations. Different actions may use Preparation, delayed
+  resolution, or Recovery, but each delay must create a decision rather than
+  idle waiting. Taming and leadership improve cooperation without creating
+  direct unit control, and Companions do not consume Load merely by existing.
+- Modifiers are reusable Codex knowledge, unique within one Expression, and
+  order-independent. Every Verb and Modifier attachment has fixed authored Load
+  independent of the chosen Target.
+- Some discoveries may add small amounts of Load, but most long-term capacity
+  comes from vulnerable Load Sources built at Home. For the first pass, losing
+  a Source affects the next Attunement, including a replacement Incarnation,
+  and never disables the current expedition's Loadout remotely.
 - Agents have identity and agency. Command communicates intent; it is not unit
   control. Command may be required for dangerous intent, but never guarantees
   obedience.

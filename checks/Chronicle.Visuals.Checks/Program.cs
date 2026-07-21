@@ -9,8 +9,58 @@ VerifyVisualCompositionAtNumericWorldEdges();
 VerifyHomeHearthstoneComposesOverItsSurfaceRidge();
 VerifyGoal4CManualPackAndStaticDangerSeam();
 VerifyGoal4CCairnSubjectsComposeOverCoreSemantics();
+VerifyMovedBellComposesAtItsCoreAddress();
 Console.WriteLine(
     "PASS: Gate 3B compiled visual packs, deterministic composition, connected features, and overlap verified.");
+
+static void VerifyMovedBellComposesAtItsCoreAddress()
+{
+    var oldAddress = SkyStratum.LandmarkAddress;
+    var movedAddress = new WorldAddress(
+        SurfacePatch.SurfaceStratum,
+        oldAddress.X,
+        oldAddress.Y);
+    var state = ChronicleState.Begin(41_337) with { BellAddress = movedAddress };
+    var movedBounds = new WorldRectangle(movedAddress.X, movedAddress.Y, Width: 1, Height: 1);
+    var oldBounds = new WorldRectangle(oldAddress.X, oldAddress.Y, Width: 1, Height: 1);
+    var movedArea = WorldArea.Generate(
+        state,
+        movedAddress.Stratum,
+        new WorldRectangle(movedAddress.X - 1, movedAddress.Y - 1, Width: 3, Height: 3));
+    var oldArea = WorldArea.Generate(
+        state,
+        oldAddress.Stratum,
+        new WorldRectangle(oldAddress.X - 1, oldAddress.Y - 1, Width: 3, Height: 3));
+
+    Assert(
+        movedArea.Cells.Single(cell => cell.Address == movedAddress).DurableIdentity ==
+            SkyStratum.LandmarkName &&
+        oldArea.Cells.Single(cell => cell.Address == oldAddress).DurableIdentity !=
+            SkyStratum.LandmarkName,
+        "WorldArea must move Bell identity to its Core address and remove it from the old sky address.");
+
+    var pack = ManualVisualPack.CreateGate3B(cellSize: 20);
+    VisualRenderPlan Compose(WorldArea area, WorldRectangle bounds) => VisualGrammar.Compose(
+        new VisualCompositionInput(
+            area,
+            bounds,
+            state.Seed,
+            pack,
+            VisualStyleVersion: pack.StyleVersion,
+            IncarnationAddress: null,
+            TargetAddresses: [],
+            SelectedAddresses: []));
+
+    var movedPlan = Compose(movedArea, movedBounds);
+    var oldPlan = Compose(oldArea, oldBounds);
+    Assert(
+        movedPlan.Marks.Any(mark =>
+            mark.Address == movedAddress &&
+            mark.VisualId == "landmark.bell-that-fell-up" &&
+            mark.Layer == VisualLayerClass.LandmarkOrSubject) &&
+        !oldPlan.Marks.Any(mark => mark.VisualId == "landmark.bell-that-fell-up"),
+        "VisualGrammar must render moved Bell at its Core address only.");
+}
 
 static void VerifyGoal4CManualPackAndStaticDangerSeam()
 {

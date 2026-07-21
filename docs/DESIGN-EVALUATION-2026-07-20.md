@@ -15,7 +15,10 @@ new Nouns, `Smash[Noun]`, terrain collision, generated-source expansion, and a
 general effect registry. That was correct slice discipline while Goal 4C
 awaited UAT. The concern recorded here is that the same prohibition must not
 become an indefinite substitute for designing the language system on which
-later slices depend.
+later slices depend. [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md)
+records the later decision to replace collectible Nouns with linked Modifiers
+and contextual world Targets; the body below remains dated evidence rather than
+current authority.
 
 ## Executive verdict
 

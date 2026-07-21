@@ -53,6 +53,7 @@ public partial class ChronicleApp : Node
     private Button _equipFoundButton = null!;
     private Button _equipSmashButton = null!;
     private Button _fitStoneButton = null!;
+    private Button _fitBellButton = null!;
     private Button _clearFirstSlotButton = null!;
     private Button _ringBellButton = null!;
     private Button _pauseButton = null!;
@@ -87,6 +88,7 @@ public partial class ChronicleApp : Node
     private long _renderedSeed;
     private WorldAddress _renderedAddress;
     private WorldAddress? _renderedLooseStoneAddress;
+    private WorldAddress _renderedBellAddress;
     private HomeState? _renderedHome;
     private FirstConflictState? _renderedFirstConflict;
     private int _renderedWorldGrammarVersion;
@@ -101,6 +103,8 @@ public partial class ChronicleApp : Node
     private bool _verifyGoal4CRestart;
     private bool _verifyGoal4CResolved;
     private bool _verifyGoal4CFailure;
+    private bool _verifySlice5;
+    private bool _verifySlice5Restart;
     private string _lastSaveLoadStatus = "Starting Chronicle.";
     private string _lastAnswerStatus = string.Empty;
     private string _lastCommandStatus = string.Empty;
@@ -120,6 +124,8 @@ public partial class ChronicleApp : Node
         _verifyGoal4CRestart = arguments.Contains("--verify-4c-restart", StringComparer.Ordinal);
         _verifyGoal4CResolved = arguments.Contains("--verify-4c-resolved", StringComparer.Ordinal);
         _verifyGoal4CFailure = arguments.Contains("--verify-4c-failure", StringComparer.Ordinal);
+        _verifySlice5 = arguments.Contains("--verify-slice5", StringComparer.Ordinal);
+        _verifySlice5Restart = arguments.Contains("--verify-slice5-restart", StringComparer.Ordinal);
         _visualCellSize = RequestedVisualCellSize(arguments);
         _visualPack = ManualVisualPack.CreateGate3B(_visualCellSize);
         _visualAtlasTexture = VisualPackGodotAdapter.CreateAtlasTexture(_visualPack);
@@ -146,7 +152,15 @@ public partial class ChronicleApp : Node
         RefreshPresentation();
         LogState("SLICE2C READY");
 
-        if (_verifyGoal4B)
+        if (_verifySlice5)
+        {
+            Callable.From(RunSlice5Acceptance).CallDeferred();
+        }
+        else if (_verifySlice5Restart)
+        {
+            Callable.From(RunSlice5RestartAcceptance).CallDeferred();
+        }
+        else if (_verifyGoal4B)
         {
             Callable.From(RunGoal4BAcceptance).CallDeferred();
         }
@@ -452,35 +466,42 @@ public partial class ChronicleApp : Node
             codexPanel,
             "EQUIP FLY",
             new Vector2(4, 144),
-            new Vector2(82, 32),
+            new Vector2(70, 32),
             () => ConfigureFirstSlot(WordIds.Fly, noun: null),
             fontSize: 10);
         _equipFoundButton = AddCommandButton(
             codexPanel,
             "EQUIP FOUND",
-            new Vector2(90, 144),
-            new Vector2(90, 32),
+            new Vector2(78, 144),
+            new Vector2(78, 32),
             () => ConfigureFirstSlot(WordIds.Found, noun: null),
             fontSize: 10);
         _equipSmashButton = AddCommandButton(
             codexPanel,
             "EQUIP SMASH",
-            new Vector2(184, 144),
-            new Vector2(95, 32),
+            new Vector2(160, 144),
+            new Vector2(82, 32),
             () => ConfigureFirstSlot(WordIds.Smash, noun: null),
             fontSize: 10);
         _fitStoneButton = AddCommandButton(
             codexPanel,
             "FIT STONE",
-            new Vector2(283, 144),
-            new Vector2(75, 32),
+            new Vector2(246, 144),
+            new Vector2(64, 32),
             () => ConfigureFirstSlot(WordIds.Fly, WordIds.Stone),
+            fontSize: 10);
+        _fitBellButton = AddCommandButton(
+            codexPanel,
+            "FIT BELL",
+            new Vector2(314, 144),
+            new Vector2(60, 32),
+            () => ConfigureFirstSlot(WordIds.Fly, WordIds.Bell),
             fontSize: 10);
         _clearFirstSlotButton = AddCommandButton(
             codexPanel,
             "CLEAR SLOT 1",
-            new Vector2(362, 144),
-            new Vector2(96, 32),
+            new Vector2(378, 144),
+            new Vector2(80, 32),
             ClearFirstSlot,
             fontSize: 10);
 
@@ -846,7 +867,7 @@ public partial class ChronicleApp : Node
         }
 
         var slot = _simulation.State.ActiveLoadout[slotIndex];
-        if (slot.IsFlyStone)
+        if (slot.IsFittedFly)
         {
             _targetingSlot = slotIndex;
         }
@@ -1041,7 +1062,7 @@ public partial class ChronicleApp : Node
     {
         var state = _simulation.State;
         var hasLivingIncarnation = state.HasLivingIncarnation;
-        var atBell = state.Address == SkyStratum.LandmarkAddress;
+        var atBell = state.Address == state.CurrentBellAddress;
         var currentStudySource = hasLivingIncarnation
             ? _simulation.CurrentStudySource
             : null;
@@ -1062,6 +1083,7 @@ public partial class ChronicleApp : Node
             state.Seed != _renderedSeed ||
             state.Address != _renderedAddress ||
             state.LooseStoneAddress != _renderedLooseStoneAddress ||
+            state.CurrentBellAddress != _renderedBellAddress ||
             state.Home != _renderedHome ||
             state.FirstConflict != _renderedFirstConflict ||
             state.WorldGrammarVersion != _renderedWorldGrammarVersion ||
@@ -1127,6 +1149,7 @@ public partial class ChronicleApp : Node
             _renderedSeed = state.Seed;
             _renderedAddress = state.Address;
             _renderedLooseStoneAddress = state.LooseStoneAddress;
+            _renderedBellAddress = state.CurrentBellAddress;
             _renderedHome = state.Home;
             _renderedFirstConflict = state.FirstConflict;
             _renderedWorldGrammarVersion = state.WorldGrammarVersion;
@@ -1169,15 +1192,17 @@ public partial class ChronicleApp : Node
                             StringComparison.Ordinal)
                         ? "FLY\nUP"
                         : "FLY\nDOWN"
-                    : slot.IsFlyStone
-                        ? "FLY\n[STONE]"
+                    : slot.IsFittedFly
+                        ? slot.DisplayName.Replace("[", "\n[", StringComparison.Ordinal)
                         : slot.DisplayName;
             button.Icon = slot.IsEmpty
                 ? null
-                : slot.IsFlyStone
+                : slot.IsFittedFly && slot.Noun == WordIds.Stone
                     ? _stoneGlyph
                     : slot.IsIntrinsicFly
                         ? _flyGlyph
+                        : slot.IsFittedFly
+                            ? _flyGlyph
                         : null;
         }
 
@@ -1197,9 +1222,12 @@ public partial class ChronicleApp : Node
             (firstSlot.Verb == WordIds.Smash && firstSlot.Noun is null);
         _fitStoneButton.Disabled =
             !hasLivingIncarnation ||
-            !state.Codex.HasFly ||
-            !state.Codex.HasStone ||
-            firstSlot.IsFlyStone;
+            !CanFit(state, WordIds.Fly, WordIds.Stone) ||
+            firstSlot == new LoadoutSlot(WordIds.Fly, WordIds.Stone);
+        _fitBellButton.Disabled =
+            !hasLivingIncarnation ||
+            !CanFit(state, WordIds.Fly, WordIds.Bell) ||
+            firstSlot == new LoadoutSlot(WordIds.Fly, WordIds.Bell);
         _clearFirstSlotButton.Disabled = !hasLivingIncarnation || firstSlot.IsEmpty;
         ApplyCompactLoadoutControlSizes();
 
@@ -1326,11 +1354,12 @@ public partial class ChronicleApp : Node
         // These buttons are created before they enter the scene tree. Godot's
         // first themed minimum-size pass uses the default font and may expand
         // them; reapply the accepted row once their 10px overrides are active.
-        _equipFlyButton.Size = new Vector2(82, 32);
-        _equipFoundButton.Size = new Vector2(90, 32);
-        _equipSmashButton.Size = new Vector2(95, 32);
-        _fitStoneButton.Size = new Vector2(75, 32);
-        _clearFirstSlotButton.Size = new Vector2(96, 32);
+        _equipFlyButton.Size = new Vector2(70, 32);
+        _equipFoundButton.Size = new Vector2(78, 32);
+        _equipSmashButton.Size = new Vector2(82, 32);
+        _fitStoneButton.Size = new Vector2(64, 32);
+        _fitBellButton.Size = new Vector2(60, 32);
+        _clearFirstSlotButton.Size = new Vector2(80, 32);
     }
 
     private string CurrentPlaceText(
@@ -1411,6 +1440,11 @@ public partial class ChronicleApp : Node
         return words.Length == 0 ? "—" : string.Join(", ", words);
     }
 
+    private static bool CanFit(ChronicleState state, WordId verbId, WordId nounId) =>
+        state.Codex.Contains(verbId) &&
+        state.Codex.Contains(nounId) &&
+        WordCatalogue.Get(verbId).CompatibleNouns.Contains(nounId);
+
     private string GuidanceText(
         ChronicleState state,
         HomeContextSnapshot homeContext,
@@ -1442,9 +1476,11 @@ public partial class ChronicleApp : Node
 
         if (_targetingSlot is { } targetingSlot)
         {
+            var slot = state.ActiveLoadout[targetingSlot];
+            var noun = WordCatalogue.Get(slot.Noun!.Value);
             return _simulation.ValidTargetsForSlot(targetingSlot).Count > 0
-                ? "TARGET FLY[STONE]: choose the highlighted loose Stone with a direction."
-                : "TARGET FLY[STONE]: no loose Stone is adjacent. Press the slot again to cancel.";
+                ? $"TARGET {slot.DisplayName}: choose the highlighted {noun.DisplayName} with a direction."
+                : $"TARGET {slot.DisplayName}: no {noun.DisplayName} is adjacent. Press the slot again to cancel.";
         }
 
         if (homeContext.Home is { } home)
@@ -1460,7 +1496,7 @@ public partial class ChronicleApp : Node
         if (_simulation.CurrentStudySource is { } source)
         {
             return _studyChoicesExposed
-                ? $"{source.Name} offers contextual Words. Choose one deliberate Study pursuit."
+                ? StudyChoiceGuidance(source)
                 : $"You are at {SkyStratum.LandmarkName}. Study its {source.Name} to choose a Word.";
         }
 
@@ -1470,15 +1506,16 @@ public partial class ChronicleApp : Node
             return FirstConflictGuidance(state, conflictContext);
         }
 
-        if (state.Codex.HasStone)
+        var firstSlot = state.ActiveLoadout[0];
+        if (firstSlot.IsFittedFly && firstSlot.Noun is { } nounId)
         {
-            var stoneAddress = state.LooseStoneAddress?.ToString() ?? "unknown";
-            return state.ActiveLoadout[0].IsFlyStone
-                ? $"FLY[STONE] acts on the adjacent loose Stone. It is currently at {stoneAddress}."
-                : $"The Codex keeps Stone; slot 1 currently acts on self. Loose Stone: {stoneAddress}.";
+            var verb = WordCatalogue.Get(firstSlot.Verb!.Value);
+            var noun = WordCatalogue.Get(nounId);
+            return $"{firstSlot.DisplayName}: {verb.Meaning} {noun.Meaning} " +
+                   $"Stand beside the matching {noun.DisplayName} and use slot 1.";
         }
 
-        if (state.Address == SkyStratum.LandmarkAddress)
+        if (state.Address == state.CurrentBellAddress)
         {
             return "You are at The Bell That Fell Up. Study its sky-stone clapper here.";
         }
@@ -1489,9 +1526,19 @@ public partial class ChronicleApp : Node
                    "explore the changed Chronicle.";
         }
 
-        return string.Equals(state.Address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal)
-            ? "Fly to the sky, then reach The Bell at sky (0, -4) to study its clapper."
-            : "The Bell That Fell Up is at sky (0, -4). Its clapper can be studied there.";
+        return $"The Bell That Fell Up is at {state.CurrentBellAddress}. Its clapper can be studied there.";
+    }
+
+    private static string StudyChoiceGuidance(StudySourceSnapshot source)
+    {
+        var fly = WordCatalogue.Get(WordIds.Fly);
+        var expressions = source.Offers
+            .Where(offer => fly.CompatibleNouns.Contains(offer.Word.Id))
+            .Select(offer =>
+                $"{fly.DisplayName}[{offer.Word.DisplayName}]: {fly.Meaning} {offer.Word.Meaning}");
+        return $"{source.Name} offers contextual Words.\n" +
+               $"{string.Join("\n", expressions)}\n" +
+               "Choose one deliberate Study pursuit.";
     }
 
     private string FirstConflictGuidance(
@@ -1702,7 +1749,7 @@ public partial class ChronicleApp : Node
                     RenderPlanDigest = plan.Digest,
                     Incarnation = _simulation.State.Address,
                     LooseStone = _simulation.State.LooseStoneAddress,
-                    Bell = SkyStratum.LandmarkAddress,
+                    Bell = _simulation.State.CurrentBellAddress,
                     ReadsImmediately = new[] { "Incarnation", "The Bell That Fell Up", "Loose Stone" },
                     Review = "Player UAT: mark noise, broken joins, and hierarchy directly on this capture.",
                 },
@@ -1715,6 +1762,151 @@ public partial class ChronicleApp : Node
         IncarnationLifeState.AwaitingReplacement => "ENDED",
         _ => "?",
     };
+
+    private void RunSlice5Acceptance()
+    {
+        try
+        {
+            StartFreshGoal4AFixture();
+            VerifyGoal4CControls();
+            DriveExploreToBell();
+            Press(_studyButton);
+
+            var fly = WordCatalogue.Get(WordIds.Fly);
+            var stone = WordCatalogue.Get(WordIds.Stone);
+            var bell = WordCatalogue.Get(WordIds.Bell);
+            VerifyAcceptance(
+                _guidanceReadout.Text.Contains("Fly[Stone]", StringComparison.Ordinal) &&
+                _guidanceReadout.Text.Contains("Fly[Bell]", StringComparison.Ordinal) &&
+                _guidanceReadout.Text.Contains(fly.Meaning, StringComparison.Ordinal) &&
+                _guidanceReadout.Text.Contains(stone.Meaning, StringComparison.Ordinal) &&
+                _guidanceReadout.Text.Contains(bell.Meaning, StringComparison.Ordinal),
+                "The Bell choice must expose both catalogue-derived Fly compositions before Study begins.");
+            VerifyLabelFits(_guidanceReadout, "Slice 5 composition guidance");
+
+            Press(_studyOfferButtons[1]);
+            AdvanceSlowClockPulses(bell.UnderstandingRequired);
+            VerifyAcceptance(
+                _simulation.State.Codex.HasBell &&
+                !_simulation.State.Codex.HasStone &&
+                !_fitBellButton.Disabled &&
+                _fitStoneButton.Disabled,
+                "Completing Bell first must enable only its compatible fitting control.");
+
+            Press(_directionButtons[2]);
+            Press(_fitBellButton);
+            VerifyAcceptance(
+                _simulation.State.ActiveLoadout[0].IsFittedFly &&
+                _simulation.State.ActiveLoadout[0].Noun == WordIds.Bell &&
+                _flyButton.Text == "FLY\n[BELL]" &&
+                _loadoutReadout.Text.Contains("FLY[BELL]", StringComparison.Ordinal),
+                "FIT BELL must render the generic fitted Expression in slot one.");
+
+            Press(_flyButton);
+            VerifyAcceptance(
+                _targetingSlot == 0 &&
+                _simulation.ValidTargetsForSlot(0)
+                    .SequenceEqual(new[] { SkyStratum.LandmarkAddress }) &&
+                _guidanceReadout.Text.Contains("TARGET FLY[BELL]", StringComparison.Ordinal) &&
+                _guidanceReadout.Text.Contains("highlighted Bell", StringComparison.Ordinal) &&
+                RequireActiveVisualPlan().Marks.Any(mark =>
+                    mark.Address == SkyStratum.LandmarkAddress &&
+                    mark.VisualId == "emphasis.target.valid"),
+                "Fly[Bell] targeting must present the Core-owned Bell target and shared visual emphasis.");
+
+            Press(_directionButtons[0]);
+            var movedBell = new WorldAddress(SurfacePatch.SurfaceStratum, 0, -4);
+            VerifyAcceptance(
+                _targetingSlot is null &&
+                _simulation.State.Address == new WorldAddress(SkyStratum.StratumName, 0, -3) &&
+                _simulation.State.CurrentBellAddress == movedBell &&
+                _lastCommandStatus.Contains("Fly[Bell] moved the Bell", StringComparison.Ordinal) &&
+                !RequireActiveVisualPlan().Marks.Any(mark =>
+                    mark.Address == SkyStratum.LandmarkAddress &&
+                    mark.VisualId == "landmark.bell-that-fell-up"),
+                "Using Fly[Bell] must move only the Bell and immediately invalidate the old rendered sky cell.");
+
+            Press(_equipFlyButton);
+            Press(_flyButton);
+            Press(_directionButtons[0]);
+            VerifyAcceptance(
+                _simulation.State.Address == movedBell &&
+                _simulation.CurrentStudySource is not null &&
+                !_studyButton.Disabled &&
+                !_ringBellButton.Disabled &&
+                _statusReadout.Text.Contains(SkyStratum.LandmarkName, StringComparison.Ordinal) &&
+                RequireActiveVisualPlan().Marks.Any(mark =>
+                    mark.Address == movedBell &&
+                    mark.VisualId == "landmark.bell-that-fell-up"),
+                "The moved Bell must retain its place text, Study Source, consequential action, and shared visual identity.");
+
+            Press(_fitBellButton);
+            Press(_saveButton);
+            VerifyAcceptance(
+                SaveVersion(_simulation.State) == ChronicleSaveCodec.CurrentVersion &&
+                ChronicleSaveCodec.CurrentVersion == 5,
+                "The moved Bell journey must save in strict version 5.");
+            GD.Print("SLICE5 SAVE READY bell=surface:0,-4 loadout=Fly[Bell] save=5");
+            GetTree().Quit();
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"SLICE5 ACCEPTANCE failed: {exception.Message}");
+            GetTree().Quit(1);
+        }
+    }
+
+    private void RunSlice5RestartAcceptance()
+    {
+        try
+        {
+            var movedBell = new WorldAddress(SurfacePatch.SurfaceStratum, 0, -4);
+            var oldBellCell = WorldArea.Generate(
+                _simulation.State,
+                SkyStratum.StratumName,
+                new WorldRectangle(0, -4, 1, 1)).Cells.Single();
+            VerifyAcceptance(
+                _simulation.State.HasLivingIncarnation &&
+                _simulation.State.Address == movedBell &&
+                _simulation.State.CurrentBellAddress == movedBell &&
+                _simulation.State.Codex.HasBell &&
+                !_simulation.State.Codex.HasStone &&
+                _simulation.State.ActiveLoadout[0].IsFittedFly &&
+                _simulation.State.ActiveLoadout[0].Noun == WordIds.Bell &&
+                _simulation.CurrentStudySource is not null &&
+                oldBellCell.DurableIdentity != SkyStratum.LandmarkName,
+                "A separate restart must restore the fitted Loadout, moved Bell, attached Study Source, and no old-address duplicate.");
+            VerifyAcceptance(
+                _flyButton.Text == "FLY\n[BELL]" &&
+                _statusReadout.Text.Contains(SkyStratum.LandmarkName, StringComparison.Ordinal) &&
+                !_ringBellButton.Disabled &&
+                RequireActiveVisualPlan().Marks.Any(mark =>
+                    mark.Address == movedBell &&
+                    mark.VisualId == "landmark.bell-that-fell-up"),
+                "The restarted shell must render and identify the moved Bell from Core-owned state.");
+
+            var beforeConfirmation = _simulation.State;
+            Press(_ringBellButton);
+            VerifyAcceptance(
+                _simulation.State == beforeConfirmation &&
+                _deathConfirmationArmed &&
+                _ringBellButton.Text == "CONFIRM DEATH",
+                "The moved Bell must retain the accepted explicit death confirmation.");
+            Press(_ringBellButton);
+            VerifyAcceptance(
+                _simulation.State.IncarnationLife == IncarnationLifeState.AwaitingReplacement &&
+                _simulation.State.CurrentBellAddress == movedBell &&
+                _replacementPanel.Visible,
+                "Confirmed death must follow the moved Bell without changing its durable address.");
+            GD.Print("SLICE5 RESTART ACCEPTANCE PASS bell=surface:0,-4 source=attached death=confirmed");
+            GetTree().Quit();
+        }
+        catch (Exception exception)
+        {
+            GD.PushError($"SLICE5 RESTART ACCEPTANCE failed: {exception.Message}");
+            GetTree().Quit(1);
+        }
+    }
 
     private void RunGoal4BAcceptance()
     {
@@ -1889,9 +2081,9 @@ public partial class ChronicleApp : Node
             Press(_saveButton);
             VerifyAcceptance(
                 SaveVersion(_simulation.State) == ChronicleSaveCodec.CurrentVersion &&
-                ChronicleSaveCodec.CurrentVersion == 4,
-                "The Goal 4B journey must save the current Home state in strict version 4.");
-            GD.Print("GOAL4B SAVE READY home=surface:0,3 route=surface:0,1 save=4");
+                ChronicleSaveCodec.CurrentVersion == 5,
+                "The retained Goal 4B journey must save the current Home state in strict version 5.");
+            GD.Print("GOAL4B SAVE READY home=surface:0,3 route=surface:0,1 save=5");
             GetTree().Quit();
         }
         catch (Exception exception)
@@ -1957,6 +2149,7 @@ public partial class ChronicleApp : Node
             foundControl,
             _equipSmashButton,
             _fitStoneButton,
+            _fitBellButton,
             _clearFirstSlotButton,
         };
         VerifyAcceptance(
@@ -1967,7 +2160,7 @@ public partial class ChronicleApp : Node
                 button.Position.X + button.Size.X <= codexPanel.Size.X &&
                 button.Position.Y + button.Size.Y <= codexPanel.Size.Y) &&
             ControlsDoNotOverlap(orderedControls),
-            "EQUIP FLY, EQUIP FOUND, EQUIP SMASH, FIT STONE, and CLEAR SLOT 1 must fit without overlap " +
+            "Verb, Noun-fitting, and clear-slot controls must fit without overlap " +
             $"in the existing Codex panel. panel={codexPanel.Size}; " +
             $"controls={string.Join(",", orderedControls.Select(control =>
                 $"{control.Text}:{control.Position}+{control.Size}/min{control.GetMinimumSize()}"))}");
@@ -2068,11 +2261,11 @@ public partial class ChronicleApp : Node
 
             Press(_saveButton);
             VerifyAcceptance(
-                SaveVersion(_simulation.State) == 4,
-                "The returned Home Chronicle must remain a strict version-4 save.");
+                SaveVersion(_simulation.State) == 5,
+                "The returned Home Chronicle must use the current strict version-5 save.");
             GD.Print(
                 "GOAL4B ACCEPTANCE PASS home=surface:0,3 material=hearthstone " +
-                "route=physical view=50x36 save=4");
+                "route=physical view=50x36 save=5");
             GetTree().Quit();
         }
         catch (Exception exception)
@@ -2144,9 +2337,9 @@ public partial class ChronicleApp : Node
 
             Press(_saveButton);
             VerifyAcceptance(
-                SaveVersion(_simulation.State) == 4,
-                "The threatened pending-SMASH Chronicle must save under strict envelope version 4.");
-            GD.Print("GOAL4C THREATENED SAVE READY address=surface:1,3 pending=Smash save=4");
+                SaveVersion(_simulation.State) == 5,
+                "The threatened pending-SMASH Chronicle must save under strict envelope version 5.");
+            GD.Print("GOAL4C THREATENED SAVE READY address=surface:1,3 pending=Smash save=5");
             GetTree().Quit();
         }
         catch (Exception exception)
@@ -2209,9 +2402,9 @@ public partial class ChronicleApp : Node
 
             Press(_saveButton);
             VerifyAcceptance(
-                SaveVersion(_simulation.State) == 4,
-                "The resolved Shattered Cairn Chronicle must save under strict envelope version 4.");
-            GD.Print("GOAL4C SUCCESS RESOLVED address=surface:1,3 result=shattered save=4");
+                SaveVersion(_simulation.State) == 5,
+                "The resolved Shattered Cairn Chronicle must save under strict envelope version 5.");
+            GD.Print("GOAL4C SUCCESS RESOLVED address=surface:1,3 result=shattered save=5");
             GetTree().Quit();
         }
         catch (Exception exception)
@@ -2280,9 +2473,9 @@ public partial class ChronicleApp : Node
 
             Press(_saveButton);
             VerifyAcceptance(
-                SaveVersion(_simulation.State) == 4,
-                "The revisited Shattered Cairn must remain a strict version-4 Chronicle save.");
-            GD.Print("GOAL4C SUCCESS RESTART PASS address=surface:1,3 result=shattered save=4");
+                SaveVersion(_simulation.State) == 5,
+                "The revisited Shattered Cairn must remain a strict version-5 Chronicle save.");
+            GD.Print("GOAL4C SUCCESS RESTART PASS address=surface:1,3 result=shattered save=5");
             GetTree().Quit();
         }
         catch (Exception exception)
@@ -2334,8 +2527,8 @@ public partial class ChronicleApp : Node
 
             Press(_saveButton);
             VerifyAcceptance(
-                SaveVersion(_simulation.State) == 4,
-                "The intact-ward replacement branch must remain a strict version-4 Chronicle save.");
+                SaveVersion(_simulation.State) == 5,
+                "The intact-ward replacement branch must remain a strict version-5 Chronicle save.");
             GD.Print("GOAL4C FAILURE ACCEPTANCE PASS tick=1 replacement=2 smash=retained loadout=empty ward=intact");
             GetTree().Quit();
         }
@@ -2501,6 +2694,7 @@ public partial class ChronicleApp : Node
             _equipFoundButton,
             _equipSmashButton,
             _fitStoneButton,
+            _fitBellButton,
             _clearFirstSlotButton,
         };
         VerifyAcceptance(
@@ -2511,7 +2705,7 @@ public partial class ChronicleApp : Node
                 button.Position.X + button.Size.X <= codexPanel.Size.X &&
                 button.Position.Y + button.Size.Y <= codexPanel.Size.Y) &&
             ControlsDoNotOverlap(controls),
-            "Fly, Found, Smash, Stone, and clear-slot controls must remain compact siblings in the existing Codex panel without overlap. " +
+            "Fly, Found, Smash, Noun-fitting, and clear-slot controls must remain compact siblings without overlap. " +
             $"panel={codexPanel.Size}; controls={string.Join(",", controls.Select(control =>
                 $"{control.Text}:{control.Visible}:{control.Position}+{control.Size}"))}");
         foreach (var control in controls)
@@ -2692,7 +2886,8 @@ public partial class ChronicleApp : Node
             Press(_flyButton);
             Press(_directionButtons[3]);
             VerifyAcceptance(
-                _simulation.State.ActiveLoadout[0].IsFlyStone &&
+                _simulation.State.ActiveLoadout[0].IsFittedFly &&
+                _simulation.State.ActiveLoadout[0].Noun == WordIds.Stone &&
                 _simulation.State.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 0, 0) &&
                 _simulation.State.LooseStoneAddress == new WorldAddress(SkyStratum.StratumName, 1, 0),
                 "The accepted Fly[Stone] material regression must remain available after Stone Study completes.");
@@ -3202,7 +3397,8 @@ public partial class ChronicleApp : Node
 
             Press(_fitStoneButton);
             VerifyAcceptance(
-                _simulation.State.ActiveLoadout[0].IsFlyStone &&
+                _simulation.State.ActiveLoadout[0].IsFittedFly &&
+                _simulation.State.ActiveLoadout[0].Noun == WordIds.Stone &&
                 !_simulation.State.CanFly &&
                 _flyButton.Text == "FLY\n[STONE]",
                 "Fitting Stone must replace intrinsic Fly with the visible FLY[STONE] Expression.");
@@ -3222,7 +3418,7 @@ public partial class ChronicleApp : Node
                 _simulation.ValidTargetsForSlot(0)
                     .SequenceEqual(new[] { ChronicleState.InitialLooseStoneAddress }) &&
                 _flyButton.Text == "CANCEL\nTARGET" &&
-                _guidanceReadout.Text.Contains("highlighted loose Stone", StringComparison.Ordinal),
+                _guidanceReadout.Text.Contains("highlighted Stone", StringComparison.Ordinal),
                 "Selecting FLY[STONE] must enter cardinal targeting and highlight only Core-valid targets.");
             if (_verifyGate3BPlayer)
             {
@@ -3273,7 +3469,8 @@ public partial class ChronicleApp : Node
             Press(_directionButtons[3]);
             VerifyAcceptance(
                 _simulation.State.Address == new WorldAddress(SurfacePatch.SurfaceStratum, 0, 0) &&
-                _simulation.State.ActiveLoadout[0].IsFlyStone &&
+                _simulation.State.ActiveLoadout[0].IsFittedFly &&
+                _simulation.State.ActiveLoadout[0].Noun == WordIds.Stone &&
                 _simulation.State.LooseStoneAddress == new WorldAddress(SkyStratum.StratumName, 1, 0),
                 "The final acceptance state must retain fitted Fly and a material Stone delta.");
 
@@ -3299,7 +3496,8 @@ public partial class ChronicleApp : Node
             Press(_fitStoneButton);
             VerifyAcceptance(
                 _simulation.State.Address == SkyStratum.LandmarkAddress &&
-                _simulation.State.ActiveLoadout[0].IsFlyStone &&
+                _simulation.State.ActiveLoadout[0].IsFittedFly &&
+                _simulation.State.ActiveLoadout[0].Noun == WordIds.Stone &&
                 _simulation.State.LooseStoneAddress == new WorldAddress(SkyStratum.StratumName, 1, 0) &&
                 !_ringBellButton.Disabled &&
                 _ringBellButton.Text == "END THIS BODY",
@@ -3397,6 +3595,7 @@ public partial class ChronicleApp : Node
                 _simulation.State.Codex == awaitingSave.Codex &&
                 _simulation.State.Study == awaitingSave.Study &&
                 _simulation.State.LooseStoneAddress == awaitingSave.LooseStoneAddress &&
+                _simulation.State.CurrentBellAddress == awaitingSave.CurrentBellAddress &&
                 _codexReadout.Text.Contains("Verbs: Fly", StringComparison.Ordinal) &&
                 _codexReadout.Text.Contains("Nouns: Stone", StringComparison.Ordinal),
                 "Replacement must visibly preserve words, Understanding, clock, and changed world state.");
@@ -3526,6 +3725,7 @@ public partial class ChronicleApp : Node
             $"incarnation={state.IncarnationId}:{state.IncarnationLife} " +
             $"loadout={state.ActiveLoadout[0].DisplayName} " +
             $"stone={AddressLogText(state.LooseStoneAddress)} " +
+            $"bell={AddressLogText(state.CurrentBellAddress)} " +
             $"activeStudy={ActiveStudyWordLogText(state)} " +
             $"stoneUnderstanding={state.Study.UnderstandingFor(WordIds.Stone)}/" +
             $"{WordCatalogue.Get(WordIds.Stone).UnderstandingRequired} " +

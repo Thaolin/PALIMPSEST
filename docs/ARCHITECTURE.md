@@ -21,6 +21,10 @@ fixed-tick Chronicle state + persistence + Word Catalogue + World Grammar
 ## Simulation shape
 
 - A continuous fixed-tick Chronicle Clock supports pause and speed controls.
+- The in-world calendar and day–night cycle derive deterministically from that
+  same Clock. When no meaningful interruption is possible, advancing a long
+  commitment may skip directly to the next relevant change instead of making
+  the player watch elapsed time.
 - Autonomous object state changes only on Chronicle ticks. While paused, Core
   subjects do not move, react, or change phase, and Godot freezes their
   time-driven presentation. Inspection, Loadout configuration, deliberate
@@ -44,27 +48,79 @@ fixed-tick Chronicle state + persistence + Word Catalogue + World Grammar
 - A Chronicle may expand into additional Worlds and has no authored geographic
   edge. "Infinite" means deterministic generation on demand, never eager
   generation or full-fidelity simulation of unreachable territory.
-- The Word Catalogue is authored domain data. Chronicle.Core deterministically
-  generates Study Sources, contextual word offers, and Understanding yield
-  from Chronicle state; it never synthesizes new word meanings at runtime.
+
+### Accepted v5 language runtime
+
+- The current Word Catalogue is authored domain data containing Verbs and
+  Nouns. Chronicle.Core deterministically generates Study Sources, contextual
+  word offers, and Understanding yield from Chronicle state; it never
+  synthesizes new word meanings at runtime.
 - One stable `WordId` is shared by catalogue definitions, Codex membership,
   word-specific Understanding, Study offers, and Loadout slots. Godot receives
   read-only definitions and generated snapshots; it never reconstructs word
   kinds, compatibility, eligibility, or yield.
-- Starting Vectors grant authored first capabilities without choosing a class or
-  locking later play. A mixed canonical Codex may independently equip its
-  compatible words through the bounded Loadout.
+- Starting Vectors grant authored first capabilities without choosing a class
+  or locking later play. A mixed canonical Codex may independently equip its
+  compatible predecessor Words through the bounded Loadout.
 - Study Source snapshots are regenerated from pinned World Grammar semantics,
   durable identity, and World Address. Only canonical Codex membership,
   word-specific Understanding, and the active source/word pursuit are saved.
-- Strict current save envelope v4 serializes canonical Chronicle state,
-  including optional singular Home, the narrow first-conflict delta, and other
-  durable deltas. Literal v3, v2, v1, and pre-envelope saves deserialize
-  through private predecessor shapes before constructing current state. Their
-  exact supported World Grammar pins remain unchanged, so older Chronicles do
-  not gain later generated subjects retroactively. Current `WordId` parsing
-  remains string-only, so colliding old numeric values never cross into the
-  unified identity model.
+- Strict current save envelope v5 serializes canonical Chronicle state,
+  including the Bell's durable Address, optional singular Home, the narrow
+  first-conflict delta, and other durable deltas. Literal v4, v3, v2, v1, and
+  pre-envelope saves deserialize through private predecessor shapes before
+  constructing current state. Their exact supported World Grammar pins remain
+  unchanged, so older Chronicles do not gain later generated subjects
+  retroactively. Current `WordId` parsing remains string-only, so colliding old
+  numeric values never cross into the unified identity model.
+- Fitted `Fly` dispatches once by Verb and resolves the learned `Stone` or
+  `Bell` Noun to one authored durable subject. This behavior remains a strict
+  migration boundary; it does not define the successor grammar recorded by
+  [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md).
+
+### Unimplemented successor language direction
+
+- The target Word Catalogue contains authored Verbs and Modifiers. Targets
+  retain World Addresses or durable subject identities and never become
+  `WordId`s.
+- Expressions configure one Verb and its linked Modifiers in the Loadout. An
+  Invocation selects a Target and attempts to apply that Expression against
+  current Chronicle state.
+- Modifiers are reusable across Verbs, unique within one Expression, and
+  order-independent. Each Verb and Modifier attachment contributes fixed
+  authored Load independent of the selected Target.
+- Targets expose facts and constraints, never an exact required Modifier
+  recipe. Invalid Targets remain available to Core-owned preview with factual
+  rejection reasons before an Invocation commits time or other cost.
+- One coherent Core-owned rule must govern Target eligibility, preview, precise
+  rejection, preparation, revalidation, and resolution so Godot and checks
+  cannot grow parallel rulebooks. An immutable action plan is the current
+  candidate interface, not a settled implementation.
+- Exact Modifier applicability remains a pressure-test decision. It may use
+  capabilities and constraints such as range, scale, area, duration,
+  persistence, or notice; a broad operation-family label alone is not proof
+  that every Modifier has coherent semantics for every Verb.
+- Verb slots, link capacity, and shared Load are distinct Loadout constraints.
+  Link count alone does not impose additive delay: ordinary combat and
+  exploration remain responsive, while scale, persistence, chosen Modifiers,
+  and any later material power economy determine whether an Invocation resolves
+  tactically or as a longer Chronicle-time commitment.
+- Core-owned action plans may use interruptible Preparation, release, delayed
+  resolution, or Recovery, but no phase is universal. The actor's available
+  alternatives, interruption points, and deterministic outcome remain Core
+  decisions; Godot presents them and delivers commands and ticks.
+- Combat is not an Invocation-only subsystem. Physical actions, equipment,
+  terrain, Companions, and Expressions share Chronicle state and time.
+  Companions remain autonomous Agents whose response to Directives is decided
+  in Core, and neither Companions nor equipment consume Load merely by being
+  present.
+- Load is checked at Attunement, meaning any Loadout creation or change. For the
+  first pass, losing a persistent Load Source changes capacity at the next
+  Attunement, including one for a replacement Incarnation, and never invalidates
+  the already-attuned Loadout remotely.
+
+### Other accepted simulation rules
+
 - Singular Home and its durable Hearthstone identity are Core state. Core also
   derives the read-only physical Return Route: it reports X-before-Y ordinary
   steps toward Home but never moves an Incarnation, teleports, or owns a Godot
@@ -83,7 +139,7 @@ fixed-tick Chronicle state + persistence + Word Catalogue + World Grammar
 
 | Concern | Owner |
 | --- | --- |
-| Rules, time, identities, Home/Return Route, persistence, generation | `Chronicle.Core` |
+| Rules, time, identities, Invocation planning, Target validity, Loadouts, Home/Return Route, persistence, generation | `Chronicle.Core` |
 | Input translation, rendering, scene lifecycle | `Chronicle.Godot` |
 | Versioned compiled-pack values and the authored Gate 3B reference pack | `Chronicle.VisualPack` |
 | Deterministic semantic-to-visual composition and transient render plans | `Chronicle.Visuals` |
@@ -138,6 +194,12 @@ Chronicle save.
 - Social Verbs determine whether a Directive can be attempted. Agent response
   remains a separate Core decision, so Command never becomes guaranteed unit
   control in Godot.
+- Targets are Core-owned Chronicle subjects or places with material facts and
+  durable identity where required. Godot may request or present a Target but
+  never decides whether an Expression can affect it.
+- Linked Modifiers remain bounded authored transformations over a Core action
+  plan. Triggering and chaining may not become freeform player programming,
+  unbounded recursion, or prose interpreted as a rule.
 - Home is a durable Core domain identity attached to one Holding, not a Godot
   scene, automatic teleport destination, or UI mode. Its Return Route is a
   read-only physical X-before-Y guide that never moves the player. Any eventual

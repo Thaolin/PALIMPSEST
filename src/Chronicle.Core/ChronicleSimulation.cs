@@ -149,15 +149,16 @@ public sealed class ChronicleSimulation
         }
 
         var slot = State.ActiveLoadout[slotIndex];
-        if (!slot.IsFlyStone ||
-            State.LooseStoneAddress is not { } stoneAddress ||
-            !IsAdjacent(State.Address, stoneAddress) ||
-            State.Home?.Address == FlyStoneDestination(stoneAddress))
+        var subject = FittedFlySubject(slot);
+        if (subject is not { } target ||
+            !IsAdjacent(State.Address, target.Address) ||
+            MatchingStratumDestination(target.Address) is not { } destination ||
+            DurableOccupantAt(destination) is not null)
         {
             return [];
         }
 
-        return [stoneAddress];
+        return [target.Address];
     }
 
     private ChronicleCommandResult ChooseStudy(ChooseStudyWord command)
@@ -282,7 +283,29 @@ public sealed class ChronicleSimulation
             return ChronicleCommandResult.Rejected($"Loadout slot {command.SlotIndex + 1} is empty.");
         }
 
-        if (slot.IsIntrinsicFly)
+        if (slot.Verb == WordIds.Fly)
+        {
+            return UseFly(command, slot);
+        }
+
+        if (slot.IsIntrinsicFound)
+        {
+            return FoundAtCurrentSite(command);
+        }
+
+        if (slot.IsIntrinsicSmash)
+        {
+            return PrepareSmashAtCurrentSite(command, slot);
+        }
+
+        return ChronicleCommandResult.Rejected("That Loadout expression is incompatible.");
+    }
+
+    private ChronicleCommandResult UseFly(
+        UseLoadoutSlot command,
+        LoadoutSlot slot)
+    {
+        if (slot.Noun is null)
         {
             if (command.Target is not null)
             {
@@ -298,46 +321,46 @@ public sealed class ChronicleSimulation
             return ChronicleCommandResult.Succeeded($"Flew to {destination}.");
         }
 
-        if (slot.IsIntrinsicFound)
-        {
-            return FoundAtCurrentSite(command);
-        }
-
-        if (slot.IsIntrinsicSmash)
-        {
-            return PrepareSmashAtCurrentSite(command, slot);
-        }
-
-        if (!slot.IsFlyStone)
-        {
-            return ChronicleCommandResult.Rejected("That Loadout expression is incompatible.");
-        }
-
+        var subject = FittedFlySubject(slot);
         if (command.Target is not { } target)
         {
-            return ChronicleCommandResult.Rejected("Choose the adjacent loose Stone.");
+            return subject is { } known
+                ? ChronicleCommandResult.Rejected($"Choose the adjacent {known.Name}.")
+                : ChronicleCommandResult.Rejected("That fitted Noun has no subject here.");
         }
 
-        if (State.LooseStoneAddress is not { } stoneAddress || target != stoneAddress)
+        var expressionName = ExpressionName(slot);
+        if (subject is not { } fittedSubject)
         {
-            return ChronicleCommandResult.Rejected("Fly[Stone] can only target the loose Stone.");
+            return ChronicleCommandResult.Rejected("That fitted Noun has no subject here.");
         }
 
-        if (!IsAdjacent(State.Address, stoneAddress))
-        {
-            return ChronicleCommandResult.Rejected("The loose Stone must be adjacent.");
-        }
-
-        var stoneDestination = FlyStoneDestination(stoneAddress);
-
-        if (State.Home is { Address: var homeAddress } && stoneDestination == homeAddress)
+        if (target != fittedSubject.Address)
         {
             return ChronicleCommandResult.Rejected(
-                "Fly[Stone] cannot move the loose Stone onto Home.");
+                $"{expressionName} can only target the {fittedSubject.Name}.");
         }
 
-        State = State with { LooseStoneAddress = stoneDestination };
-        return ChronicleCommandResult.Succeeded($"Fly[Stone] moved the loose Stone to {stoneDestination}.");
+        if (!IsAdjacent(State.Address, fittedSubject.Address))
+        {
+            return ChronicleCommandResult.Rejected($"The {fittedSubject.Name} must be adjacent.");
+        }
+
+        if (MatchingStratumDestination(fittedSubject.Address) is not { } fittedDestination)
+        {
+            return ChronicleCommandResult.Rejected(
+                $"The {fittedSubject.Name} cannot cross from this Stratum.");
+        }
+
+        if (DurableOccupantAt(fittedDestination) is { } occupant)
+        {
+            return ChronicleCommandResult.Rejected(
+                $"{expressionName} cannot move the {fittedSubject.Name} onto {occupant}.");
+        }
+
+        State = MoveFittedSubject(fittedSubject.Noun, fittedDestination);
+        return ChronicleCommandResult.Succeeded(
+            $"{expressionName} moved the {fittedSubject.Name} to {fittedDestination}.");
     }
 
     private ChronicleCommandResult FoundAtCurrentSite(UseLoadoutSlot command)
@@ -528,12 +551,56 @@ public sealed class ChronicleSimulation
 
     private static bool IsSlotIndex(int index) => index is >= 0 and < LoadoutState.SlotCount;
 
-    private static WorldAddress FlyStoneDestination(WorldAddress stoneAddress) =>
-        stoneAddress.Stratum switch
+    private FittedSubject? FittedFlySubject(LoadoutSlot slot)
+    {
+        if (!slot.IsFittedFly)
         {
-            SurfacePatch.SurfaceStratum => stoneAddress with { Stratum = SkyStratum.StratumName },
-            SkyStratum.StratumName => stoneAddress with { Stratum = SurfacePatch.SurfaceStratum },
-            _ => throw new InvalidOperationException("The loose Stone occupies an unsupported Stratum."),
+            return null;
+        }
+
+        return slot.Noun switch
+        {
+            var noun when noun == WordIds.Stone && State.LooseStoneAddress is { } address =>
+                new FittedSubject(noun.Value, "loose Stone", address),
+            var noun when noun == WordIds.Bell =>
+                new FittedSubject(noun.Value, "Bell", State.CurrentBellAddress),
+            _ => null,
+        };
+    }
+
+    private ChronicleState MoveFittedSubject(WordId noun, WorldAddress destination) =>
+        noun == WordIds.Stone
+            ? State with { LooseStoneAddress = destination }
+            : noun == WordIds.Bell
+                ? State with { BellAddress = destination }
+                : State;
+
+    private string? DurableOccupantAt(WorldAddress destination) =>
+        WorldArea.Generate(
+                State,
+                destination.Stratum,
+                new WorldRectangle(destination.X, destination.Y, 1, 1))
+            .Cells.Single().DurableIdentity switch
+        {
+            ChronicleState.HomeHearthstoneIdentity => "Home",
+            ChronicleState.LooseStoneIdentity => "the loose Stone",
+            var identity => identity,
+        };
+
+    private static string ExpressionName(LoadoutSlot slot)
+    {
+        var verb = WordCatalogue.Get(slot.Verb!.Value).DisplayName;
+        return slot.Noun is { } noun
+            ? $"{verb}[{WordCatalogue.Get(noun).DisplayName}]"
+            : verb;
+    }
+
+    private static WorldAddress? MatchingStratumDestination(WorldAddress address) =>
+        address.Stratum switch
+        {
+            SurfacePatch.SurfaceStratum => address with { Stratum = SkyStratum.StratumName },
+            SkyStratum.StratumName => address with { Stratum = SurfacePatch.SurfaceStratum },
+            _ => null,
         };
 
     private static bool IsAdjacent(WorldAddress first, WorldAddress second) =>
@@ -594,6 +661,11 @@ public sealed class ChronicleSimulation
         ChronicleSpeed.Fast => 4,
         _ => throw new ArgumentOutOfRangeException(nameof(speed), speed, "Unknown Chronicle speed."),
     };
+
+    private readonly record struct FittedSubject(
+        WordId Noun,
+        string Name,
+        WorldAddress Address);
 }
 
 public abstract record ChronicleCommand;

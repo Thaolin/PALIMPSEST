@@ -4,6 +4,12 @@ The game project lives at `src/Chronicle.Godot`; its deterministic rules live
 at `src/Chronicle.Core`. Local tool installations and generated state are
 ignored under `.tools/` and `.godot/`.
 
+This guide describes the accepted v5 predecessor runtime, including its
+`Fly[Stone]`/`Fly[Bell]` Noun journeys and eight-slot Loadout. The successor
+Verb + linked Modifier + contextual Target direction is documented but not
+implemented; follow the [active Handoff](HANDOFF.md) rather than treating this
+operational guide as authorization to migrate it.
+
 ## Local tools
 
 Gate 3B is verified with .NET SDK 8.0.423 and the official Godot 4.7.1 stable
@@ -121,7 +127,7 @@ fresh seed-`41337` controls through `HERE`, the flooded-Stone rejection at
 `surface (0, 0)`, founding at soil-supported Stone on `surface (0, 3)`, and
 ordinary departure, then writes the current strict canonical save. The
 standalone historical 4B gate required envelope v3; the retained verifier now
-reads envelope v4 with explicit Home before a second
+reads envelope v5 with explicit Home and Bell Address before a second
 process restores it, follows the physical Return Route home, and proves the
 exact Home and Hearthstone facts. Core checks retain literal
 v3/v2/v1/pre-envelope migration and death/replacement coverage.
@@ -144,23 +150,32 @@ was `NU1900` because the NuGet vulnerability feed was unreachable.
 Goal 4C adds four isolated application phases around the same strict save:
 paused threat plus pending `Smash`, successful next-tick resolution, restart
 and Shattered Cairn revisit, and the no-action death/replacement branch. The
-verifier inspects the threatened and resolved v4 envelopes between processes,
-retains old grammar pins, and proves the 20-pixel opening, conflict readout,
-Loadout controls, static danger emphasis, and material consequence through the
-real Godot shell.
+verifier now inspects the threatened and resolved v5 envelopes between
+processes, retains old grammar pins, and proves the 20-pixel opening, conflict
+readout, Loadout controls, static danger emphasis, and material consequence
+through the real Godot shell.
+
+Slice 5 adds one fresh and one restarted Godot process. The first exposes the
+catalogue-derived meanings for `Fly[Stone]` and `Fly[Bell]`, learns Bell, uses
+the shared fitted-Fly targeting path, moves the Bell and its Study Source to
+the matching surface address, and writes strict save v5. The second restores
+that exact branch, proves the old sky address is empty, and confirms the moved
+Bell retains its consequential death affordance.
 
 The current full automated gate ends with:
 
 ```text
-GOAL4C CORE ACCEPTANCE PASS openings=AGAINST,UP,HERE grammar=3 cairn=surface(1,3) smash=word.smash save=4
-PASS: Goal 4C conflict restart and failure acceptance, Goal 4B Home and restart acceptance, Goal 4A Study choice, every Goal 2 regression, Gate 3A Inspector, and Gate 3B visual acceptance verified.
+SLICE5 CORE ACCEPTANCE PASS expression=Fly[Bell] durable=Bell+source save=5 migration=4
+SLICE5 SAVE READY bell=surface:0,-4 loadout=Fly[Bell] save=5
+SLICE5 RESTART ACCEPTANCE PASS bell=surface:0,-4 source=attached death=confirmed
+PASS: Slice 5 Fly[Bell] composition and restart, Goal 4C conflict, Goal 4B Home, Goal 4A Study choice, Goal 2, Gate 3A, and Gate 3B verified.
 ```
 
-That gate passed on 2026-07-20 with zero build errors. Its only warning was
-`NU1900` because the NuGet vulnerability feed was unreachable. It makes the
-[focused Goal 4C UAT](archive/uat/GOAL-4C-UAT.md) runnable. The player
-subsequently passed that journey on 2026-07-20; the archived sheet retains the
-closer-zoom and Cairn-legibility notes.
+That gate passed on 2026-07-20 with zero build warnings or errors. The player
+then reported “Full UAT accept”; the
+[accepted Slice 5 UAT](archive/uat/SLICE-5-UAT.md) is archived. Goal 4C player
+UAT had already passed; its archived sheet retains the closer-zoom and
+Cairn-legibility notes.
 
 To run the individual proof steps instead, restore once, then build and run the
 engine-independent check:
@@ -210,6 +225,12 @@ window, schema-appropriate predecessor Word identities, fixed loose-Stone X/Y
 provenance, Home-safe `Fly[Stone]` targeting, guard-before-mutation at exhausted
 tick/Incarnation counters without application exceptions, and rejection of
 malformed current state.
+
+Slice 5 replaces the pair-specific fitted-Fly seam with one Verb dispatch and
+authored Noun-subject resolution. Its Core proof covers retained intrinsic
+actions and `Fly[Stone]`, new `Fly[Bell]`, Bell/source relocation, old-address
+suppression, moved-Bell death, strict save v5, literal v4 migration, rejection
+without mutation, and predecessor rejection of forged `Fly[Bell]` state.
 
 The Visuals executable proves both native pack sizes, stable identifiers and
 pack digests, palette/atlas bounds, all connected-feature masks, exact
@@ -367,19 +388,21 @@ They are preserved in the archived
 [Goal 2 contract](archive/contracts/GOAL-2-A-WORD-KEPT.md),
 [Goal 4A UAT sheet](archive/uat/GOAL-4A-UAT.md), and
 [Goal 4B UAT sheet](archive/uat/GOAL-4B-UAT.md), and
-[Goal 4C UAT sheet](archive/uat/GOAL-4C-UAT.md).
+[Goal 4C UAT sheet](archive/uat/GOAL-4C-UAT.md), and
+[Slice 5 UAT](archive/uat/SLICE-5-UAT.md).
 
 Godot keeps the compatible file at `user://slice0_chronicle.json`. A Slice 0
 file without Intent opens as `Unchosen`; a Slice 1 file with `UP` migrates to
 an explicit Codex containing `Fly`; a Slice 2A file gains intrinsic Fly in
 slot one and the loose Stone at `surface (1, 0)`; a Slice 2B file gains living
 Incarnation identity `1` without changing its Loadout or Stone delta. Literal
-v3, v2, v1, and pre-envelope saves are decoded through predecessor shapes
-before constructing the strict current v4 canonical Chronicle. Current v4
+v4, v3, v2, v1, and pre-envelope saves are decoded through predecessor shapes
+before constructing the strict current v5 canonical Chronicle. Current v5
 saves use stable string Word identities and contain only canonical Chronicle
-state, including optional singular Home, first-conflict state, and durable
-deltas. Surface, sky, Study Source, Hearthstone, Cairn, and route snapshots are
-regenerated from the seed, pinned grammar, durable identity, and World Address.
+state, including the Bell Address, optional singular Home, first-conflict state,
+and durable deltas. Surface, sky, Study Source, Hearthstone, Cairn, and route
+snapshots are regenerated from the seed, pinned grammar, durable identity, and
+World Address.
 
 To open the editor instead:
 

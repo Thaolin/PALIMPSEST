@@ -91,7 +91,8 @@ correction recheck, and tracker reconciliation on 2026-07-20. Slice 4C's exact
 fixture and public seams were approved, implemented, fully verified, and
 passed player UAT on 2026-07-20. Closer zoom and stronger Cairn legibility
 remain deferred visual notes; deliberate movement while paused is accepted
-command responsiveness. Goal 5 has not begun and remains separately gated.
+command responsiveness. Slice 5 subsequently passed its complete retained
+automated gate and player UAT on 2026-07-20.
 
 Begin only after Goal 2 and both Slice 3 gates pass. Deliver three sequential
 UAT slices that turn Combat, Explore, and Build into genuine openings onto the
@@ -156,35 +157,127 @@ automated proof and player UAT before the next begins.
 Implementation contract:
 [Goal 4 — Three Openings, One Chronicle](archive/contracts/GOAL-4-THREE-OPENINGS.md).
 
-## Goal 5 — Home Has People
+## Slice 5 — A Word Multiplies
 
-**Status:** Not authorized. Goal 4 has proved the Home–expedition rhythm, but
-no Goal 5 child slice may begin without separate authorization.
+**Status:** Complete and accepted on 2026-07-20. Automated proof passed with
+zero warnings or errors, then the player reported: “Full UAT accept.” This did
+not authorize Goal 6.
 
-### 5A — Someone Comes Home
+**Direction after acceptance:** Slice 5 proved deterministic shared subject
+resolution and strict migration, but the player's later post-UAT assessment was
+that collectible `Verb[Noun]` composition was not fun enough. Its save behavior
+remains an accepted predecessor baseline; ADR 0003 replaces it as the direction
+for future language growth.
+
+Settle one authored composition rule before catalogue or social-language
+growth makes the current pair-specific action pattern expensive. Preserve
+authored compatibility and all accepted behavior for intrinsic `Fly`, `Found`,
+and `Smash` plus `Fly[Stone]`; resolve them through the smallest shared Core
+seam; then add `Fly[Bell]` without a dedicated pair branch.
+
+Reuse The Bell That Fell Up and the loose Stone. Add no new Word or generated
+situation family. The existing `Stone`/`Bell` Study choice should become a
+choice between two plausible material futures, and the chosen result must
+survive save/load.
+
+**Accept when:** the player predicts what `Fly[Stone]` and `Fly[Bell]` would do
+from their meanings, chooses one Word to Study first for a defensible reason,
+and sees its durable result after reload without fixture-specific guidance.
+Adding `Fly[Bell]` must not add an `if (slot.IsSpecificPair)` equivalent.
+
+Implementation contract:
+[Slice 5 — A Word Multiplies](archive/contracts/SLICE-5-A-WORD-MULTIPLIES.md).
+Accepted player proof: [Slice 5 UAT](archive/uat/SLICE-5-UAT.md).
+
+## Modifier Grammar Pivot — A Language Worth Building
+
+**Status:** Product direction settled on 2026-07-20; the non-production player
+pressure test and the production successor are both unauthorized. This gate
+precedes Goal 6 and any material catalogue expansion.
+
+Replace collectible Nouns with contextual Targets from Chronicle state. A
+Power Word is either a Verb that defines the base magic or a Modifier linked to
+that Verb to change how it acts. The Loadout constrains breadth through Verb
+slots and depth through link capacity plus shared Load.
+
+Modifiers are reusable across different Verbs, unique within one Expression,
+and order-independent. Every equipped Word attachment has fixed authored Load
+independent of the Target. Targets expose constraints rather than one exact Word
+recipe, and invalid Targets remain inspectable before an Invocation commits.
+
+If authorized, the next gate should be a disposable or isolated player-facing
+pressure test, not a save migration or broad framework. It should use the
+smallest useful set of Verbs and Modifiers against real Target facts such as
+matter, mass, scale, resistance, or agency. At least one changing situation
+must make speed, scale, persistence, collateral, or another Modifier property
+matter; terrain collision without an evolving consequence is insufficient.
+
+Ordinary fighting and exploration must remain responsive. A Modifier such as
+`Quickly` may move an Invocation from ritual time toward tactical time by
+transferring cost into Load, material power, instability, notice, or collateral.
+Long Chronicle-time commitments are reserved for genuinely large, durable, or
+world-scale results rather than charged once per Link.
+
+The eventual Combat model is broader than Invocation: positioning, physical
+actions, equipment, terrain, and autonomous Companions share the Chronicle
+Clock with prepared, delayed, recovering, or ritual actions. The grammar
+pressure test may prove interruptible Preparation without building that broad
+combat framework or the later Agent systems.
+
+The first candidate combat shell is deliberately narrow: one Weapon slot, one
+Armor slot, one Accessory slot, visible HP bars, tick-timed weapon attacks, and
+`Burn` as the first combat Invocation. Cooldown behavior remains a pressure-test
+decision; the leading candidate is Chronicle-tick Recovery that also advances
+outside immediate danger, with safe time skipped rather than a resettable combat
+mode.
+
+**Accept when:** a player predicts how the same Verb changes under different
+links, deliberately omits at least one desirable Modifier, and can defend two
+different Loadouts with no obvious correct answer. The test must also produce
+one surprising material consequence from invoking an Expression against an
+actual Target. Omitting an expensive speed Modifier must create legible exposure
+to interruption rather than passive waiting, while invalid-Target preview
+explains constraints without giving the player a Word recipe. A passed player
+pressure test may support a separately approved bounded production contract; it
+does not itself authorize the successor Core plan, save migration, catalogue
+expansion, Load-Source construction, raids, or final power-resource economy.
+
+Direction and open decisions:
+[Modifier Grammar Course Correction](MODIFIER-GRAMMAR-DIRECTION.md).
+Decision record:
+[ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md).
+
+## Goal 6 — Home Has People
+
+**Status:** Not authorized. Goal 4 proved the Home–expedition rhythm and Slice 5
+proved shared authored predecessor composition. The Modifier Grammar pressure
+test now precedes this goal; no Goal 6 child slice may begin without both that
+decision gate and a separately approved bounded contract.
+
+### 6A — Someone Comes Home
 
 Add the first named Agent who forms a continuing relationship with Home. Give
 them identity, needs, relationships, and a material connection to one generated
 faction or piece of prior world history. They may reside, visit, or travel with
 an Incarnation but are never represented as a production slot.
 
-### 5B — A Directive, Not Unit Control
+### 6B — A Directive, Not Unit Control
 
 Add the smallest social-language proof using Suggest and Command. One dangerous
 Directive requires Command to be admissible, but the Agent still interprets,
 delays, negotiates, or refuses according to its state.
 
-### 5C — Absence Produces History
+### 6C — Absence Produces History
 
 Add one causally legible Pressure. Leave Home, allow one off-camera event to
 resolve, then return to a material change and a Chronicle Record that identifies
 its cause, participants, and outcome.
 
-**Goal 5 accepts when:** the player understands who acted, why they acted, what
+**Goal 6 accepts when:** the player understands who acted, why they acted, what
 changed while the camera was elsewhere, and why Command never became perfect
 unit control.
 
-## Slice 6 — The First Raid
+## Slice 7 — The First Raid
 
 Let the accepted Pressure escalate into one Raid with observable causes,
 choices, defenders, and durable damage. Do not add generic base management,
@@ -200,18 +293,33 @@ The numbered slices prove foundations; they are not the ceiling of the game.
 Later work should advance through player-visible arcs rather than attempt all
 remaining genre systems at once.
 
+The Modifier Grammar pressure test now owns three evidence questions formerly
+left in the long horizon:
+
+- one generated World fact that poses a Word-relevant situation;
+- enough desirable language to make the bounded Loadout exclude something;
+- one legible Word-use cost or risk, not a broad resource economy.
+
 ### A richer language and material world
 
 - More Intents, First Verbs, and First Horizons within Combat, Explore, and
   Build. Add a fourth Starting Vector only if later play proves a genuinely
   different opening rather than a renamed build.
-- A large authored Word Catalogue with more Verbs, Nouns, compatible
-  Expressions, and eventually Loadout growth from eight slots toward ten.
+- A large authored Word Catalogue with more Verbs and Modifiers, contextual
+  Targets, linked Expressions, and consequential growth in link or Load
+  capacity.
 - Generated Study Sources across creatures, events, artifacts, tomes,
   treasures, materials, phenomena, and Landmarks. Each offers contextual words
   and a significance-appropriate amount of Understanding.
+- High-link Expressions whose cost can move among shared Load, material power,
+  Chronicle time, notice, instability, and collateral. Ordinary combat and
+  exploration remain responsive; world-scale magic may require Home or other
+  persistent infrastructure without making settlement specialization mandatory.
 - Tools, weapons, armor, structures, and crafted artifacts grounded in
   Chronicle resources and provenance rather than a detached recipe checklist.
+- Consequence-bearing Combat in which physical actions, equipment, terrain,
+  autonomous Companions, and Invocations create openings for one another.
+  Taming and leadership improve cooperation without becoming unit control.
 - Underworld and stranger Strata with persistent passages and different
   opportunities for language, matter, and Holdings.
 - Additional Worlds reached through extreme height, depth, or stranger durable
@@ -239,10 +347,13 @@ remaining genre systems at once.
   with a hard cap of two per World.
 - Bounded Decrees are one possible interaction direction, not a settled system;
   no Palimpsest outcome may become freeform semantic authoring.
+- Awakening a Verb or Modifier into one authored exception to an ordinary
+  limit is another candidate Palimpsest choice, not a settled promise.
 - Optional World Claims such as founding a power, remaking a region, escaping,
   or becoming a catastrophe; no single required ending.
-- Adverbs as a deliberately late grammar expansion that changes how an
-  Expression acts. Adverbs are not a 1.0 promise.
+- Around the two-hundred-hour horizon, Palimpsests, Awakened Words, additional
+  Worlds, and incompatible Claims may open the true long-horizon chase rather
+  than ending the Chronicle.
 
 Do not number these as slices until the preceding playable evidence tells us
 which dependency should come next.

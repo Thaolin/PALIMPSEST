@@ -69,7 +69,7 @@ internal static class StudySourceGrammar
         if ((state.WorldGrammarVersion != 0 &&
              state.WorldGrammarVersion != 2 &&
              state.WorldGrammarVersion != 3) ||
-            !string.Equals(address.Stratum, SkyStratum.StratumName, StringComparison.Ordinal))
+            address != state.CurrentBellAddress)
         {
             return null;
         }

@@ -205,11 +205,26 @@ public sealed class WorldArea
         CellSemantics generated,
         WorldAddress? cairnAddress)
     {
+        var withoutMovedBell =
+            address == SkyStratum.LandmarkAddress &&
+            state.CurrentBellAddress != address &&
+            string.Equals(
+                generated.DurableIdentity,
+                SkyStratum.LandmarkName,
+                StringComparison.Ordinal)
+                ? generated with
+                {
+                    Feature = null,
+                    DurableIdentity = null,
+                    MotifIdentity = "sky-open-lane",
+                }
+                : generated;
+
         var withCairn =
             state.WorldGrammarVersion == 3 &&
             string.Equals(address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal) &&
             address == cairnAddress
-                ? generated with
+                ? withoutMovedBell with
                 {
                     DurableIdentity = state.FirstConflict is
                         {
@@ -219,18 +234,29 @@ public sealed class WorldArea
                             ? FirstConflictSubjects.ShatteredCairnIdentity
                             : FirstConflictSubjects.RivenCairnIdentity,
                 }
-                : generated;
+                : withoutMovedBell;
+
+        var withBell =
+            state.CurrentBellAddress == address &&
+            withCairn.DurableIdentity is null
+                ? withCairn with
+                {
+                    Feature = WorldFeature.Landmark,
+                    DurableIdentity = SkyStratum.LandmarkName,
+                    MotifIdentity = SkyStratum.LandmarkName,
+                }
+                : withCairn;
 
         var withLooseStone =
             state.LooseStoneAddress == address &&
-            withCairn.Feature != WorldFeature.Landmark &&
-            withCairn.DurableIdentity is null
-                ? withCairn with
+            withBell.Feature != WorldFeature.Landmark &&
+            withBell.DurableIdentity is null
+                ? withBell with
                 {
                     Feature = WorldFeature.Stone,
                     DurableIdentity = ChronicleState.LooseStoneIdentity,
                 }
-                : withCairn;
+                : withBell;
 
         return withLooseStone.DurableIdentity is null &&
                state.Home?.Address == address

@@ -18,11 +18,11 @@ into further Worlds through durable passages or extreme traversal.
 _Avoid_: Chronicle, level, disposable map
 
 **Chronicle Clock**:
-The fixed-tick continuous time of a Chronicle. The player may pause or change
-its speed for deliberation, but survival never depends on reflex input.
-Pausing freezes autonomous world change and time-driven object behavior. The
-player may still inspect, configure a Loadout, move deliberately, or prepare an
-action whose material resolution waits for a later Chronicle tick.
+The deterministic continuous time of a Chronicle, from which its calendar and
+day–night cycle derive. Pausing freezes autonomous world change and time-driven
+behavior while inspection, Loadout configuration, deliberate movement, and
+action preparation remain responsive. Only suitably large or durable acts
+commit substantial in-world time, and safe waiting skips to meaningful change.
 _Avoid_: Hard turn sequence, twitch combat clock
 
 **Stratum**:
@@ -106,6 +106,18 @@ identity, needs, relationships, and agency in a Chronicle. Agent is a systemic
 category, not a species or a promise of obedience.
 _Avoid_: Worker token, population count, helper species
 
+**Companion**:
+An Agent currently traveling or fighting beside an Incarnation through a
+relationship, shared purpose, or accepted Directive. A Companion chooses its
+own actions and is never a directly controlled unit.
+_Avoid_: Helper unit, pet slot, party pawn
+
+**Combat**:
+A consequence-bearing Chronicle conflict resolved through positioning,
+physical actions, equipment, autonomous Companions, and Invocations. It remains
+part of ordinary world state and time rather than entering a separate mode.
+_Avoid_: Spellcasting-only duel, reflex arena, isolated battle screen
+
 **Return Route**:
 A known, physically traversable way from an Incarnation to one of the player's
 Holdings. Death never erases knowledge of a Return Route, though travel along
@@ -145,25 +157,39 @@ _Avoid_: Prompt, cheat code, freeform semantic program
 ## Player Language
 
 **Word Catalogue**:
-The large authored set of Verbs, Nouns, meanings, and compatibilities from which
-Chronicles draw. World Grammar generates where and how catalogue words can be
-discovered; it does not invent their semantics.
+The large authored set of Verbs, Modifiers, meanings, and compatibilities from
+which Chronicles draw. World Grammar generates where and how catalogue words
+can be discovered; it does not invent their semantics.
 _Avoid_: Skill tree, generated definition, per-Chronicle rules vocabulary
+
+**Power Word**:
+An authored, discoverable Verb or Modifier that can enter the persistent Codex.
+_Avoid_: Skill point, spell rank, generated command
 
 **Verb**:
 A discoverable capability from the Word Catalogue that remains available to
-later Incarnations once learned. A Verb states what can be done and can be
-fitted with compatible Nouns.
+later Incarnations once learned. A Verb states the base magic that can be done,
+such as Fly, Burn, or Smash.
 _Avoid_: Cosmetic swap, one-life skill
 
-**Noun**:
-A discoverable subject or medium from the Word Catalogue, such as Animal,
-Person, Fire, Stone, or Face. A Noun can be fitted into a compatible Verb to
-state what that Verb acts upon or through.
-_Avoid_: Target filter, elemental damage type
+**Modifier**:
+A discoverable Power Word linked to a Verb to change how its magic acts, such
+as its reach, speed, scale, persistence, precision, or collateral. The same
+Modifier may support multiple Verbs but may appear only once in one Expression.
+_Avoid_: Noun, passive stat bonus, arbitrary script
+
+**Target**:
+An actual Chronicle subject or place selected when an Expression is invoked.
+Its world facts constrain the result without prescribing one exact Word recipe.
+_Avoid_: Collectible Noun, target Word, abstract type filter
+
+**Link**:
+One occupied position in an Expression's connected Word chain. The Verb occupies
+the first Link, so a six-link Expression contains one Verb and five Modifiers.
+_Avoid_: Skill level, repeated-use rank, permanent class upgrade
 
 **Codex**:
-The player's durable library of learned Verbs and Nouns. It persists across
+The player's durable library of learned Verbs and Modifiers. It persists across
 Incarnations and makes each later Loadout a different expression of a growing
 personal language.
 _Avoid_: One-life skill list, cosmetic collection
@@ -183,20 +209,55 @@ yield.
 _Avoid_: Experience pickup, generic lore object, random loot roll
 
 **Understanding**:
-Durable, word-specific progress toward adding an offered Verb or Noun to the
+Durable, word-specific progress toward adding an offered Verb or Modifier to the
 Codex. It is gained by choosing how to interpret Study Sources rather than as
 generic character experience.
 _Avoid_: Experience points, character level, research currency
 
 **Expression**:
-A compatible Verb[Noun] combination equipped in an Incarnation's Loadout. An
-Expression is a build choice, not a separate permanent unlock.
-_Avoid_: Fixed skill, arbitrary modifier stack
+An order-independent Loadout configuration of one active Verb and zero or more
+unique compatible Modifiers. It can be invoked against a Target but is not a
+separate permanent unlock.
+_Avoid_: Fixed skill, Verb[Noun] pair, arbitrary semantic program
+
+**Invocation**:
+One deliberate attempt to apply an active Expression to a chosen Target. Target
+facts and Chronicle state determine rejection, preparation, and resolution.
+_Avoid_: Expression, reflex cast, guaranteed effect
+
+**Preparation**:
+An interruptible Chronicle-time commitment made before an action releases. It
+creates exposure and may be abandoned for an incompatible immediate action.
+_Avoid_: Passive cast bar, mandatory idle wait
+
+**Recovery**:
+A bounded period after an action releases during which that action cannot be
+repeated, while the actor remains free to take other available actions.
+_Avoid_: Universal cooldown, forced inactivity
+
+**Load**:
+The shared numeric capacity of a Loadout. Every equipped Verb and Modifier
+attachment consumes a fixed authored amount independent of the chosen Target;
+equipment and Companions do not consume it merely by being present.
+_Avoid_: Mana, inventory weight, per-Verb link limit
+
+**Load Source**:
+A durable discovery or built part of Home that increases the Load available at
+Attunement. A destroyed built Load Source contributes nothing until rebuilt;
+lesser damage and repair thresholds remain distinct unsettled rules.
+_Avoid_: Character level, live spell tether, generic generator currency
+
+**Attunement**:
+The act of creating or changing any part of a Loadout within the Load currently
+available to an Incarnation. Later loss of a Load Source does not sever the
+existing configuration but reduces capacity at the next Attunement, including
+one for a replacement Incarnation.
+_Avoid_: Respec tax, live power connection, automatic optimization
 
 **Loadout**:
-The bounded selection of a Chronicle's learned Verbs made active for one
-Incarnation. It begins with eight active slots and may eventually grow to ten,
-but it must remain a consequential build choice rather than an always-on list.
+The bounded selection of learned Verbs and linked Modifiers made active for one
+Incarnation. Verb slots, link capacity, and shared Load make it a consequential
+build rather than an always-on Codex.
 _Avoid_: Full library at all times, permanent class kit
 
 **Directive**:

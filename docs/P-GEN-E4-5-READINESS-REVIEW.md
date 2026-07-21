@@ -131,9 +131,10 @@ Before adoption, retain the current deterministic proof and add:
 ## Earliest safe E5 gate
 
 E5 may begin only after an explicit Palimpsest authorization at a reconciled
-UAT boundary. Waiting until Goal 4C is accepted would avoid synchronizing the
-pack once for Home and again for the first conflict vocabulary, but sequencing
-remains a player decision.
+UAT boundary. Goal 4C and Slice 5 are now accepted, but ADR 0003 replaces their
+collectible-Noun composition as the direction for future language growth. E5
+vocabulary freeze and conformance therefore remain downstream of the Modifier
+Grammar pressure test and any separately authorized production catalogue.
 
 The E5 gate must:
 
@@ -148,7 +149,8 @@ The E5 gate must:
 
 ## Current consequence
 
-No E5 implementation is authorized. Goal 4B player UAT remains the active
-decision, and Slice 4C remains forbidden until that UAT is accepted,
-reconciled, and separately advanced. P-GEN is optional evidence and does not
-block either gate.
+No E5 implementation is authorized. A Palimpsest-owned reader remains
+technically separable from gameplay vocabulary, but even that plumbing requires
+a separate gate. Required-vocabulary freeze, conformance, and visual adoption
+must wait until the successor Power Word shape settles. P-GEN remains optional
+evidence and does not block the Modifier Grammar pressure test.
