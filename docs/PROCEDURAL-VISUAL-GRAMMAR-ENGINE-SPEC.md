@@ -1,10 +1,10 @@
 # Chronicle Visual Engine — Drop-in Specification
 
-**Status:** Design contract for a parallel candidate engine and its future
-Palimpsest integration. No implementation currently exists in this repository.
-This specification grants no authority to change production code, does not
-block Slice 3 Gate 3B, and does not make the candidate engine a runtime
-dependency.
+**Status:** Governing contract for the completed required P-GEN authoring
+pipeline and its pending Palimpsest E5 integration. P-GEN is implemented in its
+separate repository; no compiler implementation belongs in this repository.
+This specification grants no authority to change production code and never
+makes the compiler a shipped runtime dependency.
 
 The completed copy-paste implementation handoff is archived as
 [Build the Chronicle Visual Engine](archive/prompts/CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md).
@@ -32,7 +32,7 @@ may call the pure C# modules and display their output.
 
 ## Purpose
 
-The candidate engine should help a small team author and maintain
+P-GEN helps a small team author and maintain
 Palimpsest's complete symbolic pixel vocabulary:
 
 - ground, floors, walls, paths, water, clouds, and connected fields;
@@ -124,7 +124,7 @@ Pure .NET 8 class library. It owns:
 It references neither `Chronicle.Core` nor Godot.
 
 This small runtime library is justified because two real producers must be
-possible: Palimpsest's initial manual packager and the candidate compiler.
+possible: Palimpsest's initial manual packager and the P-GEN compiler.
 They meet at the pack format, not at a broad plugin interface.
 
 ### `Chronicle.VisualCompiler`
@@ -184,7 +184,7 @@ map Core semantics independently.
 
 ### Optional `Chronicle.VisualPreview.Godot`
 
-A separate Godot 4 .NET preview application may accompany the candidate engine.
+A separate Godot 4 .NET preview application may accompany P-GEN.
 It consumes `CompiledVisualPack` plus fixture render plans and offers native
 scale, enlarged nearest-neighbour scale, palette, adjacency, variant, and
 layer inspection.
@@ -405,7 +405,7 @@ game.
 
 ## Catalogue and authoring model
 
-The candidate compiler may choose its own author-friendly source syntax. JSON
+The P-GEN compiler may choose its own author-friendly source syntax. JSON
 is the recommended first adapter because .NET supplies deterministic parsing
 without another production dependency. Comments or convenience syntax may be
 accepted before normalization.
@@ -652,7 +652,7 @@ player UAT remain mandatory.
 
 ## Compiled-pack conformance suite
 
-The candidate engine must ship a dependency-free .NET conformance runner with:
+P-GEN must ship a dependency-free .NET conformance runner with:
 
 - normalized catalogue fixtures;
 - expected manifest and indexed-buffer hashes;
@@ -678,7 +678,7 @@ Palimpsest integration supplies additional fixtures:
 
 ## Definition of drop-in
 
-The candidate engine is drop-in compatible only when:
+P-GEN is drop-in compatible only when:
 
 1. It emits an accepted `PackFormatVersion` without Palimpsest parsing its
    source catalogue.
@@ -689,7 +689,7 @@ The candidate engine is drop-in compatible only when:
 5. No `Chronicle.Core` type, rule, command, or save migration changes.
 6. Clean builds on two supported environments produce identical canonical
    hashes.
-7. Equivalent packs from the manual adapter and candidate compiler can be
+7. Equivalent packs from the manual adapter and P-GEN can be
    swapped by configuration or packaged content alone.
 8. Deleting the compiler leaves the game runnable from its committed compiled
    pack.
@@ -773,7 +773,7 @@ Review sheets are evidence, not canonical runtime files.
 
 ## Palimpsest evaluation cross-section
 
-When the candidate engine is ready, evaluate:
+P-GEN completed the authoring evaluation with:
 
 - Surface and Sky palettes;
 - connected water and cloud;
@@ -783,7 +783,7 @@ When the candidate engine is ready, evaluate:
 - three distinct material objects;
 - several Codex, Loadout, map, or status glyphs;
 - target and selection emphasis;
-- native 16-pixel and 20-pixel candidates.
+- native 16-pixel and 20-pixel evidence.
 
 The comparison must include a small manual baseline using the same pack seam.
 The question is authoring leverage and visual quality, not whether the engine
@@ -791,7 +791,7 @@ can technically draw pixels.
 
 ## Acceptance signals
 
-Adopt or narrow the engine only if:
+Accept the required Palimpsest integration only if:
 
 - all tested classes read as one visual language;
 - every required specimen reads at native resolution without labels;
@@ -804,9 +804,9 @@ Adopt or narrow the engine only if:
 - the module removes complexity that would otherwise spread across views and
   asset families.
 
-## Rejection signals
+## Integration blockers
 
-Reject or reduce the engine if:
+Block E5 and return an exact defect if:
 
 - output reads as generic noise or interchangeable procedural art;
 - schemas are as laborious as drawing assets directly;
@@ -861,10 +861,11 @@ Each stage stops with reviewable evidence.
 ### Stage E5 — Palimpsest conformance
 
 - run the Gate 3B semantic fixtures through Palimpsest's composer;
-- swap the candidate pack for the manual pack without code changes;
-- record adopt, narrow, defer, or reject.
+- make the P-GEN pack the default without composer or Godot rule changes;
+- record integration acceptance or an exact blocking defect.
 
-No stage authorizes Palimpsest production integration by itself.
+P-GEN stages E0–E4.5 are complete. E5 still requires its own Palimpsest
+integration contract and acceptance.
 
 ## Non-goals
 
@@ -887,11 +888,11 @@ The engine does not initially include:
 - live Godot hot reload or an editor plugin;
 - Chronicle save fields for pixels or cosmetic choices.
 
-## Future decision record
+## E5 integration record
 
-After a real candidate is evaluated, record:
+After P-GEN is integrated, record:
 
-- **adopt, narrow, defer, or reject**;
+- **accepted** or the exact blocking defect;
 - which visual classes showed genuine leverage;
 - which classes remain better as authored sprites;
 - accepted pack, composer, and versioning contracts;
@@ -900,5 +901,5 @@ After a real candidate is evaluated, record:
 - exact changes, if any, to Palimpsest Architecture and Codemap;
 - the playable slice that justifies production integration.
 
-Until that decision, the manual Gate 3B pack remains the reference adapter and
-the candidate engine remains optional.
+Until E5 passes, the manual Gate 3B pack remains the default and golden
+comparison adapter. P-GEN remains the required authoring pipeline.

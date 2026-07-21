@@ -21,8 +21,8 @@ permitted work in the [Active Handoff Contract](HANDOFF.md).
 | Build, test, launch, or open the editor | [Development](DEVELOPMENT.md) |
 | Understand a current slice's exact promise | The contract linked from the Roadmap |
 | Find completed contracts, accepted UAT, or consumed prompts | [Documentation archive](archive/README.md) |
-| Assess the external P-GEN candidate or prepare an E5 decision | [P-GEN E4.5 readiness review](P-GEN-E4-5-READINESS-REVIEW.md) |
-| Understand a hard-to-reverse decision | [ADR 0001](adr/0001-use-godot-with-a-csharp-chronicle-core.md), [ADR 0002](adr/0002-pin-world-grammar-version-per-chronicle.md), and [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md) |
+| Integrate the required P-GEN authoring pipeline through E5 | [P-GEN E4.5 readiness review](P-GEN-E4-5-READINESS-REVIEW.md) and [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) |
+| Understand a hard-to-reverse decision | [ADR 0001](adr/0001-use-godot-with-a-csharp-chronicle-core.md), [ADR 0002](adr/0002-pin-world-grammar-version-per-chronicle.md), [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md), and [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) |
 | Check external technical references | [References](REFERENCES.md) |
 
 Repository-wide agent rules are in [AGENTS.md](../AGENTS.md). A fresh work
@@ -97,7 +97,14 @@ pack seam and the compact manually authored Gate 3B reference pack.
 | Source | Owns | Interface or callers |
 | --- | --- | --- |
 | [`CompiledVisualPack.cs`](../src/Chronicle.VisualPack/CompiledVisualPack.cs) | Pack identity and versions, indexed atlas, palette roles, stable visual definitions, anchors, layer classes, adjacency masks, validation, and digest | `CompiledVisualPack`, `VisualDefinition`; consumed by the pure composer and Godot adapter |
-| [`ManualVisualPack.cs`](../src/Chronicle.VisualPack/ManualVisualPack.cs) | Native 16 px and 20 px authored reference atlases, including intact/shattered Cairn and static danger marks | `ManualVisualPack.CreateGate3B`; replaceable authoring adapter, not a runtime compiler |
+| [`ManualVisualPack.cs`](../src/Chronicle.VisualPack/ManualVisualPack.cs) | Native 16 px and 20 px golden comparison atlases, including intact/shattered Cairn and static danger marks | `ManualVisualPack.CreateGate3B`; retained verification fixture until and after required P-GEN E5 integration |
+
+### External P-GEN authoring pipeline
+
+`C:\DEV\P-GEN` is the completed required authoring-time visual compiler. Its
+canonical `Palimpsest20` output is the source artifact for the mandatory E5
+reader/conformance gate. Palimpsest never ships or references P-GEN compiler or
+catalogue assemblies; `Chronicle.VisualPack` owns the runtime reader.
 
 ### `Chronicle.Visuals`
 
@@ -170,13 +177,14 @@ Exact supported commands and the packaged executable locations remain in the
 | [`SLICE-5-UAT.md`](archive/uat/SLICE-5-UAT.md) | Archived accepted player prediction, choice, durable consequence, and reload proof |
 | [`SLICE-3-WORLD-VISUAL-GRAMMAR.md`](SLICE-3-WORLD-VISUAL-GRAMMAR.md) | World Grammar, developer Atlas Inspector, and Visual Grammar contract |
 | [`GATE-3B-VISUAL-UAT.md`](GATE-3B-VISUAL-UAT.md) | Gate 3B candidate comparison, annotated four-image review sheet, interactive journey, and exact density decision |
-| [`PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md`](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md) | Full pure-C# compiler, compiled-pack, composer, Godot-adapter, conformance, and drop-in contract for the parallel candidate engine |
-| [`P-GEN-E4-5-READINESS-REVIEW.md`](P-GEN-E4-5-READINESS-REVIEW.md) | Reproduced external evidence, unresolved E5 ownership questions, vocabulary drift, and the future adoption gate |
+| [`PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md`](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md) | Governing pure-C# compiler, compiled-pack, composer, Godot-adapter, conformance, and drop-in contract for required P-GEN integration |
+| [`P-GEN-E4-5-READINESS-REVIEW.md`](P-GEN-E4-5-READINESS-REVIEW.md) | Reproduced external evidence and acceptance requirements for the mandatory Palimpsest E5 integration gate |
 | [`DESIGN-EVALUATION-2026-07-20.md`](DESIGN-EVALUATION-2026-07-20.md) | Dated pre-alpha assessment of playable depth, design risks, latent opportunities, and candidate decision gates; evidence rather than production authority |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Exact build, test, editor, and launch instructions |
 | [`REFERENCES.md`](REFERENCES.md) | Primary external technical references |
 | [`HANDOFF.md`](HANDOFF.md) | Current execution contract: active gate, permitted scope, known proof, stop condition, and forbidden next work |
 | [`adr/0003-use-verbs-linked-modifiers-and-world-targets.md`](adr/0003-use-verbs-linked-modifiers-and-world-targets.md) | Accepted replacement of collectible Nouns with linked Modifiers and contextual world Targets |
+| [`adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md`](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md) | Accepted use of P-GEN as the required authoring-time visual compiler behind a Palimpsest-owned reader |
 | [`adr/`](adr/) | Accepted hard-to-reverse decisions and their reasoning |
 | [`archive/`](archive/README.md) | Completed contracts, accepted UAT evidence, and consumed prompts; historical rather than current authority |
 
@@ -210,6 +218,7 @@ Exact supported commands and the packaged executable locations remain in the
 - [RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md)
 - [Passed Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md)
 - [ADR 0003 — Verbs, linked Modifiers, and world Targets](adr/0003-use-verbs-linked-modifiers-and-world-targets.md)
+- [ADR 0004 — P-GEN visual authoring pipeline](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md)
 - [Documentation Archive](archive/README.md)
 
 Read the [Roadmap](ROADMAP.md), the relevant contract's Status section, and the

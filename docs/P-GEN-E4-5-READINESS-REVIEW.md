@@ -2,12 +2,13 @@
 
 **Reviewed:** 2026-07-20
 
-**Candidate:** `C:\DEV\P-GEN` at `fc9b8e8`
+**Compiler:** `C:\DEV\P-GEN` at reviewed commit `fc9b8e8`
 
-**Decision:** technically reproducible; not adopted; E5 remains unauthorized
+**Decision:** built, technically reproduced, and required; Palimpsest E5
+integration remains unauthorized
 
-This record captures Palimpsest's read-only review of the separate P-GEN
-authoring compiler. It records evidence and future integration questions
+This record captures Palimpsest's read-only review of the separate required
+P-GEN authoring compiler. It records evidence and integration requirements
 without expanding the active gameplay slice or changing the governing
 [Chronicle Visual Engine specification](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md)
 and archived historical
@@ -44,12 +45,12 @@ and archived historical
 - The authoring compiler can remain completely absent from a shipped
   Palimpsest build.
 
-These facts make a later E5 evaluation practical. They do not yet satisfy the
-drop-in definition because Palimpsest has not accepted the file contract,
-loaded it through its production pack type, or exercised it through the shared
-player/Inspector composer.
+These facts make the required E5 integration practical. They do not mean the
+integration already exists: Palimpsest has not loaded the file contract through
+its production pack type or exercised it through the shared player/Inspector
+composer.
 
-## Unsettled before E5
+## Palimpsest integration requirements
 
 ### Consumer and contract ownership
 
@@ -57,9 +58,9 @@ Palimpsest currently constructs `CompiledVisualPack` through
 `ManualVisualPack`; it has no authorized filesystem reader or pack-selection
 configuration. P-GEN exposes a parallel `Palimpsest20Pack` model and codec.
 
-An E5 gate must choose one production ownership path. The preferred proof is a
-Palimpsest-owned reader in `Chronicle.VisualPack` that validates the canonical
-files and constructs the existing runtime value without referencing
+E5 must implement the settled production ownership path: a Palimpsest-owned
+reader in `Chronicle.VisualPack` that validates the canonical files and
+constructs the existing runtime value without referencing
 `Chronicle.VisualCompiler`, parsing a source catalogue, or creating a second
 semantic mapping.
 
@@ -70,9 +71,11 @@ contract. Goal 4B now composes `subject.home-hearthstone`; future accepted
 combat work may add further required identifiers.
 
 This is expected candidate drift, not a reason to interrupt the active slice.
-At E5, freeze the required vocabulary from the latest accepted Palimpsest
-composer, add every required identifier to the candidate fixture, and fail
-conformance on missing or extra incompatible mappings.
+At E5, record the current required vocabulary as the first versioned baseline,
+include every required identifier in the compiled artifact, and fail
+conformance on missing or extra incompatible mappings. Later gameplay slices
+extend that baseline through deliberate pack compatibility versions; E5 does
+not wait for one final game-wide vocabulary freeze.
 
 ### Motif placement ownership
 
@@ -110,33 +113,33 @@ older general Pack-v1 envelope in the governing design specification. That
 narrowing matches the current single-pack runtime shape, but P-GEN's local
 documents cannot revise Palimpsest's authority.
 
-If E5 adopts the narrower profile, reconcile the governing specification,
-Architecture, Codemap, packaging rules, and an ADR if the ownership decision
-is hard to reverse. Until then, P-GEN's `E4.5 accepted` wording means its own
-technical authoring boundary, not Palimpsest adoption.
+E5 integrates the narrower profile and must reconcile the governing
+specification, Architecture, Codemap, and packaging rules. ADR 0004 already
+records the hard-to-reverse choice of P-GEN as the required pipeline. P-GEN's
+`E4.5 accepted` wording still describes its authoring boundary rather than
+claiming the Palimpsest reader already exists.
 
 ### Review and negative proof
 
-Before adoption, retain the current deterministic proof and add:
+For integration, retain the current deterministic proof and add:
 
 - an E4.5-specific comparison against the accepted manual pack at native size;
 - invalid canonical bundles for every consumer validation class exercised by
-  the adopted reader;
+  the required reader;
 - exact Palimpsest required-mapping coverage, including newly accepted slice
   vocabulary;
 - the Gate 3B semantic seeds, overlapping requests, numeric address edges,
   player view, and Inspector through the existing composer;
-- a human visual decision recorded as adopt, narrow, defer, or reject.
+- a human native-size comparison confirming the integrated artifact or blocking
+  the gate with an exact defect.
 
 ## Earliest safe E5 gate
 
 E5 may begin only after an explicit Palimpsest authorization at a reconciled
-UAT boundary. Goal 4C and Slice 5 are now accepted, but ADR 0003 replaces their
-collectible-Noun composition as the direction for future language growth. E5
-vocabulary freeze and conformance therefore remain downstream of Goal 6A and
-6B, which will settle the first production successor catalogue and the new
-opponent, equipment, resource, structure, Target, and Modifier presentation
-vocabulary.
+boundary. It is the required next integration gate and precedes Goal 6A. The
+current mapping set becomes a versioned baseline; Goal 6A and 6B subsequently
+extend P-GEN with their opponent, equipment, resource, structure, Target, and
+Modifier presentation vocabulary.
 
 The E5 gate must:
 
@@ -147,13 +150,11 @@ The E5 gate must:
 4. swap manual and candidate packs by packaged content or configuration;
 5. prove deterministic composition, player/Inspector parity, packaging, and
    clean removal of all authoring dependencies; and
-6. record adopt, narrow, defer, or reject before another visual-system change.
+6. record integration acceptance or an exact blocking defect before Goal 6A.
 
 ## Current consequence
 
-No E5 implementation is authorized. A Palimpsest-owned reader remains
-technically separable from gameplay vocabulary, but even that plumbing requires
-a separate gate. Required-vocabulary freeze, conformance, and visual adoption
-must wait until Goal 6A and 6B settle the successor opponent, equipment,
-resource, structure, Target, and Modifier presentation vocabulary. P-GEN
-remains optional evidence and does not block the RPG successor.
+No E5 implementation is authorized. P-GEN itself is complete and required; the
+remaining work is the separately gated Palimpsest-owned reader, conformance,
+packaging, and shared player/Inspector proof. Goal 6A begins only after that
+integration passes.

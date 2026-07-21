@@ -27,4 +27,4 @@ ownership, read the [Codemap](../CODEMAP.md).
 - [Build the Chronicle Visual Engine](prompts/CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md)
 
 The visual-engine specification and P-GEN readiness review remain live
-documents because a future E5 adoption decision is still open.
+documents because the required Palimpsest E5 reader integration is still open.

@@ -38,11 +38,12 @@ remain supported predecessor behavior until one authorized successor migration
 replaces them. Do not preserve them as parallel successor interfaces or delete
 their literal migration proof prematurely.
 
-P-GEN remains an optional authoring-time visual compiler. It may eventually
-provide compiled content through a Palimpsest-owned `Chronicle.VisualPack`
-reader, but it never owns semantic World Grammar, Chronicle state, Target
-facts, or gameplay generation. The accepted manual pack remains the production
-baseline until a separate E5 gate adopts another artifact.
+P-GEN is the required authoring-time visual compiler. Palimpsest E5 must consume
+its compiled content through a Palimpsest-owned `Chronicle.VisualPack` reader;
+P-GEN never owns semantic World Grammar, Chronicle state, Target facts, or
+gameplay generation. The accepted manual pack remains a golden verification
+fixture until the required E5 integration replaces it as the default authored
+content path. See [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md).
 
 ## Simulation shape
 
@@ -182,14 +183,14 @@ maps Core snapshots and the pack to a transient render plan; Godot draws that
 plan. See the
 [Chronicle Visual Engine specification](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md).
 
-Any future external compiler adoption must preserve one Palimpsest-owned
-consumer path. `Chronicle.VisualPack` validates and loads the packaged artifact;
+P-GEN integration must preserve one Palimpsest-owned consumer path.
+`Chronicle.VisualPack` validates and loads the packaged artifact;
 `Chronicle.Visuals` owns semantic mapping, motif-placement interpretation, and
 address-complete cosmetic selection; Godot only draws. The shipped game may not
 reference the compiler, parse its catalogue, duplicate hidden authoring rules,
-or treat a candidate's private runtime utility as an accepted seam. The
+or treat P-GEN's private runtime utility as an accepted seam. The
 [P-GEN E4.5 readiness review](P-GEN-E4-5-READINESS-REVIEW.md) records the
-evidence and decisions required before any E5 gate.
+evidence and acceptance requirements for the required E5 gate.
 
 Gate 3B proves that seam with `ManualVisualPack.CreateGate3B(16|20)`,
 `VisualGrammar.Compose(...)`, and one `WorldVisualView`/raster adapter shared

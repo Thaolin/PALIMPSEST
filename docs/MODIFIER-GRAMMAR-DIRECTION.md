@@ -255,7 +255,8 @@ size, and Palimpsest affordances remain deliberately unsettled.
 
 ## P-GEN sequencing
 
-P-GEN reader plumbing remains technically separable, but E5 vocabulary freeze
-and conformance must wait until Goal 6A and 6B settle the successor opponent,
-equipment, resource, structure, Target, and Modifier vocabulary. Neither P-GEN
-integration nor E5 is authorized by this course correction.
+P-GEN is the completed required authoring-time visual compiler. Its
+Palimpsest-owned reader and conformance gate must pass before Goal 6A. The
+current required mappings become the first versioned baseline; Goal 6A and 6B
+then extend P-GEN with their opponent, equipment, resource, structure, Target,
+and Modifier vocabulary. This course correction does not itself authorize E5.

@@ -50,10 +50,11 @@ Historical implementation contract:
 UAT as a deliberately semantic/debug alpha. Gate 3B passed automated proof and
 player visual UAT with `20 px / 33 × 23` selected as the local-view baseline.
 The 16 px candidate remains comparison evidence only. A procedural asset
-compiler prototype may be evaluated separately; it was not a Gate 3B
-dependency. Underlying semantic refinement must not be disguised as visual
-polish. The Inspector's default large overview remains semantic; Visual
-Grammar preview remains limited to local 64 × 64 or 32 × 32 requests.
+compiler was not a Gate 3B dependency; P-GEN was later completed and selected
+as the required authoring pipeline behind the same pack seam. Underlying
+semantic refinement must not be disguised as visual polish. The Inspector's
+default large overview remains semantic; Visual Grammar preview remains limited
+to local 64 × 64 or 32 × 32 requests.
 
 First build one deterministic World Grammar and expose it through a
 developer-only interactive World Atlas Inspector. Then map the accepted
@@ -62,17 +63,19 @@ view. Keep its compiled-pack seam independent of the authoring method so a
 later procedural compiler can be compared against or replace the initial
 manual adapter without changing runtime meaning.
 
-The parallel candidate compiler is specified in the
+The required external P-GEN compiler is specified in the
 [Chronicle Visual Engine drop-in contract](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md).
 It is pure C# at authoring time with a Godot preview adapter, remains absent
 from the shipped runtime, and does not block Gate 3B. Its separate E0–E4
 [historical build handoff](archive/prompts/CHRONICLE-VISUAL-ENGINE-BUILD-HANDOFF.md)
 stops before
 Palimpsest integration. P-GEN's E4.5 technical proof was independently
-reproduced on 2026-07-20, but it is not adopted or currently drop-in. Its
+reproduced on 2026-07-20. P-GEN is complete and required as Palimpsest's
+authoring-time visual asset compiler; Palimpsest's compiled-pack reader
+integration remains. Its
 [readiness review](P-GEN-E4-5-READINESS-REVIEW.md) records the consumer,
 vocabulary, motif, cosmetic-selection, specification, and visual-proof
-decisions required before a separately authorized E5 gate.
+requirements for E5.
 
 **Accept when:** the inspector makes generated places visibly structured rather
 than random across large bounded requests and query edges; the local player
@@ -248,9 +251,37 @@ Passed prototype evidence:
 Decision record:
 [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md).
 
+## Gate P-GEN E5 — The Authored World Enters the Game
+
+**Status:** Required next integration gate; implementation not authorized.
+P-GEN is built and is the canonical visual authoring pipeline. E5 is not an
+adoption decision: it connects the completed compiler output to Palimpsest's
+existing runtime pack seam before Goal 6A adds new gameplay vocabulary.
+
+Add one Palimpsest-owned canonical bundle reader in `Chronicle.VisualPack`.
+Load P-GEN's current versioned 20-pixel artifact through the existing
+`Chronicle.Visuals` composer and shared player/Inspector Godot path. Keep P-GEN
+compiler and catalogue code outside the shipped dependency graph. Preserve the
+manual pack only as a golden comparison and verification fixture.
+
+Treat current required mappings as the first versioned vocabulary baseline,
+not a permanent final freeze. Goal 6A and later slices must add their opponent,
+equipment, resource, structure, Target, and Modifier visuals to P-GEN and bump
+the compatible pack contract deliberately.
+
+**Accept when:** the P-GEN artifact is Palimpsest's default authored pack;
+player and Inspector output remain deterministic and semantically identical;
+missing, extra-incompatible, corrupt, or mismatched files fail precisely; the
+manual and P-GEN comparison is reviewed at native size; packaged builds contain
+only the compiled artifact; and the full retained gate passes.
+
+Decision record:
+[ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md).
+
 ## Goal 6 — A Real RPG Loop
 
-**Status:** Direction settled; production not authorized. Retain the accepted
+**Status:** Direction settled; production not authorized. Begin only after the
+required P-GEN E5 integration passes. Retain the accepted
 Slice 0–3 Chronicle, World Grammar, map, 20-pixel palette and Visual Grammar,
 then replace predecessor gameplay incrementally through two separately gated
 vertical slices. See the

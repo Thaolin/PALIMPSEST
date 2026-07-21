@@ -10,7 +10,7 @@ authorized future slice contract.
 
 ## Current gate
 
-**RPG successor direction settled — Goal 6A not authorized**
+**P-GEN E5 required — integration not authorized**
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -61,6 +61,10 @@ authorized future slice contract.
   sequences Goal 6 as `A Real Fight` followed by `Power Comes Home`; neither
   child slice is authorized. `Home Has People` is now Goal 7 and the first Raid
   is Slice 8.
+- The player corrected P-GEN's status: it is built, ready, and required, not an
+  optional candidate. [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md)
+  records P-GEN as the canonical authoring-time visual pipeline. The next gate
+  is Palimpsest-owned reader integration; Goal 6A follows only after it passes.
 
 ## Settled successor direction
 
@@ -121,10 +125,11 @@ the tiny Bell Study fixture, the one-exchange Cairn fight, current onboarding,
 and fixture-specific UI are evidence rather than successor constraints. Home's
 identity and role remain settled, but its production mechanics may be replaced.
 
-The accepted manual visual pack remains the production baseline. P-GEN remains
-an optional authoring-time compiler. Reader plumbing requires its own gate;
-vocabulary freeze and adoption wait until Goal 6A and 6B settle the new visual
-subjects.
+P-GEN is the required authoring-time visual compiler. The accepted manual pack
+remains a golden comparison fixture until E5 makes the P-GEN artifact the
+default authored pack. Current required mappings form a versioned baseline;
+Goal 6A and 6B add their new visual subjects through P-GEN rather than waiting
+for one final vocabulary freeze.
 
 ## Open decisions before production
 
@@ -150,11 +155,12 @@ subjects.
 - strict migration of the accepted v5 Codex and `Fly[Stone]`/`Fly[Bell]`
   Loadouts if the successor reaches production.
 
-Goal 6A's contract must narrow these decisions to one dangerous opponent, two
-competing `Burn` builds, one Weapon, Armor, and Accessory, the accepted
-Heartbeat interaction, one persistent material result, and the smallest strict
-successor migration. Goal 6B separately owns one resource and one Load Source;
-it may not be pulled into 6A as infrastructure work.
+After P-GEN E5 passes, Goal 6A's contract must narrow these decisions to one
+dangerous opponent, two competing `Burn` builds, one Weapon, Armor, and
+Accessory, the accepted Heartbeat interaction, one persistent material result,
+and the smallest strict successor migration. Goal 6B separately owns one
+resource and one Load Source; it may not be pulled into 6A as infrastructure
+work.
 
 ## Accepted Goal 4 result
 
@@ -204,8 +210,9 @@ reported.
 No production feature or polish work is authorized. The bounded
 [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md) is complete and
 retained only as evidence. Current scope is documentation reconciliation and,
-if separately requested, drafting the Goal 6A contract. The prototype must
-remain outside production projects, saves, Godot, and the retained gate.
+if separately requested, drafting the required P-GEN E5 integration contract.
+The prototype must remain outside production projects, saves, Godot, and the
+retained gate.
 
 ## Retained accepted baseline
 
@@ -226,8 +233,8 @@ remain outside production projects, saves, Godot, and the retained gate.
 - New Chronicles use strict save envelope v5 and World Grammar v3. Literal
   v4/v3/v2/v1/pre-envelope compatibility remains verified, and old grammar
   pins `0`, `1`, and `2` do not gain the Cairn retroactively.
-- P-GEN remains an optional external authoring compiler. E5 adoption is a
-  separate future decision.
+- P-GEN is the completed required external authoring compiler. Its Palimpsest
+  E5 reader/conformance integration is the next separately gated step.
 
 ## Other retained non-blocking notes
 
@@ -258,6 +265,6 @@ remain outside production projects, saves, Godot, and the retained gate.
 
 ## Stop and hand off
 
-Stop. The direction and sequence are settled. Do not begin Goal 6A production,
-P-GEN E5, a save migration, or resource-system implementation without a
-separately authorized contract. Passing 6A will not authorize 6B.
+Stop. The direction and sequence are settled. Do not begin P-GEN E5 without a
+separately authorized integration contract. Goal 6A remains downstream of E5
+and requires its own later contract; passing 6A will not authorize 6B.

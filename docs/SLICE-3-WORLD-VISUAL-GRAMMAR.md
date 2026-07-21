@@ -387,10 +387,10 @@ Stop for UAT if:
 - the result imitates one reference rather than synthesizing the shared
   direction.
 
-The initial authored pack and any future procedural compiler meet at one
-versioned compiled-pack seam. Replacing the authoring adapter must not change
-Core semantics, Chronicle saves, runtime composition inputs, or Godot drawing.
-The exact candidate-engine and drop-in requirements are in the
+The initial authored pack and the required P-GEN compiler meet at one versioned
+compiled-pack seam. Replacing the authoring adapter must not change Core
+semantics, Chronicle saves, runtime composition inputs, or Godot drawing. The
+exact P-GEN and drop-in requirements are in the
 [Chronicle Visual Engine specification](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md).
 
 Both Slice 3 gates pass. This completed contract does not itself authorize

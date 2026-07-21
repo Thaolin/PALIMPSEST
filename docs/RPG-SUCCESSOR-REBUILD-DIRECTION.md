@@ -30,7 +30,7 @@ The successor retains and deepens these accepted foundations:
 - strict persistence and literal predecessor migration as engineering
   disciplines, although the successor save shape will require its own contract;
   and
-- P-GEN as an optional authoring-time visual asset compiler behind a
+- P-GEN as the required authoring-time visual asset compiler behind a
   Palimpsest-owned compiled-pack reader, never as a gameplay or World Grammar
   runtime.
 
@@ -56,6 +56,17 @@ not delete them speculatively, reinterpret old saves, or layer successor rules
 beside them indefinitely.
 
 ## Production sequence
+
+### Gate P-GEN E5 — Integrate the completed authoring pipeline
+
+Before Goal 6A, load P-GEN's canonical 20-pixel compiled artifact through a
+Palimpsest-owned `Chronicle.VisualPack` reader and the existing composer/player/
+Inspector path. The manual pack becomes a golden comparison fixture rather than
+the default authoring path. This gate changes no gameplay or Chronicle save.
+
+The first integrated required vocabulary is a versioned baseline, not a final
+freeze. Each later gameplay slice adds its required visual subjects to P-GEN
+and advances compatibility deliberately.
 
 ### Goal 6 — A Real RPG Loop
 
@@ -132,18 +143,20 @@ or a second public interface.
 
 ## P-GEN sequencing
 
-Keep the accepted manual 20-pixel pack and palette as the production baseline.
-A Palimpsest-owned reader for P-GEN's canonical compiled files remains safe
-separate plumbing under its own gate. Required-vocabulary freeze, conformance,
-and visual adoption wait until 6A and 6B settle the opponent, equipment,
-resource, structure, Target, and Modifier presentation vocabulary.
+P-GEN is complete and required. Integrate its canonical compiled files through
+a Palimpsest-owned reader before 6A. Keep the accepted manual 20-pixel pack and
+palette as golden comparison evidence during that gate, not as the long-term
+authoring path. Extend the versioned P-GEN vocabulary within 6A and 6B when the
+opponent, equipment, resource, structure, Target, and Modifier subjects become
+accepted requirements.
 
 P-GEN may author how generated things look. World Grammar and Chronicle state
 continue to decide what exists, where it exists, and what it means.
 
 ## Next authorization
 
-The next permissible implementation contract is **6A — A Real Fight**. It must
+The next permissible implementation contract is **P-GEN E5 integration**.
+After it passes, the next contract is **6A — A Real Fight**. That contract must
 name one player journey, the exact retained interfaces, the smallest successor
 save migration, automated Core proof, Godot proof, and a UAT stop. Passing 6A
 does not authorize 6B.
