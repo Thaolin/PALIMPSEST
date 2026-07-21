@@ -1,15 +1,15 @@
 # Handoff
 
-- Status: **E5 integration active in Palimpsest.**
-- Active stage: authorized vocabulary refresh and canonical bundle repin
+- Status: **E5.1 accepted and closed in Palimpsest on 2026-07-21.**
+- Active stage: none; later work requires a new Palimpsest contract
 - Public artifact: `artifacts/e45/build-a/pack` after
   `tools/verify.ps1`
 - Review artifact: `artifacts/e45/build-a/review`
 - Catalogue: `catalogues/e45-palimpsest20.json`
-- Contract fixture: `fixtures/palimpsest20/contract.json` (185 definitions)
+- Contract fixture: `fixtures/palimpsest20/contract.json` (249 definitions)
 - Hash fixture: `fixtures/palimpsest20/expected-hashes.json`
 - Canonical aggregate:
-  `sha256:245cb53df47d7f9866071d75359d272cbd53c56010e3d3f4921d12cf72eaf707`
+  `sha256:85418f3025f2944d2f58a0a981febb00903bf67edcc23cb84054b3fd9f91eae0`
 - Godot viewport/CPU-oracle PNG:
   `sha256:8b987ebe3e65f0e0421d648e4945972f2a253f797c40d35ed7765f5addc92b20`
 - Verification entry point: `tools/verify.ps1`
@@ -37,12 +37,35 @@ compatibility, palette, atlas, definition, metadata, occupancy, and canonical
 serialization rules. Legacy Pack-v1 envelope fields and constructor-only
 `PackFile` path grammar are recorded as not applicable to this narrowed reader.
 
-The supplied 185-definition contract includes the required centered anchor and
+The supplied 249-definition contract includes the required centered anchor and
 the accepted Hearthstone, Riven Cairn, shattered Cairn, and River Ward danger
 visuals.
+
+The first integrated candidate failed player visual UAT on 2026-07-21. Generic
+center-and-arm rastering made water, grove, ridge, and related materials read
+as one wall lattice; the 6–11-pixel actor and landmark masks also read too
+small inside native 20-pixel cells. Palimpsest's authorized
+`P-GEN-E5-1-VISUAL-AUTHORING-SPIKE.md` now governs the correction.
 Its existing conformance path emits deterministic exact-ID reports for missing,
 unexpected, family, layer, mask, variant, anchor, overview, and palette-role
 mismatches without reading the Palimpsest repository.
+
+E5.1 now replaces generic visual connectivity with material treatments: water
+uses shore boundaries and ripples, groves use tree silhouettes, ridges use
+mountain silhouettes, ridge-water intersections use nonconnecting rocky fords,
+and cloud cells form continuous banks with scalloped boundaries. Only genuine
+walls and paths retain generic connector continuity. Principal actors and
+landmarks now occupy 10–18 rows, and grove/ridge families expose four authored
+variants. The separate `Chronicle.VisualWorkbench.Godot` project provides an
+Asset Lab, Material Matrix, Biome Board, native/tall comparison, live
+recompile, filtering, and explicit non-overwriting biome-brief export.
+
+The complete verifier passed on 2026-07-21 with zero compiler warnings or
+errors. It produced 249 definitions and canonical aggregate
+`sha256:85418f3025f2944d2f58a0a981febb00903bf67edcc23cb84054b3fd9f91eae0`;
+the final wrapper marker was `PGEN_E51_VERIFY_EXIT=0`. The player accepted the
+corrected assets and workbench with the note that the actor looks terrible and
+can be iterated later. Actor-art quality is explicit non-blocking debt.
 
 Review output now adds `manual-baseline-20.png` and
 `authoring-evidence.json`. Its 64 accepted/candidate rows cover the six
@@ -51,7 +74,7 @@ crossing captures. Comparison construction resolves the exact family, mask,
 and local variant and rejects missing or ambiguous candidates; the evidence
 records all 64 mappings. Native and 4× nearest sheets plus adjacency,
 shifted-overlap, motif, layer, and variant sheets cover broader family lineage.
-Baseline definitions remain outside the four canonical files and the 185
+Baseline definitions remain outside the four canonical files and the 249
 exported definitions. These images are evidence for human review, not
 Palimpsest visual UAT.
 
@@ -70,27 +93,30 @@ typed selector.
   `docs/ROADMAP.md`.
 - Review-only inputs and selection boundary:
   `catalogues/e45-palimpsest20.json`,
-  `src/Chronicle.VisualCompiler/DeterministicSelection.cs`.
+  `docs/reference/e5-1-sprite-language-concept.png`, and
+  `src/Chronicle.VisualCompiler/VisualCompiler.cs`.
 - Public-seam conformance and supplied fixtures:
-  `src/Chronicle.Visuals.Conformance/Palimpsest20BundleConformance.cs`,
   `src/Chronicle.Visuals.Conformance/Palimpsest20CompilerConformance.cs`,
-  `fixtures/palimpsest20/invalid/cases.json`,
-  `fixtures/palimpsest20/contract.json`.
-- One-command evidence assertions: `tools/verify.ps1`.
+  `fixtures/palimpsest20/contract.json`, and
+  `fixtures/palimpsest20/expected-hashes.json`.
+- Authoring Adapter: `src/Chronicle.VisualWorkbench.Godot` and
+  `workbench.ps1`.
+- One-command evidence assertions: `tools/verify.ps1`, which now builds and
+  headlessly launches both Godot projects while preserving the pack-only
+  Preview boundary.
 
-## Remaining Palimpsest blockers
+## Accepted Palimpsest result
 
-- Palimpsest's strict reader, shared player/Inspector loader, packaging checks,
-  and player visual UAT must pass before E5 closes.
-- Motif placement and typed World/Stratum cosmetic selection remain outside
-  this narrowed E5 runtime bundle.
+- Reader, shared loader, packaging, deterministic composition, retained saves,
+  player/Inspector automation, corrected runtime world, and authoring workbench
+  are accepted. A later authorized asset pass may replace the actor art without
+  reopening this gate.
 
 The next forbidden P-GEN work is runtime catalogue parsing, compiler linkage
-from Palimpsest, compiled motif-record export, live swapping, or Goal 6A visual
-vocabulary without a later authorized contract.
+from Palimpsest, compiled motif-record export, live swapping, camera-coordinate
+changes, semantic biome generation, or Goal 6A visual vocabulary without a
+later authorized contract.
 
-The Palimpsest worktree contains unrelated local modifications and untracked
-files. The preceding read-only Palimpsest audit did not edit, stage, commit,
-publish, push, or open a pull request in either repository. This current P-GEN
-E4.5 hardening task intentionally edits the listed P-GEN files while Palimpsest
-remains read-only.
+The exact verified four-file output is synchronized into Palimpsest for its
+corrected E5.1 UAT. No file is staged, committed, published, pushed, or placed
+in a pull request in either repository.

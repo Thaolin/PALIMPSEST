@@ -89,6 +89,10 @@ $hashedPackPaths = @(
     'manifest.json',
     'validation.json'
 )
+$contractFixture = Get-Content -Raw -LiteralPath (
+    Join-Path $root 'fixtures\palimpsest20\contract.json') |
+    ConvertFrom-Json
+$requiredDefinitionCount = [int]$contractFixture.definitionCount
 $requiredReviewPaths = @(
     'review/adjacency-20.png',
     'review/authoring-evidence.json',
@@ -217,8 +221,8 @@ function Assert-E45ReviewArtifacts {
     $manifest = Get-Content -Raw -LiteralPath (Join-Path $packDirectory 'manifest.json') |
         ConvertFrom-Json
     $definitions = @($manifest.definitions)
-    if ($definitions.Count -ne 185) {
-        throw "$Label must export exactly 185 visual definitions, got $($definitions.Count)."
+    if ($definitions.Count -ne $requiredDefinitionCount) {
+        throw "$Label must export exactly $requiredDefinitionCount visual definitions, got $($definitions.Count)."
     }
     if (@($definitions | Where-Object {
                 $_.visualId -like 'baseline.*' -or $_.familyId -like 'baseline.*'
@@ -601,6 +605,9 @@ if (-not $godot -or (& $godot --version) -notlike '4.7.1.stable.mono*') {
 
 $previewRoot = Join-Path $root 'src\Chronicle.VisualPreview.Godot'
 $previewProject = Join-Path $previewRoot 'Chronicle.VisualPreview.Godot.csproj'
+$workbenchRoot = Join-Path $root 'src\Chronicle.VisualWorkbench.Godot'
+$workbenchProject = Join-Path $workbenchRoot 'Chronicle.VisualWorkbench.Godot.csproj'
+$workbenchLauncher = Join-Path $root 'workbench.ps1'
 $plan = Join-Path $root 'fixtures\preview-plans\e45-palimpsest20.json'
 if (-not (Test-Path -LiteralPath $plan -PathType Leaf)) {
     throw "Missing E4.5 Godot preview plan '$plan'."
@@ -632,6 +639,10 @@ if ($previewReferenceMatches.Count -ne 0) {
         "catalogue, or motif definitions: $($firstPreviewReference.Path):" +
         "$($firstPreviewReference.LineNumber).")
 }
+if (-not (Test-Path -LiteralPath $workbenchProject -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $workbenchLauncher -PathType Leaf)) {
+    throw 'E5.1 authoring workbench project or one-command launcher is missing.'
+}
 $captureA = Resolve-ProofOutputPath (Join-Path $proofRoot 'godot-a')
 $captureB = Resolve-ProofOutputPath (Join-Path $proofRoot 'godot-b')
 foreach ($capture in @($captureA, $captureB)) {
@@ -653,12 +664,21 @@ New-Item -ItemType Directory -Force -Path $godotAppData,$godotLocalAppData |
     Out-Null
 & $dotnet build $previewProject --configuration Debug -nodeReuse:false
 if ($LASTEXITCODE -ne 0) { throw 'Godot preview build failed.' }
+& $dotnet build $workbenchProject --configuration Debug -nodeReuse:false
+if ($LASTEXITCODE -ne 0) { throw 'Godot authoring workbench build failed.' }
 
 [xml]$previewXml = Get-Content -Raw -LiteralPath $previewProject
 $references = @($previewXml.Project.ItemGroup.ProjectReference.Include)
 if ($references.Count -ne 1 -or
     $references[0] -notlike '*Chronicle.VisualPack.csproj') {
     throw 'Godot preview must reference only Chronicle.VisualPack.'
+}
+[xml]$workbenchXml = Get-Content -Raw -LiteralPath $workbenchProject
+$workbenchReferences = @($workbenchXml.Project.ItemGroup.ProjectReference.Include)
+if ($workbenchReferences.Count -ne 2 -or
+    -not ($workbenchReferences -like '*Chronicle.VisualCompiler.csproj') -or
+    -not ($workbenchReferences -like '*Chronicle.VisualPack.csproj')) {
+    throw 'Godot workbench must reference exactly compiler plus pack authoring Modules.'
 }
 
 $godotBefore = @(Get-Process -ErrorAction SilentlyContinue |
@@ -667,7 +687,10 @@ $godotBefore = @(Get-Process -ErrorAction SilentlyContinue |
 $logA = (Join-Path $proofRoot 'godot-a.log').Replace('\', '/')
 $logB = (Join-Path $proofRoot 'godot-b.log').Replace('\', '/')
 $interactiveLog = (Join-Path $proofRoot 'godot-interactive.log').Replace('\', '/')
+$workbenchLog = (Join-Path $proofRoot 'godot-workbench.log').Replace('\', '/')
 $godotPreviewRoot = $previewRoot.Replace('\', '/')
+$godotWorkbenchRoot = $workbenchRoot.Replace('\', '/')
+$godotCatalogue = $catalogue.Replace('\', '/')
 $godotPackA = $packA.Replace('\', '/')
 $godotPackB = $packB.Replace('\', '/')
 $godotPlan = $plan.Replace('\', '/')
@@ -708,6 +731,16 @@ $headlessArguments = @(
     '--plan', $godotPlan
 )
 Invoke-BoundedGodot $headlessArguments 'Interactive preview headless launch'
+$workbenchArguments = @(
+    '--headless',
+    '--quit-after', '3',
+    '--log-file', $workbenchLog,
+    '--path', $godotWorkbenchRoot,
+    '--',
+    '--catalogue', $godotCatalogue,
+    '--brief-directory', (Join-Path $proofRoot 'unused-briefs').Replace('\', '/')
+)
+Invoke-BoundedGodot $workbenchArguments 'Authoring workbench headless launch'
 function Invoke-GodotCapture(
     [string]$log,
     [string]$pack,
@@ -753,7 +786,7 @@ $remainingGodotProcesses = @(Get-Process -ErrorAction SilentlyContinue |
 if ($remainingGodotProcesses.Count -ne 0) {
     throw 'Godot acceptance did not shut down within ten seconds.'
 }
-foreach ($godotLog in @($interactiveLog, $logA, $logB)) {
+foreach ($godotLog in @($interactiveLog, $workbenchLog, $logA, $logB)) {
     if (Select-String -LiteralPath $godotLog -Pattern 'ERROR:' -Quiet) {
         throw "Godot reported an error in '$godotLog'."
     }

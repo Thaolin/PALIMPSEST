@@ -329,7 +329,7 @@ public static class VisualCompiler
                                 nativeSize,
                                 mask,
                                 TransformFlags.None,
-                                family.MaterialTreatment != MaterialTreatment.Transition,
+                                RequiresConnectedOccupancy(family.MaterialTreatment),
                                 pixels,
                                 width);
                             if (!maskGeometry.Add(geometry))
@@ -353,7 +353,7 @@ public static class VisualCompiler
                                 mask,
                                 TransformFlags.None,
                                 family.PaletteRoles,
-                                family.MaterialTreatment != MaterialTreatment.Transition,
+                                RequiresConnectedOccupancy(family.MaterialTreatment),
                                 geometry,
                                 family.TransitionOwnership == TransitionOwnership.None
                                     ? ImmutableArray.Create("connected")
@@ -654,45 +654,21 @@ public static class VisualCompiler
         switch (treatment)
         {
             case MaterialTreatment.Water:
-                Connections(2, Colour(1));
-                FillBox(center - 4, center - 4, 9, 9, Colour(1));
-                Horizontal(center - 3, center + 3, center - 2, Colour(2));
-                Shore(Colour(0));
+                MaterialBoundary(Colour(0), Colour(1));
+                Ripple(center - 5, center - 2, 5, Colour(2));
+                Ripple(center + 2, center + 4, 4, Colour(2));
                 break;
             case MaterialTreatment.Cloud:
-                Connections(2, Colour(1));
-                FillBox(center - 4, center - 3, 9, 7, Colour(1));
-                FillBox(center - 2, center - 5, 5, 11, Colour(1));
-                Horizontal(center - 4, center + 4, center + 3, Colour(0));
-                Set(center - 4, center - 3, Colour(0));
-                Set(center + 4, center - 2, Colour(0));
+                CloudBank(Colour(0), Colour(1));
                 break;
             case MaterialTreatment.Grove:
-                Connections(1, Colour(0));
-                FillBox(center - 4, center - 3, 9, 6, Colour(1));
-                FillBox(center - 2, center - 5, 5, 10, Colour(1));
-                Horizontal(center - 3, center + 3, center - 3, Colour(2));
-                Vertical(center, center + 1, center + 5, Colour(3));
+                Tree(center, center + 8, variant);
                 break;
             case MaterialTreatment.Ridge:
-                Connections(3, Colour(1));
-                FillBox(center - 5, center - 4, 11, 9, Colour(1));
-                Horizontal(center - 4, center + 4, center - 3, Colour(2));
-                Horizontal(center - 5, center + 5, center + 3, Colour(0));
+                Mountain(center, center + 8, variant);
                 break;
             case MaterialTreatment.Crossing:
-                Connections(3, Colour(1));
-                FillBox(center - 5, center - 4, 11, 9, Colour(1));
-                if ((variant & 1) == 0)
-                {
-                    Vertical(center - 1, center - 5, center + 5, Colour(3));
-                    Vertical(center, center - 5, center + 5, Colour(4));
-                }
-                else
-                {
-                    Horizontal(center - 5, center + 5, center - 1, Colour(3));
-                    Horizontal(center - 5, center + 5, center, Colour(4));
-                }
+                RockyFord(variant);
                 break;
             case MaterialTreatment.Wall:
                 Connections(3, Colour(1));
@@ -706,10 +682,9 @@ public static class VisualCompiler
                 Set(center - 1, center - 1, Colour(0));
                 break;
             case MaterialTreatment.Transition:
-                Connections(1, Colour(1));
-                FillBox(center - 2, center - 2, 5, 5, Colour(1));
-                Shore(Colour(0));
-                Horizontal(center - 2, center + 2, center, Colour(2));
+                MaterialBoundary(Colour(0), Colour(1));
+                Set(center - 5, center - 2, Colour(2));
+                Set(center + 4, center + 3, Colour(2));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(
@@ -718,7 +693,10 @@ public static class VisualCompiler
                     "Unknown material treatment.");
         }
 
-        ApplyVariantGeometry();
+        if (treatment is not (MaterialTreatment.Grove or MaterialTreatment.Ridge))
+        {
+            ApplyVariantGeometry();
+        }
 
         void Connections(int halfWidth, byte colour)
         {
@@ -756,12 +734,186 @@ public static class VisualCompiler
             }
         }
 
-        void Shore(byte colour)
+        void MaterialBoundary(byte outer, byte inner)
         {
-            if ((mask & 1) == 0) Horizontal(center - 4, center + 4, center - 5, colour);
-            if ((mask & 2) == 0) Vertical(center + 5, center - 4, center + 4, colour);
-            if ((mask & 4) == 0) Horizontal(center - 4, center + 4, center + 5, colour);
-            if ((mask & 8) == 0) Vertical(center - 5, center - 4, center + 4, colour);
+            if ((mask & 1) == 0)
+            {
+                Horizontal(0, size - 1, 0, outer);
+                Horizontal(2, size - 3, 1, inner);
+            }
+            if ((mask & 2) == 0)
+            {
+                Vertical(size - 1, 0, size - 1, outer);
+                Vertical(size - 2, 2, size - 3, inner);
+            }
+            if ((mask & 4) == 0)
+            {
+                Horizontal(0, size - 1, size - 1, outer);
+                Horizontal(2, size - 3, size - 2, inner);
+            }
+            if ((mask & 8) == 0)
+            {
+                Vertical(0, 0, size - 1, outer);
+                Vertical(1, 2, size - 3, inner);
+            }
+        }
+
+        void Ripple(int x, int y, int width, byte colour)
+        {
+            Horizontal(x, x + width - 1, y, colour);
+            Set(x - 1, y + 1, colour);
+            Set(x + width, y + 1, colour);
+        }
+
+        void CloudBank(byte shadow, byte light)
+        {
+            // A cloud bank is a continuous mass, not one tiny cloud icon repeated
+            // in every occupied cell. Connected sides remain full; open sides are
+            // cut into broad scallops so only the bank boundary reads as cloud.
+            FillBox(0, 0, size, size, light);
+
+            if ((mask & 1) == 0)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var depth = 2 + ((x / 5) & 1) * 2;
+                    for (var y = 0; y < depth; y++)
+                    {
+                        Clear(x, y);
+                    }
+                }
+            }
+            if ((mask & 4) == 0)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var depth = 3 + (((x + 2) / 6) & 1) * 2;
+                    for (var y = size - depth; y < size; y++)
+                    {
+                        Clear(x, y);
+                    }
+                    Set(x, size - depth - 1, shadow);
+                }
+            }
+            if ((mask & 8) == 0)
+            {
+                for (var y = 0; y < size; y++)
+                {
+                    var depth = 2 + ((y / 6) & 1) * 2;
+                    for (var x = 0; x < depth; x++)
+                    {
+                        Clear(x, y);
+                    }
+                }
+            }
+            if ((mask & 2) == 0)
+            {
+                for (var y = 0; y < size; y++)
+                {
+                    var depth = 2 + (((y + 3) / 5) & 1) * 2;
+                    for (var x = size - depth; x < size; x++)
+                    {
+                        Clear(x, y);
+                    }
+                }
+            }
+        }
+
+        void RockyFord(int fordVariant)
+        {
+            var layouts = new[]
+            {
+                new[] { (-5, -5, 3, 2), (3, -1, 4, 2), (-4, 5, 4, 2) },
+                new[] { (-6, 3, 3, 2), (0, -4, 4, 2), (5, 5, 3, 2) },
+                new[] { (-5, -2, 4, 2), (3, -6, 3, 2), (4, 5, 4, 2) },
+                new[] { (-6, -5, 3, 2), (1, 1, 4, 2), (5, -3, 3, 2) }
+            };
+            foreach (var (x, y, width, height) in layouts[fordVariant % layouts.Length])
+            {
+                FillBox(center + x - 1, center + y, width + 2, height + 2, Colour(0));
+                FillBox(center + x, center + y, width, height, Colour(1));
+                Horizontal(center + x, center + x + width - 2, center + y, Colour(2));
+            }
+        }
+
+        void Tree(int x, int groundY, int treeVariant)
+        {
+            FillBox(x - 1, groundY - 6, 3, 7, Colour(3));
+            FillBox(x, groundY - 7, 2, 7, Colour(0));
+            if (treeVariant >= 2)
+            {
+                var pineShift = treeVariant == 2 ? -1 : 1;
+                for (var row = 0; row < 15; row++)
+                {
+                    var tier = row / 4;
+                    var halfWidth = Math.Min(7, 1 + row / 2 - tier);
+                    Horizontal(
+                        x + pineShift - halfWidth,
+                        x + pineShift + halfWidth,
+                        groundY - 17 + row,
+                        Colour(row % 4 == 3 ? 0 : 1));
+                }
+                Horizontal(x - 3 + pineShift, x + pineShift, groundY - 12, Colour(2));
+                Horizontal(x + pineShift, x + 4 + pineShift, groundY - 8, Colour(2));
+                return;
+            }
+
+            var crownShift = treeVariant == 0 ? 0 : -1;
+            for (var row = 0; row < 11; row++)
+            {
+                var distance = Math.Abs(5 - row);
+                var halfWidth = 7 - distance / 2;
+                Horizontal(
+                    x + crownShift - halfWidth,
+                    x + crownShift + halfWidth,
+                    groundY - 15 + row,
+                    Colour(distance > 3 ? 0 : 1));
+            }
+            FillBox(x - 4 + crownShift, groundY - 13, 4, 3, Colour(2));
+            FillBox(x + 2 + crownShift, groundY - 10, 3, 2, Colour(2));
+            Set(x - 6 + crownShift, groundY - 8, Colour(0));
+            Set(x + 6 + crownShift, groundY - 12, Colour(0));
+        }
+
+        void Mountain(int x, int groundY, int mountainVariant)
+        {
+            var peakX = x + (mountainVariant switch
+            {
+                0 => -2,
+                1 => 2,
+                2 => -4,
+                _ => 3
+            });
+            for (var row = 0; row < 16; row++)
+            {
+                var halfWidth = Math.Min(
+                    9,
+                    row / 2 + 1 + (mountainVariant == 3 && row > 8 ? 1 : 0));
+                Horizontal(
+                    peakX - halfWidth,
+                    peakX + halfWidth,
+                    groundY - 15 + row,
+                    Colour(row < 4 ? 2 : 1));
+            }
+            for (var row = 4; row < 14; row++)
+            {
+                var highlightX = peakX - Math.Max(1, row / 4);
+                Set(highlightX, groundY - 15 + row, Colour(2));
+                Set(highlightX - 1, groundY - 15 + row, Colour(0));
+            }
+            if (mountainVariant == 2)
+            {
+                for (var row = 5; row < 13; row++)
+                {
+                    var halfWidth = (row - 4) / 2;
+                    Horizontal(
+                        x + 3 - halfWidth,
+                        x + 3 + halfWidth,
+                        groundY - 13 + row,
+                        Colour(row < 8 ? 2 : 1));
+                }
+            }
+            Horizontal(x - 9, x + 9, groundY, Colour(0));
         }
 
         void ApplyVariantGeometry()
@@ -840,4 +992,7 @@ public static class VisualCompiler
             }
         }
     }
+
+    private static bool RequiresConnectedOccupancy(MaterialTreatment treatment) =>
+        treatment is MaterialTreatment.Wall or MaterialTreatment.Path;
 }

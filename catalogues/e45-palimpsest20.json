@@ -241,16 +241,26 @@
         {
           "nativeSize": 20,
           "rows": [
-            "000020000",
-            "000222000",
-            "002222200",
-            "022222220",
-            "222333333",
-            "022222220",
-            "002222200",
-            "000242000"
+            "000000111000000",
+            "000001222100000",
+            "000012333210000",
+            "000001242100000",
+            "000000121000000",
+            "000001222100000",
+            "000012222210000",
+            "000122222221000",
+            "001222222222100",
+            "012222222222210",
+            "122222222222221",
+            "122222222222221",
+            "012222222222210",
+            "001222222222100",
+            "000133333331000",
+            "000011141110000",
+            "000000111000000",
+            "000000010000000"
           ],
-          "anchor": [4, 7],
+          "anchor": [7, 10],
           "layer": "landmark",
           "paletteRoles": [
             "authoring.landmark.dark",
@@ -272,14 +282,18 @@
         {
           "nativeSize": 20,
           "rows": [
-            "0003000",
-            "0033300",
-            "0332330",
-            "3222223",
-            "0111110",
-            "0011100"
+            "0000003000000",
+            "0000033300000",
+            "0000333330000",
+            "0003322333000",
+            "0033222233300",
+            "0332222222330",
+            "3322222222233",
+            "3222222222223",
+            "0111111111110",
+            "0011111111100"
           ],
-          "anchor": [3, 5],
+          "anchor": [6, 5],
           "layer": "landmark",
           "paletteRoles": [
             "stone.dark",
@@ -287,7 +301,8 @@
             "authoring.stone.light",
             "actor.read"
           ],
-          "overviewPaletteRole": "authoring.stone.light"
+          "overviewPaletteRole": "authoring.stone.light",
+          "requireConnected": false
         }
       ]
     },
@@ -301,15 +316,25 @@
         {
           "nativeSize": 20,
           "rows": [
-            "00000300000",
-            "00003230000",
-            "00032223000",
-            "00322422300",
-            "03224442230",
-            "32224542223",
-            "11111511111"
+            "00000000300000000",
+            "00000003230000000",
+            "00000032223000000",
+            "00000322222300000",
+            "00003224442230000",
+            "00032224442223000",
+            "00322224542222300",
+            "03222224542222230",
+            "32222224542222223",
+            "32222224542222223",
+            "03222224542222230",
+            "00322224442222300",
+            "00032224442223000",
+            "00003224442230000",
+            "00000322222300000",
+            "11111111511111111",
+            "01111111111111110"
           ],
-          "anchor": [5, 6],
+          "anchor": [8, 9],
           "layer": "landmark",
           "paletteRoles": [
             "stone.dark",
@@ -332,15 +357,25 @@
         {
           "nativeSize": 20,
           "rows": [
-            "00000300000",
-            "00003230000",
-            "00032223000",
-            "00322422300",
-            "03224442230",
-            "32224542223",
-            "11111511111"
+            "00000000300000000",
+            "00000003230000000",
+            "00000032223000000",
+            "00000322222300000",
+            "00003224442230000",
+            "00032224442223000",
+            "00322224542222300",
+            "03222224542222230",
+            "32222224542222223",
+            "32222224542222223",
+            "03222224542222230",
+            "00322224442222300",
+            "00032224442223000",
+            "00003224442230000",
+            "00000322222300000",
+            "11111111511111111",
+            "01111111111111110"
           ],
-          "anchor": [5, 6],
+          "anchor": [8, 9],
           "layer": "landmark",
           "paletteRoles": [
             "stone.dark",
@@ -363,14 +398,19 @@
         {
           "nativeSize": 20,
           "rows": [
-            "00000000000",
-            "00000300000",
-            "03003230030",
-            "32322222323",
-            "12211111221",
-            "01100000110"
+            "00000000300000000",
+            "00000003000000000",
+            "00030032300003000",
+            "00320322230200300",
+            "03232222222323030",
+            "32322223222222323",
+            "32222322232222223",
+            "12222111112222221",
+            "01111100001111110",
+            "00110000000001100",
+            "01000000000000010"
           ],
-          "anchor": [5, 5],
+          "anchor": [8, 6],
           "layer": "landmark",
           "paletteRoles": [
             "authoring.soil.dark",
@@ -378,7 +418,8 @@
             "stone.primary",
             "authoring.stone.light"
           ],
-          "overviewPaletteRole": "authoring.stone.light"
+          "overviewPaletteRole": "authoring.stone.light",
+          "requireConnected": false
         }
       ]
     },
@@ -421,15 +462,26 @@
         {
           "nativeSize": 20,
           "rows": [
-            "000300000",
-            "003330000",
-            "002220000",
-            "022222000",
-            "002220000",
-            "011211000",
-            "110001100"
+            "0000003000000",
+            "0000033300000",
+            "0000322230000",
+            "0003222223000",
+            "0003222223000",
+            "0000322230000",
+            "0000033300000",
+            "0000012100000",
+            "0000112110000",
+            "0001122211000",
+            "0011222221100",
+            "0011222221100",
+            "0001222221000",
+            "0001122211000",
+            "0001100011000",
+            "0011000001100",
+            "0110000000110",
+            "1100000000011"
           ],
-          "anchor": [4, 6],
+          "anchor": [6, 10],
           "layer": "actor",
           "paletteRoles": ["actor.dark", "actor.primary", "actor.read"],
           "overviewPaletteRole": "actor.primary"
@@ -587,12 +639,12 @@
       "overviewPaletteRole": "water.primary",
       "materialTreatment": "water",
       "identity": "always-two-digit-mask",
-      "requireEdgeContinuity": true
+      "requireEdgeContinuity": false
     },
     {
       "id": "feature.surface.grove",
       "seed": 173,
-      "variantCount": 2,
+      "variantCount": 4,
       "nativeSizes": [20],
       "layer": "feature",
       "paletteRole": "authoring.grove.primary",
@@ -605,12 +657,12 @@
       "overviewPaletteRole": "authoring.grove.primary",
       "materialTreatment": "grove",
       "identity": "masked-variant",
-      "requireEdgeContinuity": true
+      "requireEdgeContinuity": false
     },
     {
       "id": "feature.surface.ridge",
       "seed": 181,
-      "variantCount": 2,
+      "variantCount": 4,
       "nativeSizes": [20],
       "layer": "feature",
       "paletteRole": "stone.primary",
@@ -618,7 +670,7 @@
       "overviewPaletteRole": "stone.primary",
       "materialTreatment": "ridge",
       "identity": "masked-variant",
-      "requireEdgeContinuity": true
+      "requireEdgeContinuity": false
     },
     {
       "id": "feature.surface.ridge-water-crossing",
@@ -637,7 +689,7 @@
       "overviewPaletteRole": "authoring.stone.light",
       "materialTreatment": "crossing",
       "identity": "masked-variant",
-      "requireEdgeContinuity": true
+      "requireEdgeContinuity": false
     },
     {
       "id": "terrain.sky.cloud",
@@ -650,7 +702,7 @@
       "overviewPaletteRole": "cloud.primary",
       "materialTreatment": "cloud",
       "identity": "masked",
-      "requireEdgeContinuity": true
+      "requireEdgeContinuity": false
     },
     {
       "id": "structure.wall.stone",
@@ -689,7 +741,7 @@
       "overviewPaletteRole": "water.primary",
       "materialTreatment": "transition",
       "identity": "review-only",
-      "requireEdgeContinuity": true,
+      "requireEdgeContinuity": false,
       "transitionOwnership": "primary-ground-plus-one-transition"
     }
   ],

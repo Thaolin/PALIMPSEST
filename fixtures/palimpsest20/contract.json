@@ -1,12 +1,12 @@
 {
   "cellSize": 20,
   "atlasWidth": 160,
-  "atlasHeight": 480,
+  "atlasHeight": 640,
   "anchor": {
     "x": 10,
     "y": 10
   },
-  "definitionCount": 185,
+  "definitionCount": 249,
   "definitions": [
     {
       "id": "actor.incarnation",
@@ -98,6 +98,34 @@
       ]
     },
     {
+      "id": "feature.surface.grove.mask.01.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.01.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
       "id": "feature.surface.grove.mask.02",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 0,
@@ -115,6 +143,34 @@
       "id": "feature.surface.grove.mask.02.v1",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.02.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.02.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 2,
       "overviewPaletteIndex": 10,
@@ -154,6 +210,34 @@
       ]
     },
     {
+      "id": "feature.surface.grove.mask.03.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.03.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
       "id": "feature.surface.grove.mask.04",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 0,
@@ -171,6 +255,34 @@
       "id": "feature.surface.grove.mask.04.v1",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.04.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.04.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 4,
       "overviewPaletteIndex": 10,
@@ -210,6 +322,34 @@
       ]
     },
     {
+      "id": "feature.surface.grove.mask.05.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.05.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
       "id": "feature.surface.grove.mask.06",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 0,
@@ -227,6 +367,34 @@
       "id": "feature.surface.grove.mask.06.v1",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.06.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.06.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 6,
       "overviewPaletteIndex": 10,
@@ -266,6 +434,34 @@
       ]
     },
     {
+      "id": "feature.surface.grove.mask.07.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.07.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
       "id": "feature.surface.grove.mask.08",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 0,
@@ -283,6 +479,34 @@
       "id": "feature.surface.grove.mask.08.v1",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.08.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.08.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 8,
       "overviewPaletteIndex": 10,
@@ -322,6 +546,34 @@
       ]
     },
     {
+      "id": "feature.surface.grove.mask.09.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.09.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
       "id": "feature.surface.grove.mask.10",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 0,
@@ -339,6 +591,34 @@
       "id": "feature.surface.grove.mask.10.v1",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.10.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.10.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 10,
       "overviewPaletteIndex": 10,
@@ -378,6 +658,34 @@
       ]
     },
     {
+      "id": "feature.surface.grove.mask.11.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.11.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
       "id": "feature.surface.grove.mask.12",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 0,
@@ -395,6 +703,34 @@
       "id": "feature.surface.grove.mask.12.v1",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.12.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.12.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 12,
       "overviewPaletteIndex": 10,
@@ -434,6 +770,34 @@
       ]
     },
     {
+      "id": "feature.surface.grove.mask.13.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.13.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
       "id": "feature.surface.grove.mask.14",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 0,
@@ -451,6 +815,34 @@
       "id": "feature.surface.grove.mask.14.v1",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.14.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.14.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 14,
       "overviewPaletteIndex": 10,
@@ -490,9 +882,65 @@
       ]
     },
     {
+      "id": "feature.surface.grove.mask.15.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.mask.15.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
       "id": "feature.surface.grove.v1",
       "familyId": "feature.surface.grove",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.v2",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 10,
+      "paletteRoleIndexes": [
+        9,
+        10,
+        11,
+        4
+      ]
+    },
+    {
+      "id": "feature.surface.grove.v3",
+      "familyId": "feature.surface.grove",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 0,
       "overviewPaletteIndex": 10,
@@ -1503,6 +1951,32 @@
       ]
     },
     {
+      "id": "feature.surface.ridge.mask.01.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.01.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 1,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
       "id": "feature.surface.ridge.mask.02",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 0,
@@ -1519,6 +1993,32 @@
       "id": "feature.surface.ridge.mask.02.v1",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.02.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 2,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.02.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 2,
       "overviewPaletteIndex": 13,
@@ -1555,6 +2055,32 @@
       ]
     },
     {
+      "id": "feature.surface.ridge.mask.03.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.03.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 3,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
       "id": "feature.surface.ridge.mask.04",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 0,
@@ -1571,6 +2097,32 @@
       "id": "feature.surface.ridge.mask.04.v1",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.04.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 4,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.04.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 4,
       "overviewPaletteIndex": 13,
@@ -1607,6 +2159,32 @@
       ]
     },
     {
+      "id": "feature.surface.ridge.mask.05.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.05.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 5,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
       "id": "feature.surface.ridge.mask.06",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 0,
@@ -1623,6 +2201,32 @@
       "id": "feature.surface.ridge.mask.06.v1",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.06.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 6,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.06.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 6,
       "overviewPaletteIndex": 13,
@@ -1659,6 +2263,32 @@
       ]
     },
     {
+      "id": "feature.surface.ridge.mask.07.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.07.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 7,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
       "id": "feature.surface.ridge.mask.08",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 0,
@@ -1675,6 +2305,32 @@
       "id": "feature.surface.ridge.mask.08.v1",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.08.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 8,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.08.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 8,
       "overviewPaletteIndex": 13,
@@ -1711,6 +2367,32 @@
       ]
     },
     {
+      "id": "feature.surface.ridge.mask.09.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.09.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 9,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
       "id": "feature.surface.ridge.mask.10",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 0,
@@ -1727,6 +2409,32 @@
       "id": "feature.surface.ridge.mask.10.v1",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.10.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 10,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.10.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 10,
       "overviewPaletteIndex": 13,
@@ -1763,6 +2471,32 @@
       ]
     },
     {
+      "id": "feature.surface.ridge.mask.11.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.11.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 11,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
       "id": "feature.surface.ridge.mask.12",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 0,
@@ -1779,6 +2513,32 @@
       "id": "feature.surface.ridge.mask.12.v1",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.12.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 12,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.12.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 12,
       "overviewPaletteIndex": 13,
@@ -1815,6 +2575,32 @@
       ]
     },
     {
+      "id": "feature.surface.ridge.mask.13.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.13.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 13,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
       "id": "feature.surface.ridge.mask.14",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 0,
@@ -1831,6 +2617,32 @@
       "id": "feature.surface.ridge.mask.14.v1",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.14.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 14,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.14.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 14,
       "overviewPaletteIndex": 13,
@@ -1867,9 +2679,61 @@
       ]
     },
     {
+      "id": "feature.surface.ridge.mask.15.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.mask.15.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
+      "layer": "environmentalFeature",
+      "mask": 15,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
       "id": "feature.surface.ridge.v1",
       "familyId": "feature.surface.ridge",
       "variantOrdinal": 1,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.v2",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 2,
+      "layer": "environmentalFeature",
+      "mask": 0,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": "feature.surface.ridge.v3",
+      "familyId": "feature.surface.ridge",
+      "variantOrdinal": 3,
       "layer": "environmentalFeature",
       "mask": 0,
       "overviewPaletteIndex": 13,

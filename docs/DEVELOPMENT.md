@@ -101,6 +101,25 @@ Controls:
 
 The preview calls only exact `Resolve(string)` IDs and never edits the pack.
 
+## E5.1 authoring workbench
+
+```powershell
+.\workbench.ps1
+```
+
+The workbench is a separate authoring-only Godot project. It reads the source
+catalogue and invokes the compiler in memory; it does not weaken the pack-only
+Preview. Use its three views to inspect one silhouette, compare family
+variants/masks, or review a mixed surface-biome board. The aspect selector
+compares native `20 × 20` with a stretched `20 × 30` evidence view based on
+Qud's `16 × 24` cell; it does not change exported pixels.
+
+The Biome Board's form writes only after **Save biome brief** is pressed. It
+creates a new `catalogues/briefs/<id>.visual-brief.json` and refuses to
+overwrite an existing brief. The brief records visual intent for a later
+authored P-GEN pass; it is not compiler input and cannot invent Chronicle
+semantics.
+
 ## Boundaries
 
 Production code is C# only. Do not add a P-GEN-to-PALIMPSEST runtime adapter, a

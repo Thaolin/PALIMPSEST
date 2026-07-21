@@ -8,16 +8,23 @@
 | E3 | PALIMPSEST-shaped specimen breadth | Complete |
 | E4 | Godot 4.7.1 .NET pack-only preview | Complete |
 | E4.5 | Canonical PALIMPSEST-compatible 20px authoring compiler | Complete |
-| E5 | PALIMPSEST runtime loading and packaged compiled artifact | Authorized in Palimpsest on 2026-07-21; integration active |
+| E5 | PALIMPSEST runtime loading and packaged compiled artifact | Accepted and closed in Palimpsest on 2026-07-21 |
+| E5.1 | Material-specific visual correction and authoring workbench spike | Accepted and closed in Palimpsest on 2026-07-21; actor art deferred |
 
-Current status: **E5 integration active in Palimpsest.**
+Current status: **E5.1 accepted and closed; actor-art quality is deferred non-blocking debt.**
+
+The first E5 candidate passed automated integration but failed player visual
+UAT because material families read as connected walls and key silhouettes were
+too small. The bounded
+[E5.1 contract](E5-1-VISUAL-AUTHORING-SPIKE.md) produced the accepted correction.
+The player deferred only actor-art quality as non-blocking debt.
 
 ## E4.5 reconciled gate
 
 `tools/verify.ps1` is the sole clean-checkout acceptance entry point. It proves:
 
-- the exact 185-definition PALIMPSEST vocabulary and layer mapping;
-- one 160×480 indexed 20px atlas, one palette, centered anchors, and direct
+- the exact versioned PALIMPSEST vocabulary and layer mapping;
+- one indexed 20px atlas, one palette, centered anchors, and direct
   concrete-ID resolution;
 - required `validation.json` and every compatibility boundary;
 - byte-identical repeated canonical output;
@@ -25,20 +32,20 @@ Current status: **E5 integration active in Palimpsest.**
 - deterministic signed/large-coordinate, seed, variant, mask, and motif
   clipping vectors;
 - separate material grammars and nearest-neighbour 20px review sheets;
-- review-only manual-baseline evidence outside the versioned 185-definition pack;
+- review-only manual-baseline evidence outside the versioned pack;
 - a Godot preview that reads only the exported canonical artifact; and
 - safe output ownership plus bounded Godot process cleanup.
 
 Pinned canonical values:
 
 - indexed atlas:
-  `sha256:a44f0eff2fd8f6e2d86595c8b2f399b539af5e405da9f715a8a629e5051a63fd`
+  `sha256:3c7697eb5d8df50fc920bc52faf422f0077d7d8c2eb60b78582005c41c2126bb`
 - manifest:
-  `sha256:6b2c34655543b2a83c0e706cc7c1b6e8dec6a7406fd6c00ce0905e495be93f1a`
+  `sha256:ebe73660faa1d9f441eee78d5f146a186d072a568f0a749d3aedaaa78deb3bdd`
 - PALIMPSEST-shaped pack:
-  `sha256:a63d1cfe147f22a39e84c835a33b77689c8b3b5492b49eb5e5b8fad18108a8fc`
+  `sha256:6ff87d0e52c494fe4e0ff79044606dd8694a559aa68fa0d412844ba639167acf`
 - canonical aggregate:
-  `sha256:245cb53df47d7f9866071d75359d272cbd53c56010e3d3f4921d12cf72eaf707`
+  `sha256:85418f3025f2944d2f58a0a981febb00903bf67edcc23cb84054b3fd9f91eae0`
 
 Palimpsest owns the authorized E5 reader and packaged runtime Adapter. P-GEN
 continues to own only authored catalogue input, deterministic compilation, and

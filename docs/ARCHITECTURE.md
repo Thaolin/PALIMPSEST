@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **E5 integration active in Palimpsest.**
+Status: **E5.1 accepted in Palimpsest on 2026-07-21.**
 
 Dependencies point inward:
 
@@ -8,6 +8,7 @@ Dependencies point inward:
 Chronicle.VisualCompiler.Cli -> Chronicle.VisualCompiler -> Chronicle.VisualPack
 Chronicle.Visuals.Conformance -> Chronicle.VisualCompiler + Chronicle.VisualPack
 Chronicle.VisualPreview.Godot -> Chronicle.VisualPack
+Chronicle.VisualWorkbench.Godot -> Chronicle.VisualCompiler + Chronicle.VisualPack
 ```
 
 `Chronicle.VisualPack` exposes the narrow `Palimpsest20Pack` and
@@ -19,6 +20,12 @@ typed material treatments, packing, diagnostics, noncanonical review sheets,
 and an internal deterministic-selection algorithm retained only as pinned
 authoring/conformance evidence. The CLI owns filesystem replacement and
 ownership guards. Godot reads only a completed canonical pack.
+
+The last sentence applies to the pack-only Preview. E5.1 adds a separate
+authoring Workbench Adapter that deliberately sits outside the runtime seam and
+may invoke the compiler in memory. Keeping the two Godot projects separate
+prevents authoring affordances from contaminating the canonical pack oracle.
+Neither project is referenced or packaged by Palimpsest.
 
 No P-GEN project references PALIMPSEST production assemblies or
 `Chronicle.Core`. PALIMPSEST remains the authoritative consumer contract.

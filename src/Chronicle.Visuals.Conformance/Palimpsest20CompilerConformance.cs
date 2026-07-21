@@ -85,6 +85,12 @@ static class Palimpsest20CompilerConformance
             return false;
         }
 
+        if (!MaterialGrammarIsSubstanceSpecific(catalogue, pack) ||
+            !PrincipalSilhouettesOccupyTheirCells(pack))
+        {
+            return false;
+        }
+
         if (!ContractMismatchesAreReported(contract, actual))
         {
             return false;
@@ -113,6 +119,178 @@ static class Palimpsest20CompilerConformance
         }
 
         return true;
+    }
+
+    private static bool MaterialGrammarIsSubstanceSpecific(
+        VisualCatalogue catalogue,
+        Palimpsest20Pack pack)
+    {
+        var continuity = catalogue.ConnectedFamilies.ToDictionary(
+            static family => family.MaterialTreatment,
+            static family => family.RequireEdgeContinuity);
+        foreach (var treatment in new[]
+        {
+            MaterialTreatment.Water,
+            MaterialTreatment.Cloud,
+            MaterialTreatment.Grove,
+            MaterialTreatment.Ridge,
+            MaterialTreatment.Crossing,
+            MaterialTreatment.Transition
+        })
+        {
+            if (!continuity.TryGetValue(treatment, out var requiresContinuity) ||
+                requiresContinuity)
+            {
+                Console.Error.WriteLine(
+                    $"PAL20-MATERIAL-CONTINUITY: '{treatment}' still declares generic edge continuity.");
+                return false;
+            }
+        }
+
+        foreach (var treatment in new[] { MaterialTreatment.Wall, MaterialTreatment.Path })
+        {
+            if (!continuity.TryGetValue(treatment, out var requiresContinuity) ||
+                !requiresContinuity)
+            {
+                Console.Error.WriteLine(
+                    $"PAL20-MATERIAL-STRUCTURE: '{treatment}' lost genuine connector continuity.");
+                return false;
+            }
+        }
+
+        if (!SamePixels(
+                pack,
+                "feature.surface.grove",
+                "feature.surface.grove.mask.15") ||
+            !SamePixels(
+                pack,
+                "feature.surface.ridge",
+                "feature.surface.ridge.mask.15") ||
+            !SamePixels(
+                pack,
+                "feature.surface.ridge-water-crossing",
+                "feature.surface.ridge-water-crossing.mask.15"))
+        {
+            Console.Error.WriteLine(
+                "PAL20-MATERIAL-MASK: organic features still change into cardinal connector arms by adjacency mask.");
+            return false;
+        }
+
+        var openWater = Cell(pack, "terrain.surface.water.edge.15");
+        if (TouchesEdge(openWater, 20, north: true) ||
+            TouchesEdge(openWater, 20, east: true) ||
+            TouchesEdge(openWater, 20, south: true) ||
+            TouchesEdge(openWater, 20, west: true))
+        {
+            Console.Error.WriteLine(
+                "PAL20-MATERIAL-WATER: fully surrounded water still paints a connector to a cell edge.");
+            return false;
+        }
+
+        var isolatedWater = Cell(pack, "terrain.surface.water.edge.00");
+        if (!TouchesEdge(isolatedWater, 20, north: true) ||
+            !TouchesEdge(isolatedWater, 20, east: true) ||
+            !TouchesEdge(isolatedWater, 20, south: true) ||
+            !TouchesEdge(isolatedWater, 20, west: true))
+        {
+            Console.Error.WriteLine(
+                "PAL20-MATERIAL-SHORE: isolated water does not paint its four material boundaries.");
+            return false;
+        }
+
+        var fullCloud = Cell(pack, "terrain.sky.cloud.mask.15");
+        if (fullCloud.Any(static pixel => pixel == 0))
+        {
+            Console.Error.WriteLine(
+                "PAL20-MATERIAL-CLOUD: a fully surrounded cloud cell is not a seamless bank mass.");
+            return false;
+        }
+
+        foreach (var suffix in new[] { "", ".v1", ".v2", ".v3" })
+        {
+            var ford = Cell(pack, $"feature.surface.ridge-water-crossing{suffix}");
+            if (TouchesEdge(ford, 20, north: true) ||
+                TouchesEdge(ford, 20, east: true) ||
+                TouchesEdge(ford, 20, south: true) ||
+                TouchesEdge(ford, 20, west: true))
+            {
+                Console.Error.WriteLine(
+                    $"PAL20-MATERIAL-CROSSING: rocky ford '{suffix}' still forms a tile-edge connector lattice.");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool PrincipalSilhouettesOccupyTheirCells(Palimpsest20Pack pack)
+    {
+        var requiredHeights = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["actor.incarnation"] = 18,
+            ["landmark.bell-that-fell-up"] = 18,
+            ["subject.home-hearthstone"] = 17,
+            ["subject.riven-cairn-river-ward"] = 17,
+            ["subject.shattered-cairn"] = 11,
+            ["subject.loose-stone"] = 10
+        };
+
+        foreach (var requirement in requiredHeights)
+        {
+            var pixels = Cell(pack, requirement.Key);
+            var occupiedRows = Enumerable.Range(0, 20)
+                .Count(row => pixels.AsSpan(row * 20, 20).ContainsAnyExcept((byte)0));
+            if (occupiedRows < requirement.Value)
+            {
+                Console.Error.WriteLine(
+                    $"PAL20-OCCUPANCY: '{requirement.Key}' occupies {occupiedRows} rows; expected at least {requirement.Value}.");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool SamePixels(Palimpsest20Pack pack, string leftId, string rightId) =>
+        Cell(pack, leftId).AsSpan().SequenceEqual(Cell(pack, rightId));
+
+    private static byte[] Cell(Palimpsest20Pack pack, string id)
+    {
+        var definition = pack.Resolve(id);
+        var rect = definition.AtlasRect;
+        var result = new byte[rect.Width * rect.Height];
+        for (var y = 0; y < rect.Height; y++)
+        {
+            for (var x = 0; x < rect.Width; x++)
+            {
+                result[y * rect.Width + x] = pack.AtlasIndices[
+                    (rect.Y + y) * pack.AtlasWidth + rect.X + x];
+            }
+        }
+        return result;
+    }
+
+    private static bool TouchesEdge(
+        byte[] pixels,
+        int size,
+        bool north = false,
+        bool east = false,
+        bool south = false,
+        bool west = false)
+    {
+        if (north)
+        {
+            return pixels.AsSpan(0, size).ContainsAnyExcept((byte)0);
+        }
+        if (east)
+        {
+            return Enumerable.Range(0, size).Any(y => pixels[y * size + size - 1] != 0);
+        }
+        if (south)
+        {
+            return pixels.AsSpan((size - 1) * size, size).ContainsAnyExcept((byte)0);
+        }
+        return west && Enumerable.Range(0, size).Any(y => pixels[y * size] != 0);
     }
 
     private static bool InvalidMotifsAreRejected(byte[] source)
