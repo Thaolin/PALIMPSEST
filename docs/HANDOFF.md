@@ -10,7 +10,7 @@ authorized future slice contract.
 
 ## Current gate
 
-**Modifier grammar course correction recorded — pressure test not authorized**
+**Combat grammar pressure test authorized — isolated prototype only**
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -36,6 +36,13 @@ authorized future slice contract.
   shared Load constrain the active build.
 - [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md), the
   glossary, Vision, Architecture, and Roadmap now record that direction.
+- The accepted v5 predecessor, Slice 5 evidence, archives, and reconciled
+  direction were verified through the complete retained gate and committed on
+  `main` as `bd023c6` before prototype work began.
+- The player authorized the isolated
+  [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md) on
+  2026-07-21. It may create only a throwaway C# logic model and terminal shell
+  outside production projects and saves.
 - Goal 6 and Slice 7 remain later gates.
 
 ## Settled successor direction
@@ -145,11 +152,11 @@ reported.
 
 ## Current permitted scope
 
-No production feature or polish work is currently authorized. This requested
-documentation reconciliation is permitted. The next candidate is a separately
-approved, bounded, disposable or isolated player pressure test; it must not
-silently become the production grammar, a save migration, or a catalogue
-expansion.
+No production feature or polish work is authorized. The active scope is the
+bounded [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md): its
+contract documentation, one in-memory pure C# combat model, one thin terminal
+shell, and one-command runner. It must remain outside production projects,
+saves, Godot, and the retained verification gate.
 
 ## Retained accepted baseline
 
@@ -162,6 +169,9 @@ expansion.
   SLICE5 RESTART ACCEPTANCE PASS bell=surface:0,-4 source=attached death=confirmed
   PASS: Slice 5 Fly[Bell] composition and restart, Goal 4C conflict, Goal 4B Home, Goal 4A Study choice, Goal 2, Gate 3A, and Gate 3B verified.
   ```
+- The same complete retained gate passed again on 2026-07-21 immediately before
+  baseline commit `bd023c6`, with zero build warnings or errors and the same
+  final acceptance marker.
 - The accepted player baseline remains the 20-pixel pack on the `1600 × 900`
   canvas with a `1020 × 740`, `51 × 37` map.
 - New Chronicles use strict save envelope v5 and World Grammar v3. Literal
@@ -189,13 +199,16 @@ expansion.
 - camera zoom, Cairn art, broad visual polish, water traversal, route arrows,
   P-GEN integration, or E5 without a separately approved gate;
 - health, damage, initiative, combat statistics, bestiary, loot, inventory, or
-  a generic combat framework by extending the accepted 4C fixture;
+  a generic production combat framework by extending the accepted 4C fixture;
+- moving prototype HP, equipment, tick attacks, `Burn`, Companion, Target, or
+  Recovery rules into production, the solution, saves, Godot, or the retained
+  gate before player pressure-test acceptance and a separate contract;
 - weakening strict saves, changing old grammar pins, or hiding Core decisions
   in Godot.
 
 ## Stop and hand off
 
-The course correction is documentation-only. Stop before production work and
-ask whether to authorize the bounded Modifier Grammar pressure test. Do not
-begin Goal 6, P-GEN E5, a save migration, or resource-system implementation by
-inference.
+When the isolated prototype runs, stop and hand the one-command journey to the
+player. Automated execution is not UAT acceptance. Do not begin a production
+successor, Goal 6, P-GEN E5, a save migration, or resource-system implementation
+without a separately authorized contract.
