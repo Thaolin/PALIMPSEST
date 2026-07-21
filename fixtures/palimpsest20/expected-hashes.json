@@ -3,21 +3,21 @@
   "files": [
     {
       "path": "atlases/palimpsest20.indices",
-      "digest": "sha256:052bcfe6bd97274905198decaf7f13c7c0770df097180c74a9808b0ebd18313b"
+      "digest": "sha256:a44f0eff2fd8f6e2d86595c8b2f399b539af5e405da9f715a8a629e5051a63fd"
     },
     {
       "path": "hashes.json",
-      "digest": "sha256:c539560c559f2e6a936653ea0f623892f84ce90a63444ea624d5d832562eab4f"
+      "digest": "sha256:0e24ceb16d0aa705c417bc488687d143ff5dd0b223725d994723d08540144154"
     },
     {
       "path": "manifest.json",
-      "digest": "sha256:9436b487408b7c715beadb19ec5bb9178a6e3e0bf391b1f9a573c444beb086d8"
+      "digest": "sha256:6b2c34655543b2a83c0e706cc7c1b6e8dec6a7406fd6c00ce0905e495be93f1a"
     },
     {
       "path": "validation.json",
       "digest": "sha256:8f0d0d8b47e2b76f3821ac35b7dc58c8a1978f2dadb80f0954e8f7136d276594"
     }
   ],
-  "palimpsestDigest": "sha256:4fa9fdf590310cc81f136668d1e656945f5dd04b6fddaa7ad847509385214c64",
-  "aggregateDigest": "sha256:f41d1e4e4f76b5e6e57921cda35050582368486e87e932d5f1273ff4c2be9bd8"
+  "palimpsestDigest": "sha256:a63d1cfe147f22a39e84c835a33b77689c8b3b5492b49eb5e5b8fad18108a8fc",
+  "aggregateDigest": "sha256:245cb53df47d7f9866071d75359d272cbd53c56010e3d3f4921d12cf72eaf707"
 }

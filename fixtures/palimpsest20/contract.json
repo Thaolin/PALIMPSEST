@@ -1,12 +1,12 @@
 {
   "cellSize": 20,
   "atlasWidth": 160,
-  "atlasHeight": 460,
+  "atlasHeight": 480,
   "anchor": {
     "x": 10,
     "y": 10
   },
-  "definitionCount": 181,
+  "definitionCount": 185,
   "definitions": [
     {
       "id": "actor.incarnation",
@@ -17,6 +17,18 @@
       "overviewPaletteIndex": 23,
       "paletteRoleIndexes": [
         22,
+        23,
+        24
+      ]
+    },
+    {
+      "id": "emphasis.danger.river-ward",
+      "familyId": "emphasis.danger.river-ward",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 23,
+      "paletteRoleIndexes": [
         23,
         24
       ]
@@ -1934,6 +1946,21 @@
       ]
     },
     {
+      "id": "subject.home-hearthstone",
+      "familyId": "subject.home-hearthstone",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        19,
+        20
+      ]
+    },
+    {
       "id": "subject.loose-stone",
       "familyId": "subject.loose-stone",
       "variantOrdinal": 0,
@@ -1945,6 +1972,35 @@
         13,
         14,
         24
+      ]
+    },
+    {
+      "id": "subject.riven-cairn-river-ward",
+      "familyId": "subject.riven-cairn-river-ward",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [
+        12,
+        13,
+        14,
+        6,
+        25
+      ]
+    },
+    {
+      "id": "subject.shattered-cairn",
+      "familyId": "subject.shattered-cairn",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 14,
+      "paletteRoleIndexes": [
+        4,
+        12,
+        13,
+        14
       ]
     },
     {

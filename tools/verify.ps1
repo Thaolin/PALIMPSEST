@@ -217,8 +217,8 @@ function Assert-E45ReviewArtifacts {
     $manifest = Get-Content -Raw -LiteralPath (Join-Path $packDirectory 'manifest.json') |
         ConvertFrom-Json
     $definitions = @($manifest.definitions)
-    if ($definitions.Count -ne 181) {
-        throw "$Label must export exactly 181 visual definitions, got $($definitions.Count)."
+    if ($definitions.Count -ne 185) {
+        throw "$Label must export exactly 185 visual definitions, got $($definitions.Count)."
     }
     if (@($definitions | Where-Object {
                 $_.visualId -like 'baseline.*' -or $_.familyId -like 'baseline.*'

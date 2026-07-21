@@ -1,6 +1,6 @@
 # Engine Specification
 
-Status: **E4.5 technically complete — awaiting Palimpsest adoption review.**
+Status: **E5 integration active in Palimpsest.**
 
 The governing read-only source contract is:
 

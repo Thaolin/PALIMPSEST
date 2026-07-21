@@ -292,6 +292,126 @@
       ]
     },
     {
+      "id": "subject.home-hearthstone",
+      "seed": 823,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "00000300000",
+            "00003230000",
+            "00032223000",
+            "00322422300",
+            "03224442230",
+            "32224542223",
+            "11111511111"
+          ],
+          "anchor": [5, 6],
+          "layer": "landmark",
+          "paletteRoles": [
+            "stone.dark",
+            "stone.primary",
+            "authoring.stone.light",
+            "authoring.landmark.dark",
+            "landmark.gold"
+          ],
+          "overviewPaletteRole": "landmark.gold"
+        }
+      ]
+    },
+    {
+      "id": "subject.riven-cairn-river-ward",
+      "seed": 827,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "00000300000",
+            "00003230000",
+            "00032223000",
+            "00322422300",
+            "03224442230",
+            "32224542223",
+            "11111511111"
+          ],
+          "anchor": [5, 6],
+          "layer": "landmark",
+          "paletteRoles": [
+            "stone.dark",
+            "stone.primary",
+            "authoring.stone.light",
+            "water.deep",
+            "emphasis.active"
+          ],
+          "overviewPaletteRole": "emphasis.active"
+        }
+      ]
+    },
+    {
+      "id": "subject.shattered-cairn",
+      "seed": 829,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "00000000000",
+            "00000300000",
+            "03003230030",
+            "32322222323",
+            "12211111221",
+            "01100000110"
+          ],
+          "anchor": [5, 5],
+          "layer": "landmark",
+          "paletteRoles": [
+            "authoring.soil.dark",
+            "stone.dark",
+            "stone.primary",
+            "authoring.stone.light"
+          ],
+          "overviewPaletteRole": "authoring.stone.light"
+        }
+      ]
+    },
+    {
+      "id": "emphasis.danger.river-ward",
+      "seed": 1307,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "11100000111",
+            "10000000001",
+            "10000200001",
+            "00000000000",
+            "00000000000",
+            "00200000200",
+            "00000000000",
+            "10000200001",
+            "10000000001",
+            "11100000111"
+          ],
+          "anchor": [5, 5],
+          "layer": "effect",
+          "paletteRoles": ["actor.primary", "actor.read"],
+          "overviewPaletteRole": "actor.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
       "id": "actor.incarnation",
       "seed": 703,
       "variantCount": 1,

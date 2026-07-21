@@ -1,6 +1,7 @@
 # Decision
 
-Status: **E4.5 technically complete — awaiting Palimpsest adoption review.**
+Status: **Superseded for adoption status by Palimpsest ADR 0004; retained as
+the E4.5 technical decision record.**
 
 P-GEN is narrowed to an engine-independent C# authoring compiler. Its only
 public compiled-pack candidate is `Palimpsest20`; the richer historic pack

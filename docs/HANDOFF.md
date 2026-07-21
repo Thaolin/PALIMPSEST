@@ -1,15 +1,15 @@
 # Handoff
 
-- Status: **E4.5 technically complete — awaiting Palimpsest adoption review.**
-- Active stage: none; implementation is stopped before E5
+- Status: **E5 integration active in Palimpsest.**
+- Active stage: authorized vocabulary refresh and canonical bundle repin
 - Public artifact: `artifacts/e45/build-a/pack` after
   `tools/verify.ps1`
 - Review artifact: `artifacts/e45/build-a/review`
 - Catalogue: `catalogues/e45-palimpsest20.json`
-- Contract fixture: `fixtures/palimpsest20/contract.json` (181 definitions)
+- Contract fixture: `fixtures/palimpsest20/contract.json` (185 definitions)
 - Hash fixture: `fixtures/palimpsest20/expected-hashes.json`
 - Canonical aggregate:
-  `sha256:f41d1e4e4f76b5e6e57921cda35050582368486e87e932d5f1273ff4c2be9bd8`
+  `sha256:245cb53df47d7f9866071d75359d272cbd53c56010e3d3f4921d12cf72eaf707`
 - Godot viewport/CPU-oracle PNG:
   `sha256:8b987ebe3e65f0e0421d648e4945972f2a253f797c40d35ed7765f5addc92b20`
 - Verification entry point: `tools/verify.ps1`
@@ -37,7 +37,9 @@ compatibility, palette, atlas, definition, metadata, occupancy, and canonical
 serialization rules. Legacy Pack-v1 envelope fields and constructor-only
 `PackFile` path grammar are recorded as not applicable to this narrowed reader.
 
-The supplied 181-definition contract now includes the required centered anchor.
+The supplied 185-definition contract includes the required centered anchor and
+the accepted Hearthstone, Riven Cairn, shattered Cairn, and River Ward danger
+visuals.
 Its existing conformance path emits deterministic exact-ID reports for missing,
 unexpected, family, layer, mask, variant, anchor, overview, and palette-role
 mismatches without reading the Palimpsest repository.
@@ -49,7 +51,7 @@ crossing captures. Comparison construction resolves the exact family, mask,
 and local variant and rejects missing or ambiguous candidates; the evidence
 records all 64 mappings. Native and 4× nearest sheets plus adjacency,
 shifted-overlap, motif, layer, and variant sheets cover broader family lineage.
-Baseline definitions remain outside the four canonical files and the 181
+Baseline definitions remain outside the four canonical files and the 185
 exported definitions. These images are evidence for human review, not
 Palimpsest visual UAT.
 
@@ -78,22 +80,14 @@ typed selector.
 
 ## Remaining Palimpsest blockers
 
-- Goal 4B player visual UAT is pending; Goal 4C and E5 remain unauthorized.
-- Palimpsest has no authorized filesystem reader or production construction
-  seam for this directory.
-- The frozen fixture predates Goal 4B; an authorized E5 review must freeze the
-  then-accepted vocabulary, including any accepted Home mapping.
-- Consumer ownership, motif placement, and a typed World/Stratum cosmetic
-  selection context remain undecided.
-- Player and Inspector composer parity, semantic seed/overlap fixtures, and a
-  human adopt/narrow/defer/reject decision have not been performed.
-- Adopting the narrowed four-file profile would require reconciliation with
-  Palimpsest's governing specification and architecture records.
+- Palimpsest's strict reader, shared player/Inspector loader, packaging checks,
+  and player visual UAT must pass before E5 closes.
+- Motif placement and typed World/Stratum cosmetic selection remain outside
+  this narrowed E5 runtime bundle.
 
-The next forbidden work is any Palimpsest edit, E5 loader or live swap,
-runtime selector, compiled motif-record export, runtime catalogue parsing,
-`subject.home-hearthstone` addition, Goal 4C/combat vocabulary, or canonical
-hash repin. Stop here until Palimpsest explicitly authorizes a later gate.
+The next forbidden P-GEN work is runtime catalogue parsing, compiler linkage
+from Palimpsest, compiled motif-record export, live swapping, or Goal 6A visual
+vocabulary without a later authorized contract.
 
 The Palimpsest worktree contains unrelated local modifications and untracked
 files. The preceding read-only Palimpsest audit did not edit, stage, commit,

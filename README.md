@@ -5,7 +5,8 @@ PALIMPSEST 20px visual contract. It compiles a typed catalogue into one canonica
 `Palimpsest20` pack: one indexed atlas, one palette, concrete string-resolvable
 definitions, overview indexes, compatibility metadata, and pinned hashes.
 
-Status: **E4.5 technically complete — awaiting Palimpsest adoption review.**
+Status: **E5 integration active in Palimpsest.** The authorized vocabulary
+baseline includes the accepted Home and first-conflict visuals.
 
 Godot 4.7.1 .NET is presentation and verification only. It reads the exported
 pack; it does not contain compiler rules, motif definitions, variant selection,
