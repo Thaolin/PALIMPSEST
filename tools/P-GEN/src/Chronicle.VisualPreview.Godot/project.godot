@@ -1,0 +1,23 @@
+; Chronicle Visual Engine E4 read-only preview
+config_version=5
+
+[application]
+
+config/name="Chronicle Visual Preview"
+run/main_scene="res://Preview.tscn"
+
+[display]
+
+window/size/viewport_width=640
+window/size/viewport_height=520
+window/stretch/mode="canvas_items"
+
+[dotnet]
+
+project/assembly_name="Chronicle.VisualPreview.Godot"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>chronicle-visuals</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Chronicle.VisualCompiler/Chronicle.VisualCompiler.csproj" />
+    <ProjectReference Include="../Chronicle.VisualPack/Chronicle.VisualPack.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "packId": "chronicle.e1",
+  "visualStyleVersion": 1,
+  "palettes": [
+    {
+      "id": "surface",
+      "entries": ["00000000", "e8c45cff"],
+      "roles": {
+        "surface.ink": 1
+      }
+    }
+  ],
+  "families": [
+    {
+      "id": "glyph.test",
+      "seed": 7,
+      "variantCount": 2,
+      "targets": [
+        {
+          "nativeSize": 16,
+          "rows": ["0000", "0110", "0110", "0000"],
+          "anchor": [2, 3],
+          "layer": "overlay",
+          "paletteRoles": ["surface.ink"]
+        },
+        {
+          "nativeSize": 20,
+          "rows": ["00000", "00100", "01110", "00100", "00000"],
+          "anchor": [2, 4],
+          "layer": "overlay",
+          "paletteRoles": ["surface.ink"]
+        }
+      ]
+    },
+    {
+      "id": "glyph.control",
+      "seed": 11,
+      "variantCount": 1,
+      "targets": [
+        {
+          "nativeSize": 16,
+          "rows": ["010", "111", "010"],
+          "anchor": [1, 2],
+          "layer": "overlay",
+          "paletteRoles": ["surface.ink"]
+        },
+        {
+          "nativeSize": 20,
+          "rows": ["00100", "01110", "11111", "01110", "00100"],
+          "anchor": [2, 4],
+          "layer": "overlay",
+          "paletteRoles": ["surface.ink"]
+        }
+      ]
+    }
+  ]
+}

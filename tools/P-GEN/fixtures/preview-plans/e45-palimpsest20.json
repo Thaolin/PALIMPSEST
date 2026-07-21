@@ -1,0 +1,44 @@
+{
+  "id": "chronicle.e45.palimpsest20",
+  "width": 640,
+  "height": 480,
+  "background": "10131aff",
+  "paletteId": "chronicle.palimpsest20.palette",
+  "entries": [
+    {"visualId": "terrain.surface.grass", "nativeSize": 20, "x": 8, "y": 8, "scale": 3},
+    {"visualId": "terrain.surface.grass.v3", "nativeSize": 20, "x": 86, "y": 8, "scale": 3},
+    {"visualId": "terrain.surface.soil.v1", "nativeSize": 20, "x": 164, "y": 8, "scale": 3},
+    {"visualId": "terrain.sky.open.v2", "nativeSize": 20, "x": 242, "y": 8, "scale": 3},
+    {"visualId": "terrain.surface.water", "nativeSize": 20, "x": 320, "y": 8, "scale": 3},
+    {"visualId": "actor.incarnation", "nativeSize": 20, "x": 398, "y": 8, "scale": 3},
+    {"visualId": "subject.loose-stone", "nativeSize": 20, "x": 476, "y": 8, "scale": 3},
+    {"visualId": "landmark.bell-that-fell-up", "nativeSize": 20, "x": 554, "y": 8, "scale": 3},
+
+    {"visualId": "terrain.surface.water.edge.00", "nativeSize": 20, "x": 8, "y": 90, "scale": 3},
+    {"visualId": "terrain.surface.water.edge.01", "nativeSize": 20, "x": 86, "y": 90, "scale": 3},
+    {"visualId": "terrain.surface.water.edge.03", "nativeSize": 20, "x": 164, "y": 90, "scale": 3},
+    {"visualId": "terrain.surface.water.edge.05", "nativeSize": 20, "x": 242, "y": 90, "scale": 3},
+    {"visualId": "terrain.surface.water.edge.10", "nativeSize": 20, "x": 320, "y": 90, "scale": 3},
+    {"visualId": "terrain.surface.water.edge.15", "nativeSize": 20, "x": 398, "y": 90, "scale": 3},
+    {"visualId": "terrain.sky.cloud.mask.01", "nativeSize": 20, "x": 476, "y": 90, "scale": 3},
+    {"visualId": "terrain.sky.cloud.mask.10", "nativeSize": 20, "x": 554, "y": 90, "scale": 3},
+
+    {"visualId": "terrain.sky.cloud.mask.05", "nativeSize": 20, "x": 8, "y": 172, "scale": 3},
+    {"visualId": "terrain.sky.cloud.mask.15", "nativeSize": 20, "x": 86, "y": 172, "scale": 3},
+    {"visualId": "feature.surface.grove", "nativeSize": 20, "x": 164, "y": 172, "scale": 3},
+    {"visualId": "feature.surface.grove.mask.09.v1", "nativeSize": 20, "x": 242, "y": 172, "scale": 3},
+    {"visualId": "feature.surface.ridge", "nativeSize": 20, "x": 320, "y": 172, "scale": 3},
+    {"visualId": "feature.surface.ridge.mask.12.v1", "nativeSize": 20, "x": 398, "y": 172, "scale": 3},
+    {"visualId": "feature.surface.ridge-water-crossing", "nativeSize": 20, "x": 476, "y": 172, "scale": 3},
+    {"visualId": "feature.surface.ridge-water-crossing.mask.02.v3", "nativeSize": 20, "x": 554, "y": 172, "scale": 3},
+
+    {"visualId": "feature.surface.ridge-water-crossing.mask.15.v1", "nativeSize": 20, "x": 8, "y": 254, "scale": 3},
+    {"visualId": "emphasis.target.valid", "nativeSize": 20, "x": 86, "y": 254, "scale": 3},
+    {"visualId": "emphasis.selection", "nativeSize": 20, "x": 164, "y": 254, "scale": 3},
+    {"visualId": "glyph.codex", "nativeSize": 20, "x": 242, "y": 254, "scale": 3},
+    {"visualId": "glyph.codex.fly", "nativeSize": 20, "x": 320, "y": 254, "scale": 3},
+    {"visualId": "glyph.codex.stone", "nativeSize": 20, "x": 398, "y": 254, "scale": 3},
+    {"visualId": "glyph.loadout", "nativeSize": 20, "x": 476, "y": 254, "scale": 3},
+    {"visualId": "terrain.sky.cloud", "nativeSize": 20, "x": 554, "y": 254, "scale": 3}
+  ]
+}

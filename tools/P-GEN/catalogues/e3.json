@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "packId": "chronicle.e3",
+  "visualStyleVersion": 1,
+  "palettes": [
+    {
+      "id": "surface",
+      "entries": ["00000000", "4f8ca8ff", "e8eef2ff", "7b756dff", "c69a52ff", "497046ff", "8b7355ff", "e8c45cff", "a87845ff", "f2e3b5ff"],
+      "roles": {
+        "water.edge": 1,
+        "cloud.edge": 2,
+        "wall.edge": 3,
+        "path.edge": 4,
+        "grove.ink": 5,
+        "ridge.ink": 6,
+        "figure.ink": 7,
+        "object.ink": 8,
+        "glyph.ink": 9,
+        "emphasis.ink": 9
+      }
+    },
+    {
+      "id": "sky",
+      "entries": ["00000000", "5f91a9ff", "f4f7faff", "807a73ff", "d9a85bff", "5f895cff", "9c8062ff", "f1d16dff", "b48a66ff", "dceeffff"],
+      "roles": {
+        "water.edge": 1,
+        "cloud.edge": 2,
+        "wall.edge": 3,
+        "path.edge": 4,
+        "grove.ink": 5,
+        "ridge.ink": 6,
+        "figure.ink": 7,
+        "object.ink": 8,
+        "glyph.ink": 9,
+        "emphasis.ink": 9
+      }
+    }
+  ],
+  "families": [
+    {
+      "id": "actor.incarnation",
+      "seed": 703,
+      "variantCount": 3,
+      "targets": [
+        {"nativeSize": 16, "rows": ["0007000", "0077700", "0777770", "0077700", "0077700", "0770770"], "anchor": [3, 5], "layer": "actor", "paletteRoles": ["figure.ink"]},
+        {"nativeSize": 20, "rows": ["000070000", "000777000", "007777700", "000777000", "000777000", "000777000", "007707700"], "anchor": [4, 6], "layer": "actor", "paletteRoles": ["figure.ink"]}
+      ]
+    },
+    {
+      "id": "actor.incarnation.corpse",
+      "seed": 719,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["0000000", "0700070", "0777770", "0077700"], "anchor": [3, 3], "layer": "actor", "paletteRoles": ["figure.ink"]},
+        {"nativeSize": 20, "rows": ["000000000", "007000700", "007777700", "000777000", "000070000"], "anchor": [4, 4], "layer": "actor", "paletteRoles": ["figure.ink"]}
+      ]
+    },
+    {
+      "id": "baseline.actor.incarnation",
+      "seed": 1703,
+      "variantCount": 1,
+      "targets": [
+        {"nativeSize": 16, "rows": ["0007000", "0077700", "0007000", "0077700", "0777770"], "anchor": [3, 4], "layer": "actor", "paletteRoles": ["figure.ink"]},
+        {"nativeSize": 20, "rows": ["000070000", "000777000", "007777700", "000070000", "000777000", "007777700"], "anchor": [4, 5], "layer": "actor", "paletteRoles": ["figure.ink"]}
+      ]
+    },
+    {
+      "id": "baseline.landmark.bell-that-fell-up",
+      "seed": 1901,
+      "variantCount": 1,
+      "targets": [
+        {"nativeSize": 16, "rows": ["0007000", "0077700", "0777770", "7777777", "0077700", "0777770"], "anchor": [3, 5], "layer": "landmark", "paletteRoles": ["figure.ink"]},
+        {"nativeSize": 20, "rows": ["000070000", "000777000", "007777700", "077777770", "777777777", "000777000", "007777700"], "anchor": [4, 6], "layer": "landmark", "paletteRoles": ["figure.ink"]}
+      ]
+    },
+    {
+      "id": "baseline.subject.loose-stone",
+      "seed": 1811,
+      "variantCount": 1,
+      "targets": [
+        {"nativeSize": 16, "rows": ["00800", "08880", "88888", "08880"], "anchor": [2, 3], "layer": "feature", "paletteRoles": ["object.ink"]},
+        {"nativeSize": 20, "rows": ["0008000", "0088800", "0888880", "8888888", "0888880"], "anchor": [3, 4], "layer": "feature", "paletteRoles": ["object.ink"]}
+      ]
+    },
+    {
+      "id": "emphasis.selection",
+      "seed": 1303,
+      "variantCount": 1,
+      "targets": [
+        {"nativeSize": 16, "rows": ["9999999", "9000009", "9000009", "9000009", "9999999"], "anchor": [3, 2], "layer": "emphasis", "paletteRoles": ["emphasis.ink"]},
+        {"nativeSize": 20, "rows": ["999999999", "900000009", "900000009", "900000009", "900000009", "999999999"], "anchor": [4, 3], "layer": "emphasis", "paletteRoles": ["emphasis.ink"]}
+      ]
+    },
+    {
+      "id": "emphasis.target",
+      "seed": 1301,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["00900", "00900", "99999", "00900", "00900"], "anchor": [2, 2], "layer": "emphasis", "paletteRoles": ["emphasis.ink"]},
+        {"nativeSize": 20, "rows": ["0009000", "0009000", "0009000", "9999999", "0009000", "0009000", "0009000"], "anchor": [3, 3], "layer": "emphasis", "paletteRoles": ["emphasis.ink"]}
+      ]
+    },
+    {
+      "id": "feature.surface.grove",
+      "seed": 173,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["00500", "05550", "55555", "05550", "00500", "00500"], "anchor": [2, 5], "layer": "feature", "paletteRoles": ["grove.ink"]},
+        {"nativeSize": 20, "rows": ["0005000", "0055500", "0555550", "5555555", "0555550", "0055500", "0005000", "0005000"], "anchor": [3, 7], "layer": "feature", "paletteRoles": ["grove.ink"]}
+      ]
+    },
+    {
+      "id": "feature.surface.ridge",
+      "seed": 181,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["0006000", "0066600", "0666660", "6666666", "6666666"], "anchor": [3, 4], "layer": "feature", "paletteRoles": ["ridge.ink"]},
+        {"nativeSize": 20, "rows": ["000060000", "000666000", "006666600", "066666660", "666666666", "666666666"], "anchor": [4, 5], "layer": "feature", "paletteRoles": ["ridge.ink"]}
+      ]
+    },
+    {
+      "id": "glyph.codex",
+      "seed": 1101,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["09990", "09090", "09990"], "anchor": [2, 2], "layer": "overlay", "paletteRoles": ["glyph.ink"]},
+        {"nativeSize": 20, "rows": ["099990", "090090", "090090", "099990"], "anchor": [2, 3], "layer": "overlay", "paletteRoles": ["glyph.ink"]}
+      ]
+    },
+    {
+      "id": "glyph.loadout",
+      "seed": 1103,
+      "variantCount": 1,
+      "targets": [
+        {"nativeSize": 16, "rows": ["00900", "09990", "99099", "99999"], "anchor": [2, 3], "layer": "overlay", "paletteRoles": ["glyph.ink"]},
+        {"nativeSize": 20, "rows": ["0009000", "0099900", "0990990", "0999990", "0099900"], "anchor": [3, 4], "layer": "overlay", "paletteRoles": ["glyph.ink"]}
+      ]
+    },
+    {
+      "id": "glyph.map",
+      "seed": 1105,
+      "variantCount": 1,
+      "targets": [
+        {"nativeSize": 16, "rows": ["99099", "99999", "99099", "99999"], "anchor": [2, 3], "layer": "overlay", "paletteRoles": ["glyph.ink"]},
+        {"nativeSize": 20, "rows": ["990099", "999999", "990099", "990099", "999999"], "anchor": [2, 4], "layer": "overlay", "paletteRoles": ["glyph.ink"]}
+      ]
+    },
+    {
+      "id": "glyph.status",
+      "seed": 1107,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["00900", "09990", "99999", "09990", "00900"], "anchor": [2, 4], "layer": "overlay", "paletteRoles": ["glyph.ink"]},
+        {"nativeSize": 20, "rows": ["0009000", "0099900", "0999990", "9999999", "0999990", "0099900", "0009000"], "anchor": [3, 6], "layer": "overlay", "paletteRoles": ["glyph.ink"]}
+      ]
+    },
+    {
+      "id": "landmark.bell-that-fell-up",
+      "seed": 901,
+      "variantCount": 3,
+      "targets": [
+        {"nativeSize": 16, "rows": ["0007000", "0077700", "0777770", "0777770", "7777777", "7777777", "0777770"], "anchor": [3, 6], "layer": "landmark", "paletteRoles": ["figure.ink"]},
+        {"nativeSize": 20, "rows": ["000070000", "000777000", "007777700", "007777700", "077777770", "077777770", "777777777", "077777770"], "anchor": [4, 7], "layer": "landmark", "paletteRoles": ["figure.ink"]}
+      ]
+    },
+    {
+      "id": "object.material.glass",
+      "seed": 1007,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["00800", "08880", "08080", "08080", "08880"], "anchor": [2, 4], "layer": "structure", "paletteRoles": ["object.ink"]},
+        {"nativeSize": 20, "rows": ["0008000", "0088800", "0880880", "0800080", "0800080", "0888880"], "anchor": [3, 5], "layer": "structure", "paletteRoles": ["object.ink"]}
+      ]
+    },
+    {
+      "id": "object.material.iron",
+      "seed": 1003,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["08880", "88888", "08880", "00800", "08880"], "anchor": [2, 4], "layer": "structure", "paletteRoles": ["object.ink"]},
+        {"nativeSize": 20, "rows": ["0088800", "0888880", "8888888", "0088800", "0008000", "0088800"], "anchor": [3, 5], "layer": "structure", "paletteRoles": ["object.ink"]}
+      ]
+    },
+    {
+      "id": "object.material.wood",
+      "seed": 1001,
+      "variantCount": 2,
+      "targets": [
+        {"nativeSize": 16, "rows": ["88888", "80008", "88888", "80008", "88888"], "anchor": [2, 4], "layer": "structure", "paletteRoles": ["object.ink"]},
+        {"nativeSize": 20, "rows": ["8888888", "8000008", "8888888", "8080808", "8888888", "8000008", "8888888"], "anchor": [3, 6], "layer": "structure", "paletteRoles": ["object.ink"]}
+      ]
+    },
+    {
+      "id": "subject.loose-stone",
+      "seed": 811,
+      "variantCount": 3,
+      "targets": [
+        {"nativeSize": 16, "rows": ["08880", "88888", "88888", "88888", "88888"], "anchor": [2, 4], "layer": "feature", "paletteRoles": ["object.ink"]},
+        {"nativeSize": 20, "rows": ["0088800", "0888880", "8888888", "8888888", "8888888", "0888880"], "anchor": [3, 5], "layer": "feature", "paletteRoles": ["object.ink"]}
+      ]
+    }
+  ],
+  "connectedFamilies": [
+    {"id": "terrain.surface.water", "seed": 41337, "variantCount": 2, "nativeSizes": [16, 20], "layer": "adjacency", "paletteRole": "water.edge", "requireEdgeContinuity": true},
+    {"id": "terrain.sky.cloud", "seed": 41338, "variantCount": 2, "nativeSizes": [16, 20], "layer": "adjacency", "paletteRole": "cloud.edge", "requireEdgeContinuity": true},
+    {"id": "structure.wall.stone", "seed": 90421, "variantCount": 1, "nativeSizes": [16, 20], "layer": "structure", "paletteRole": "wall.edge", "requireEdgeContinuity": true},
+    {"id": "terrain.path.border", "seed": 41339, "variantCount": 1, "nativeSizes": [16, 20], "layer": "adjacency", "paletteRole": "path.edge", "requireEdgeContinuity": true},
+    {"id": "transition.surface-water", "seed": 41340, "variantCount": 1, "nativeSizes": [16, 20], "layer": "adjacency", "paletteRole": "water.edge", "requireEdgeContinuity": true, "masks": [0, 1, 2, 4, 8, 15], "fallbackMask": 0, "transitionOwnership": "primary-ground-plus-one-transition"}
+  ],
+  "motifs": [
+    {
+      "familyId": "motif.grove",
+      "footprint": [2, 2],
+      "anchorCell": [0, 1],
+      "occupancyTags": ["grove", "surface"],
+      "clippingBehavior": "clip",
+      "marks": [
+        {"visualId": "feature.surface.grove", "cell": [0, 1], "pixelOffset": [0, 0]},
+        {"visualId": "feature.surface.grove", "cell": [1, 0], "pixelOffset": [1, -1]},
+        {"visualId": "feature.surface.grove", "cell": [1, 1], "pixelOffset": [-1, 1]}
+      ]
+    },
+    {
+      "familyId": "motif.stone-ridge",
+      "footprint": [3, 2],
+      "anchorCell": [1, 1],
+      "occupancyTags": ["ridge", "surface"],
+      "clippingBehavior": "clip",
+      "marks": [
+        {"visualId": "feature.surface.ridge", "cell": [0, 1], "pixelOffset": [0, 0]},
+        {"visualId": "feature.surface.ridge", "cell": [1, 0], "pixelOffset": [0, -1]},
+        {"visualId": "feature.surface.ridge", "cell": [2, 1], "pixelOffset": [0, 0]}
+      ]
+    }
+  ]
+}

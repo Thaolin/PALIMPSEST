@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "packId": "chronicle.e2",
+  "visualStyleVersion": 1,
+  "palettes": [
+    {
+      "id": "surface",
+      "entries": [
+        "00000000",
+        "4f8ca8ff",
+        "e8eef2ff",
+        "7b756dff",
+        "c69a52ff",
+        "497046ff",
+        "8b7355ff"
+      ],
+      "roles": {
+        "water.edge": 1,
+        "cloud.edge": 2,
+        "wall.edge": 3,
+        "path.edge": 4,
+        "grove.ink": 5,
+        "ridge.ink": 6
+      }
+    }
+  ],
+  "families": [
+    {
+      "id": "feature.surface.grove",
+      "seed": 173,
+      "variantCount": 2,
+      "targets": [
+        {
+          "nativeSize": 16,
+          "rows": ["00500", "05550", "55555", "05550", "00500", "00500"],
+          "anchor": [2, 5],
+          "layer": "feature",
+          "paletteRoles": ["grove.ink"]
+        },
+        {
+          "nativeSize": 20,
+          "rows": ["0005000", "0055500", "0555550", "5555555", "0555550", "0055500", "0005000", "0005000"],
+          "anchor": [3, 7],
+          "layer": "feature",
+          "paletteRoles": ["grove.ink"]
+        }
+      ]
+    },
+    {
+      "id": "feature.surface.ridge",
+      "seed": 181,
+      "variantCount": 2,
+      "targets": [
+        {
+          "nativeSize": 16,
+          "rows": ["0006000", "0066600", "0666660", "6666666", "6666666"],
+          "anchor": [3, 4],
+          "layer": "feature",
+          "paletteRoles": ["ridge.ink"]
+        },
+        {
+          "nativeSize": 20,
+          "rows": ["000060000", "000666000", "006666600", "066666660", "666666666", "666666666"],
+          "anchor": [4, 5],
+          "layer": "feature",
+          "paletteRoles": ["ridge.ink"]
+        }
+      ]
+    }
+  ],
+  "connectedFamilies": [
+    {
+      "id": "terrain.surface.water",
+      "seed": 41337,
+      "variantCount": 2,
+      "nativeSizes": [16, 20],
+      "layer": "adjacency",
+      "paletteRole": "water.edge",
+      "requireEdgeContinuity": true
+    },
+    {
+      "id": "terrain.sky.cloud",
+      "seed": 41338,
+      "variantCount": 2,
+      "nativeSizes": [16, 20],
+      "layer": "adjacency",
+      "paletteRole": "cloud.edge",
+      "requireEdgeContinuity": true
+    },
+    {
+      "id": "structure.wall.stone",
+      "seed": 90421,
+      "variantCount": 1,
+      "nativeSizes": [16, 20],
+      "layer": "structure",
+      "paletteRole": "wall.edge",
+      "requireEdgeContinuity": true
+    },
+    {
+      "id": "terrain.path.border",
+      "seed": 41339,
+      "variantCount": 1,
+      "nativeSizes": [16, 20],
+      "layer": "adjacency",
+      "paletteRole": "path.edge",
+      "requireEdgeContinuity": true
+    },
+    {
+      "id": "transition.surface-water",
+      "seed": 41340,
+      "variantCount": 1,
+      "nativeSizes": [16, 20],
+      "layer": "adjacency",
+      "paletteRole": "water.edge",
+      "requireEdgeContinuity": true,
+      "masks": [0, 1, 2, 4, 8, 15],
+      "fallbackMask": 0,
+      "transitionOwnership": "primary-ground-plus-one-transition"
+    }
+  ],
+  "motifs": [
+    {
+      "familyId": "motif.grove",
+      "footprint": [2, 2],
+      "anchorCell": [0, 1],
+      "occupancyTags": ["grove", "surface"],
+      "clippingBehavior": "clip",
+      "marks": [
+        {"visualId": "feature.surface.grove", "cell": [0, 1], "pixelOffset": [0, 0]},
+        {"visualId": "feature.surface.grove", "cell": [1, 0], "pixelOffset": [1, -1]},
+        {"visualId": "feature.surface.grove", "cell": [1, 1], "pixelOffset": [-1, 1]}
+      ]
+    },
+    {
+      "familyId": "motif.stone-ridge",
+      "footprint": [3, 2],
+      "anchorCell": [1, 1],
+      "occupancyTags": ["ridge", "surface"],
+      "clippingBehavior": "clip",
+      "marks": [
+        {"visualId": "feature.surface.ridge", "cell": [0, 1], "pixelOffset": [0, 0]},
+        {"visualId": "feature.surface.ridge", "cell": [1, 0], "pixelOffset": [0, -1]},
+        {"visualId": "feature.surface.ridge", "cell": [2, 1], "pixelOffset": [0, 0]}
+      ]
+    }
+  ]
+}

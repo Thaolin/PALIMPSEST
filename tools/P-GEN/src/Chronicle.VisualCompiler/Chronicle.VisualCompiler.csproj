@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Chronicle.VisualPack/Chronicle.VisualPack.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../fixtures/palimpsest20/accepted-reference.json"
+                      LogicalName="Chronicle.VisualCompiler.accepted-reference.json" />
+  </ItemGroup>
+</Project>
