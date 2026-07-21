@@ -18,9 +18,36 @@ Chronicle.Core
 fixed-tick Chronicle state + persistence + Word Catalogue + World Grammar
 ```
 
+## Successor rebuild boundary
+
+The RPG successor preserves the accepted Slice 0–3 substrate and replaces
+player-facing predecessor rules incrementally. This is one runtime evolving
+through strict migrations, not a new application or a second simulation path.
+
+Retained interfaces and implementations include deterministic Chronicle time,
+World Addresses and Strata, bounded versioned World Grammar, semantic area
+snapshots, persistent deltas, the developer World Atlas Inspector, the accepted
+20-pixel compiled visual pack and palette, `VisualGrammar.Compose`, and the
+Godot drawing adapters. `ChronicleSimulation` remains the external rule seam
+used by Godot and Core checks, although its internal implementation may deepen
+around successor action planning.
+
+Collectible-Noun Loadout rules, fitted `Fly[Stone]` / `Fly[Bell]`, the Bell
+Study fixture, the one-exchange Cairn conflict, and their fixture-specific UI
+remain supported predecessor behavior until one authorized successor migration
+replaces them. Do not preserve them as parallel successor interfaces or delete
+their literal migration proof prematurely.
+
+P-GEN remains an optional authoring-time visual compiler. It may eventually
+provide compiled content through a Palimpsest-owned `Chronicle.VisualPack`
+reader, but it never owns semantic World Grammar, Chronicle state, Target
+facts, or gameplay generation. The accepted manual pack remains the production
+baseline until a separate E5 gate adopts another artifact.
+
 ## Simulation shape
 
-- A continuous fixed-tick Chronicle Clock supports pause and speed controls.
+- The Chronicle Clock advances through fixed deterministic Heartbeats and
+  supports pause and speed controls.
 - The in-world calendar and day–night cycle derive deterministically from that
   same Clock. When no meaningful interruption is possible, advancing a long
   commitment may skip directly to the next relevant change instead of making

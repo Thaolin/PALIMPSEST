@@ -16,7 +16,8 @@ permitted work in the [Active Handoff Contract](HANDOFF.md).
 | See sequencing and current gates | [Roadmap](ROADMAP.md) |
 | See exactly what may be worked on now | [Active Handoff Contract](HANDOFF.md) |
 | Understand the successor Power Word grammar and its pressure-test boundary | [Modifier Grammar Course Correction](MODIFIER-GRAMMAR-DIRECTION.md) and [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md) |
-| Run or inspect the active isolated combat-grammar prototype | [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md) |
+| Understand what the RPG successor retains, redesigns, and sequences next | [RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md) |
+| Run or inspect the passed isolated combat-grammar prototype | [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md) |
 | Build, test, launch, or open the editor | [Development](DEVELOPMENT.md) |
 | Understand a current slice's exact promise | The contract linked from the Roadmap |
 | Find completed contracts, accepted UAT, or consumed prompts | [Documentation archive](archive/README.md) |
@@ -141,8 +142,8 @@ Exact supported commands and the packaged executable locations remain in the
 
 | Source | Owns |
 | --- | --- |
-| [`prototypes/Chronicle.CombatGrammar/`](../prototypes/Chronicle.CombatGrammar/) | Throwaway in-memory combat/grammar state model and terminal shell for the active pressure test; never referenced by production projects |
-| [`prototype-combat.ps1`](../prototype-combat.ps1) | One-command bundled-.NET runner for the isolated prototype |
+| [`prototypes/Chronicle.CombatGrammar/`](../prototypes/Chronicle.CombatGrammar/) | Retained throwaway in-memory evidence for the passed combat/grammar pressure test; never referenced by production projects |
+| [`prototype-combat.ps1`](../prototype-combat.ps1) | One-command bundled-.NET runner for the retained prototype evidence |
 
 ### Repository entry points
 
@@ -161,7 +162,8 @@ Exact supported commands and the packaged executable locations remain in the
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Runtime seams, ownership, persistence/generation shape, and technical constraints |
 | [`ROADMAP.md`](ROADMAP.md) | Slice sequence, acceptance headlines, and links to implementation contracts |
 | [`MODIFIER-GRAMMAR-DIRECTION.md`](MODIFIER-GRAMMAR-DIRECTION.md) | Settled successor grammar, rejected assumptions, pressure-test boundary, and open decisions; not production authorization |
-| [`COMBAT-GRAMMAR-PRESSURE-TEST.md`](COMBAT-GRAMMAR-PRESSURE-TEST.md) | Active isolated prototype question, fixed fixture, player journey, pass evidence, and forbidden production drift |
+| [`RPG-SUCCESSOR-REBUILD-DIRECTION.md`](RPG-SUCCESSOR-REBUILD-DIRECTION.md) | Retained Slice 0–3 foundation, redesigned gameplay surface, Goal 6–8 sequence, and P-GEN timing; not production authorization |
+| [`COMBAT-GRAMMAR-PRESSURE-TEST.md`](COMBAT-GRAMMAR-PRESSURE-TEST.md) | Completed isolated prototype question, fixed fixture, player journey, accepted evidence, and forbidden production drift |
 | [`GOAL-4-THREE-OPENINGS.md`](archive/contracts/GOAL-4-THREE-OPENINGS.md) | Archived Goal 4 contract and accepted 4A Study, 4B Home, and 4C conflict proof |
 | [`GOAL-4C-UAT.md`](archive/uat/GOAL-4C-UAT.md) | Archived fresh-Chronicle fight journey, player result, and deferred visual notes |
 | [`SLICE-5-A-WORD-MULTIPLIES.md`](archive/contracts/SLICE-5-A-WORD-MULTIPLIES.md) | Archived accepted contract for shared authored Expression resolution and the `Fly[Bell]` proof |
@@ -205,7 +207,8 @@ Exact supported commands and the packaged executable locations remain in the
 - [Chronicle Visual Engine — Drop-in Specification](PROCEDURAL-VISUAL-GRAMMAR-ENGINE-SPEC.md)
 - [P-GEN E4.5 Readiness Review](P-GEN-E4-5-READINESS-REVIEW.md)
 - [Modifier Grammar Course Correction](MODIFIER-GRAMMAR-DIRECTION.md)
-- [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md)
+- [RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md)
+- [Passed Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md)
 - [ADR 0003 — Verbs, linked Modifiers, and world Targets](adr/0003-use-verbs-linked-modifiers-and-world-targets.md)
 - [Documentation Archive](archive/README.md)
 

@@ -193,8 +193,9 @@ Accepted player proof: [Slice 5 UAT](archive/uat/SLICE-5-UAT.md).
 
 **Status:** Product direction settled on 2026-07-20. The isolated combat-cycle
 prototype and its Slow-heartbeat, pause, and Engagement-Plan refinement passed
-player UAT on 2026-07-21. The production successor remains unauthorized. This
-gate precedes Goal 6 and any material catalogue expansion.
+player UAT on 2026-07-21. The production successor remains unauthorized. The
+[RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md) now
+defines what is retained and sequences the next production goals.
 
 Replace collectible Nouns with contextual Targets from Chronicle state. A
 Power Word is either a Verb that defines the base magic or a Modifier linked to
@@ -206,12 +207,10 @@ and order-independent. Every equipped Word attachment has fixed authored Load
 independent of the Target. Targets expose constraints rather than one exact Word
 recipe, and invalid Targets remain inspectable before an Invocation commits.
 
-If authorized, the next gate should be a disposable or isolated player-facing
-pressure test, not a save migration or broad framework. It should use the
-smallest useful set of Verbs and Modifiers against real Target facts such as
-matter, mass, scale, resistance, or agency. At least one changing situation
-must make speed, scale, persistence, collateral, or another Modifier property
-matter; terrain collision without an evolving consequence is insufficient.
+The passed pressure test used the smallest useful set of Verbs and Modifiers
+against real Target facts and one changing threat. It proved that speed,
+persistence, physical attacks, equipment, an autonomous helper, Preparation,
+and Recovery can produce meaningful choices without reflex input or an MP bar.
 
 Ordinary fighting and exploration must remain responsive. A Modifier such as
 `Quickly` may move an Invocation from ritual time toward tactical time by
@@ -219,68 +218,110 @@ transferring cost into Load, material power, instability, notice, or collateral.
 Long Chronicle-time commitments are reserved for genuinely large, durable, or
 world-scale results rather than charged once per Link.
 
-The eventual Combat model is broader than Invocation: positioning, physical
+The successor Combat model is broader than Invocation: positioning, physical
 actions, equipment, terrain, and autonomous Companions share the Chronicle
-Clock with prepared, delayed, recovering, or ritual actions. The grammar
-pressure test may prove interruptible Preparation without building that broad
-combat framework or the later Agent systems.
+Clock with prepared, delayed, recovering, or ritual actions. The passed
+prototype is evidence for the first production slice, not code to port or
+permission to build a broad combat framework.
 
-The first candidate combat shell is deliberately narrow: one Weapon slot, one
+The passed combat shell was deliberately narrow: one Weapon slot, one
 Armor slot, one Accessory slot, visible HP bars, tick-timed weapon attacks, and
-`Burn` as the first combat Invocation. Cooldown behavior remains a pressure-test
-decision; the leading candidate is Chronicle-tick Recovery that also advances
-outside immediate danger, with safe time skipped rather than a resettable combat
-mode.
+`Burn` as the first combat Invocation. It also proved a Slow Heartbeat,
+Engagement Plan, opening pause, pause-first tactical input, and Chronicle-time
+Recovery that survives retreat.
 
-**Accept when:** a player predicts how the same Verb changes under different
-links, deliberately omits at least one desirable Modifier, and can defend two
-different Loadouts with no obvious correct answer. The test must also produce
-one surprising material consequence from invoking an Expression against an
-actual Target. Omitting an expensive speed Modifier must create legible exposure
-to interruption rather than passive waiting, while invalid-Target preview
-explains constraints without giving the player a Word recipe. A passed player
-pressure test may support a separately approved bounded production contract; it
-does not itself authorize the successor Core plan, save migration, catalogue
-expansion, Load-Source construction, raids, or final power-resource economy.
+**Accepted evidence:** the player predicted how the same Verb changed under
+different links, deliberately omitted at least one desirable Modifier, and
+could defend different Loadouts without one obvious correct answer. The test
+also produced a persistent material consequence against an actual Target.
+Omitting the expensive speed Modifier created legible exposure to interruption
+rather than passive waiting, while invalid-Target preview explained constraints
+without giving the player a Word recipe. This evidence supports a separately
+approved bounded production contract; it does not itself authorize the
+successor Core plan, save migration, catalogue expansion, Load-Source
+construction, raids, or final power-resource economy.
 
 Direction and open decisions:
 [Modifier Grammar Course Correction](MODIFIER-GRAMMAR-DIRECTION.md).
-Active prototype contract:
+Passed prototype evidence:
 [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md).
 Decision record:
 [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md).
 
-## Goal 6 — Home Has People
+## Goal 6 — A Real RPG Loop
+
+**Status:** Direction settled; production not authorized. Retain the accepted
+Slice 0–3 Chronicle, World Grammar, map, 20-pixel palette and Visual Grammar,
+then replace predecessor gameplay incrementally through two separately gated
+vertical slices. See the
+[RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md).
+
+### 6A — A Real Fight
+
+Move the passed successor grammar and combat cycle into production with one
+dangerous authored opponent, contextual Targets, `Burn` plus two competing
+Modifier builds, shared Load, one Weapon, one Armor, one Accessory, visible HP,
+Preparation, Recovery, and the accepted paused/Slow Engagement behavior.
+
+Use existing World Grammar, Chronicle state, Visual Grammar, and Godot drawing
+interfaces. Replace the predecessor gameplay through one strict migration; do
+not create a parallel simulation or port prototype types. Defer Companions until
+an Agent can own that identity and agency.
+
+**Accept when:** the player deliberately prepares for, reads, and survives one
+dangerous generated-world encounter using both physical and language actions;
+can defend at least two Loadouts; sees one material consequence persist through
+save, death, and restart; and reports that the production interaction retains
+the pressure test's deliberate real-time-with-pause feel.
+
+### 6B — Power Comes Home
+
+Add one generated expedition resource, physical return to Home, and one
+buildable vulnerable Load Source. Its capacity applies at the next Attunement
+and enables one previously impossible Loadout. Destruction removes future
+Attunement capacity without disabling the current expedition; rebuilding
+restores it.
+
+**Accept when:** the player completes the full expedition-to-Home power loop,
+uses the resulting Load to confront a new possibility, and understands the
+consequence of losing and rebuilding the Source without encountering a generic
+crafting or base-management mode.
+
+Goal 6 deliberately does not add a broad bestiary, inventory, loot economy,
+crafting framework, production chain, anonymous workers, or raid simulation.
+Each child slice requires its own contract, automated proof, and player UAT.
+
+## Goal 7 — Home Has People
 
 **Status:** Not authorized. Goal 4 proved the Home–expedition rhythm and Slice 5
-proved shared authored predecessor composition. The Modifier Grammar pressure
-test now precedes this goal; no Goal 6 child slice may begin without both that
-decision gate and a separately approved bounded contract.
+proved shared authored predecessor composition. Goal 6 must first establish the
+successor RPG and material power loop; no Goal 7 child slice may begin without
+Goal 6 acceptance and a separately approved bounded contract.
 
-### 6A — Someone Comes Home
+### 7A — Someone Comes Home
 
 Add the first named Agent who forms a continuing relationship with Home. Give
 them identity, needs, relationships, and a material connection to one generated
 faction or piece of prior world history. They may reside, visit, or travel with
 an Incarnation but are never represented as a production slot.
 
-### 6B — A Directive, Not Unit Control
+### 7B — A Directive, Not Unit Control
 
 Add the smallest social-language proof using Suggest and Command. One dangerous
 Directive requires Command to be admissible, but the Agent still interprets,
 delays, negotiates, or refuses according to its state.
 
-### 6C — Absence Produces History
+### 7C — Absence Produces History
 
 Add one causally legible Pressure. Leave Home, allow one off-camera event to
 resolve, then return to a material change and a Chronicle Record that identifies
 its cause, participants, and outcome.
 
-**Goal 6 accepts when:** the player understands who acted, why they acted, what
+**Goal 7 accepts when:** the player understands who acted, why they acted, what
 changed while the camera was elsewhere, and why Command never became perfect
 unit control.
 
-## Slice 7 — The First Raid
+## Slice 8 — The First Raid
 
 Let the accepted Pressure escalate into one Raid with observable causes,
 choices, defenders, and durable damage. Do not add generic base management,
@@ -296,8 +337,8 @@ The numbered slices prove foundations; they are not the ceiling of the game.
 Later work should advance through player-visible arcs rather than attempt all
 remaining genre systems at once.
 
-The Modifier Grammar pressure test now owns three evidence questions formerly
-left in the long horizon:
+The passed Modifier Grammar pressure test answered three evidence questions
+formerly left in the long horizon:
 
 - one generated World fact that poses a Word-relevant situation;
 - enough desirable language to make the bounded Loadout exclude something;

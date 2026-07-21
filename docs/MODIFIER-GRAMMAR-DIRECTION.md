@@ -2,13 +2,13 @@
 
 **Decided:** 2026-07-20
 **Refined:** 2026-07-21
-**Status:** accepted product direction; production successor not implemented or
-authorized
+**Status:** accepted product direction and passed pressure test; production
+successor not implemented or authorized
 
 This document replaces the original modifier-grammar proposal after further
 design pressure testing. It records the smallest settled direction, the current
-predecessor boundary, and the questions a player-facing pressure test must
-answer before production work.
+predecessor boundary, and the evidence the player-facing pressure test supplied
+before production work.
 
 Canonical authority remains [AGENTS.md](../AGENTS.md), the
 [glossary](../CONTEXT.md), [Vision](VISION.md),
@@ -171,28 +171,25 @@ beasts, a leader coordinating several Agents, and a solo ritualist creating
 time through terrain, traps, or delayed effects. Exact action lists, combat
 conditions, and balance remain unsettled.
 
-### First candidate combat shell
+### Passed combat shell
 
-The first combat-shaped pressure test should begin with exactly one Weapon
+The combat-shaped pressure test used exactly one Weapon
 slot, one Armor slot, and one Accessory slot; visible HP bars; weapon attacks
 whose authored timing resolves on Chronicle ticks; and `Burn` as the first
-combat Invocation. This is enough to compare physical tempo with language
+combat Invocation. This was enough to compare physical tempo with language
 without first building inventory breadth, a bestiary, or a general combat
-framework.
+framework, and the player accepted the result.
 
-Exact weapon commands, damage and mitigation arithmetic, healing, Accessory
-effects, HP persistence, and `Burn` semantics remain pressure-test decisions.
+Exact production weapon commands, damage and mitigation arithmetic, healing,
+Accessory effects, HP persistence, and `Burn` semantics remain slice decisions.
 The accepted v5 Cairn conflict implements none of this; it remains the preserved
 one-exchange predecessor proof.
 
-An Invocation cooldown is best expressed through the existing Recovery concept,
-but tying Recovery only to a combat flag is not settled. A mode-gated clock
-creates an immediate boundary exploit: leaving and re-entering danger could
-freeze, clear, or restart the cooldown. The simplest candidate is for Recovery
-to advance on Chronicle ticks everywhere; when the actor is safe, meaningful
-time skipping removes the wait, while retreat never erases elapsed state. A
-derived danger indicator may still control UI emphasis and automatic pausing
-without becoming a separate combat rules mode.
+The prototype supported the existing Recovery concept without tying it to a
+combat flag. Recovery advanced on Heartbeats, survived retreat and
+re-engagement, and could be skipped safely outside danger. A derived danger
+indicator controlled automatic pausing without becoming a separate combat
+rules mode. Production semantics still require a bounded slice contract.
 
 A stored material power resource and Home infrastructure are promising ways to
 support extreme chains without adding a generic mana bar. Neither the resource
@@ -212,10 +209,10 @@ supports the same semantics. Triggered, chained, reflected, or recursive
 Modifiers are deferred until simple geometry, scale, persistence, and time have
 proved fun; the system may not become freeform player programming.
 
-## Required pressure test
+## Passed pressure test
 
-The next gate should be disposable or isolated from production saves. Use the
-smallest set that can establish the player decision:
+The isolated gate used the smallest set needed to establish the player
+decision:
 
 - a few Verbs and Modifiers rather than a paper catalogue;
 - contextual Targets with at least one material or scale constraint;
@@ -230,7 +227,7 @@ smallest set that can establish the player decision:
 - no save migration, broad resource economy, Agents framework, or Palimpsest
   implementation.
 
-Pass only when the player:
+The player passed after they:
 
 1. predicts how one Verb changes under different links;
 2. deliberately omits an available desirable Modifier;
@@ -238,9 +235,12 @@ Pass only when the player:
 4. produces one surprising systemic consequence against an actual Target; and
 5. wants to retry with a different chain.
 
-An engineering check that a second Modifier can be added cleanly is necessary
-but insufficient. The gate exists to prove the grammar fun before the project
-pays for a successor save model.
+The player reported that the system felt like a proper RPG combat cycle and,
+after the Slow-heartbeat refinement, compared its feel to *Baldur's Gate*.
+The gate therefore proved the grammar and combat cadence worth carrying into a
+separately authorized successor slice. See the
+[accepted pressure-test evidence](COMBAT-GRAMMAR-PRESSURE-TEST.md) and
+[RPG successor sequencing](RPG-SUCCESSOR-REBUILD-DIRECTION.md).
 
 ## Long horizon, not current promises
 
@@ -256,5 +256,6 @@ size, and Palimpsest affordances remain deliberately unsettled.
 ## P-GEN sequencing
 
 P-GEN reader plumbing remains technically separable, but E5 vocabulary freeze
-and conformance must wait until the successor power-word vocabulary settles.
-Neither P-GEN integration nor E5 is authorized by this course correction.
+and conformance must wait until Goal 6A and 6B settle the successor opponent,
+equipment, resource, structure, Target, and Modifier vocabulary. Neither P-GEN
+integration nor E5 is authorized by this course correction.

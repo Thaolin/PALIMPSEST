@@ -10,7 +10,7 @@ authorized future slice contract.
 
 ## Current gate
 
-**Combat grammar pressure test passed — successor slice not authorized**
+**RPG successor direction settled — Goal 6A not authorized**
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -53,7 +53,14 @@ authorized future slice contract.
   feels great too. Like Baldur's Gate!” The pressure test is closed. Heartbeats,
   the Engagement Plan, opening pause, and pause-first tactical input are now
   settled successor direction, not authorization to port fixture rules.
-- Goal 6 and Slice 7 remain later gates.
+- The player then chose to retain the accepted Slice 0–3 map generation,
+  graphics, palette, Clock, and runtime seams, and redesign the RPG gameplay
+  from that foundation rather than restart the project or preserve predecessor
+  gameplay by inertia.
+- The [RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md)
+  sequences Goal 6 as `A Real Fight` followed by `Power Comes Home`; neither
+  child slice is authorized. `Home Has People` is now Goal 7 and the first Raid
+  is Slice 8.
 
 ## Settled successor direction
 
@@ -97,6 +104,28 @@ authorized future slice contract.
 - Awakening a Power Word is a candidate Palimpsest offer, not a settled
   affordance or required ending.
 
+## Retained foundation and redesign surface
+
+Retain the accepted foundation through Slice 3:
+
+- the engine-independent C# Chronicle and thin Godot adapter;
+- deterministic Heartbeats, pause and speed, seed, World Address, Strata,
+  bounded versioned World Grammar, generated Landmarks, and persistent deltas;
+- the developer World Atlas Inspector and shared semantic snapshot path; and
+- the accepted 20-pixel map scale, restrained palette, compiled-pack seam,
+  deterministic Visual Grammar, and Godot rendering adapters.
+
+Redesign predecessor gameplay on top of that foundation through one migration,
+not a parallel runtime. Collectible Nouns, fitted `Fly[Stone]` / `Fly[Bell]`,
+the tiny Bell Study fixture, the one-exchange Cairn fight, current onboarding,
+and fixture-specific UI are evidence rather than successor constraints. Home's
+identity and role remain settled, but its production mechanics may be replaced.
+
+The accepted manual visual pack remains the production baseline. P-GEN remains
+an optional authoring-time compiler. Reader plumbing requires its own gate;
+vocabulary freeze and adoption wait until Goal 6A and 6B settle the new visual
+subjects.
+
 ## Open decisions before production
 
 - the smallest Verbs, Modifiers, Targets, and changing situation that can prove
@@ -120,6 +149,12 @@ authorized future slice contract.
   taming or leadership without requiring a broad Agent framework first;
 - strict migration of the accepted v5 Codex and `Fly[Stone]`/`Fly[Bell]`
   Loadouts if the successor reaches production.
+
+Goal 6A's contract must narrow these decisions to one dangerous opponent, two
+competing `Burn` builds, one Weapon, Armor, and Accessory, the accepted
+Heartbeat interaction, one persistent material result, and the smallest strict
+successor migration. Goal 6B separately owns one resource and one Load Source;
+it may not be pulled into 6A as infrastructure work.
 
 ## Accepted Goal 4 result
 
@@ -168,9 +203,9 @@ reported.
 
 No production feature or polish work is authorized. The bounded
 [Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md) is complete and
-retained only as evidence. Current scope is documentation reconciliation and
-definition of a separately authorized successor vertical slice. The prototype
-must remain outside production projects, saves, Godot, and the retained gate.
+retained only as evidence. Current scope is documentation reconciliation and,
+if separately requested, drafting the Goal 6A contract. The prototype must
+remain outside production projects, saves, Godot, and the retained gate.
 
 ## Retained accepted baseline
 
@@ -201,12 +236,12 @@ must remain outside production projects, saves, Godot, and the retained gate.
 
 ## Do not drift into
 
-- Goal 6 Agents, residents, relationships, Directives, Pressure, or off-camera
-  history before a Goal 6 child-slice contract is approved;
-- Slice 7 raid work before Goal 6 provides its accepted Pressure;
+- Goal 7 Agents, residents, relationships, Directives, Pressure, or off-camera
+  history before Goal 6 passes and a Goal 7 child-slice contract is approved;
+- Slice 8 raid work before Goal 7 provides its accepted Pressure;
 - successor grammar production code, save v6, old-save migration, a broad
-  EffectPlan framework, or a large Verb/Modifier catalogue before the pressure
-  test passes and a production contract is separately approved;
+  EffectPlan framework, or a large Verb/Modifier catalogue before a Goal 6A
+  production contract is separately approved;
 - a universal tick surcharge per Link, a generic mana bar, or Home progression
   that makes ordinary combat and exploration wait for settlement development;
 - settled Palimpsest Awakening rules or a power-resource economy by inference;
@@ -215,13 +250,14 @@ must remain outside production projects, saves, Godot, and the retained gate.
 - health, damage, initiative, combat statistics, bestiary, loot, inventory, or
   a generic production combat framework by extending the accepted 4C fixture;
 - moving prototype HP, equipment, tick attacks, `Burn`, Companion, Target, or
-  Recovery rules into production, the solution, saves, Godot, or the retained
-  gate before player pressure-test acceptance and a separate contract;
+  Recovery types directly into production, the solution, saves, Godot, or the
+  retained gate; Goal 6A must implement its own bounded Core rules through the
+  accepted simulation seam;
 - weakening strict saves, changing old grammar pins, or hiding Core decisions
   in Godot.
 
 ## Stop and hand off
 
-Stop. The player accepted the pressure test. Do not begin a production
-successor, Goal 6, P-GEN E5, a save migration, or resource-system implementation
-without a separately authorized contract.
+Stop. The direction and sequence are settled. Do not begin Goal 6A production,
+P-GEN E5, a save migration, or resource-system implementation without a
+separately authorized contract. Passing 6A will not authorize 6B.

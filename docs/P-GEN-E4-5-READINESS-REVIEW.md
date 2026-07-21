@@ -133,8 +133,10 @@ Before adoption, retain the current deterministic proof and add:
 E5 may begin only after an explicit Palimpsest authorization at a reconciled
 UAT boundary. Goal 4C and Slice 5 are now accepted, but ADR 0003 replaces their
 collectible-Noun composition as the direction for future language growth. E5
-vocabulary freeze and conformance therefore remain downstream of the Modifier
-Grammar pressure test and any separately authorized production catalogue.
+vocabulary freeze and conformance therefore remain downstream of Goal 6A and
+6B, which will settle the first production successor catalogue and the new
+opponent, equipment, resource, structure, Target, and Modifier presentation
+vocabulary.
 
 The E5 gate must:
 
@@ -152,5 +154,6 @@ The E5 gate must:
 No E5 implementation is authorized. A Palimpsest-owned reader remains
 technically separable from gameplay vocabulary, but even that plumbing requires
 a separate gate. Required-vocabulary freeze, conformance, and visual adoption
-must wait until the successor Power Word shape settles. P-GEN remains optional
-evidence and does not block the Modifier Grammar pressure test.
+must wait until Goal 6A and 6B settle the successor opponent, equipment,
+resource, structure, Target, and Modifier presentation vocabulary. P-GEN
+remains optional evidence and does not block the RPG successor.
