@@ -17,13 +17,13 @@ public sealed class ChronicleSimulation
     /// simulation-local presentation history and never enter Chronicle saves.
     /// </summary>
     public CombatContextSnapshot CombatContext =>
-        Goal6AActionPlanning.Snapshot(State, _recentCombatResults);
+        CombatRules.Snapshot(State, _recentCombatResults, HoldingCommitments.Instance);
 
     public TargetPreviewSnapshot PreviewTarget(WorldAddress target) =>
-        Goal6AActionPlanning.PreviewTarget(State, target);
+        CombatRules.PreviewTarget(State, target);
 
     public PowerComesHomeContextSnapshot PowerComesHomeContext =>
-        Goal6BPowerComesHome.Snapshot(State);
+        HoldingRules.Snapshot(State);
 
     public StudySourceSnapshot? CurrentStudySource =>
         StudySourceGrammar.At(State, State.Address);
@@ -116,17 +116,17 @@ public sealed class ChronicleSimulation
 
         if (command is LiftResonantLode)
         {
-            return ChangeLodeCarry(Goal6BPowerComesHome.TryLift);
+            return ChangeLodeCarry(HoldingRules.TryLift);
         }
 
         if (command is SetDownResonantLode)
         {
-            return ChangeLodeCarry(Goal6BPowerComesHome.TryDrop);
+            return ChangeLodeCarry(HoldingRules.TryDrop);
         }
 
         if (command is CancelPowerCommitment)
         {
-            return ChangeLodeCarry(Goal6BPowerComesHome.TryCancel);
+            return ChangeLodeCarry(HoldingRules.TryCancel);
         }
 
         if (command is ConfigureEngagementPlan configurePlan)
@@ -155,8 +155,8 @@ public sealed class ChronicleSimulation
         }
 
         if (command is SetChronicleSpeed requestedSpeed &&
-            Goal6AActionPlanning.IsAvailable(State) &&
-            Goal6AActionPlanning.IsImmediateDanger(State) &&
+            CombatRules.IsAvailable(State) &&
+            CombatRules.IsImmediateDanger(State) &&
             requestedSpeed.Speed is ChronicleSpeed.Normal or ChronicleSpeed.Fast)
         {
             return ChronicleCommandResult.Rejected(
@@ -202,7 +202,7 @@ public sealed class ChronicleSimulation
             MoveIncarnation move when !IsCardinal(move.DeltaX, move.DeltaY) => throw new ArgumentException(
                 "Incarnation movement must be exactly one cardinal step.",
                 nameof(command)),
-            MoveIncarnation move when Goal6AActionPlanning.IsAvailable(State) => MoveGoal6A(move),
+            MoveIncarnation move when CombatRules.IsAvailable(State) => MoveUnderCombatRules(move),
             MoveIncarnation move => Move(move),
             _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown Chronicle command."),
         };
@@ -214,13 +214,13 @@ public sealed class ChronicleSimulation
 
     public void AdvanceOneTick()
     {
-        if (!Goal6AActionPlanning.IsAvailable(State))
+        if (!CombatRules.IsAvailable(State))
         {
             State = State.AdvanceTick();
             return;
         }
 
-        var result = Goal6AActionPlanning.Advance(State);
+        var result = CombatRules.Advance(State, HoldingCommitments.Instance);
         State = result.State;
         AddCombatResults(result.Results);
     }
@@ -235,7 +235,7 @@ public sealed class ChronicleSimulation
 
     public IReadOnlyList<WorldAddress> ValidTargetsForSlot(int slotIndex)
     {
-        if (Goal6AActionPlanning.IsAvailable(State))
+        if (CombatRules.IsAvailable(State))
         {
             if (!State.HasLivingIncarnation || !IsSlotIndex(slotIndex) ||
                 State.ActiveLoadout[slotIndex].Verb != WordIds.Burn)
@@ -266,8 +266,8 @@ public sealed class ChronicleSimulation
 
     private ChronicleState SetSpeed(ChronicleSpeed speed)
     {
-        if (Goal6AActionPlanning.IsAvailable(State) &&
-            Goal6AActionPlanning.IsImmediateDanger(State) &&
+        if (CombatRules.IsAvailable(State) &&
+            CombatRules.IsImmediateDanger(State) &&
             speed is ChronicleSpeed.Normal or ChronicleSpeed.Fast)
         {
             return State;
@@ -278,32 +278,32 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult Attune(AttuneExpression command)
     {
-        if (!Goal6AActionPlanning.IsAvailable(State))
+        if (!CombatRules.IsAvailable(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Successor Expressions require a World Grammar v4 Chronicle.");
         }
 
-        if (Goal6AActionPlanning.IsImmediateDanger(State))
+        if (CombatRules.IsImmediateDanger(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Attunement is available only while immediate danger is absent.");
         }
 
-        if (Goal6BPowerComesHome.IsCarrying(State))
+        if (HoldingFacts.IsCarrying(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Set down the Resonant Lode before Attunement; carrying occupies focused Attunement.");
         }
 
-        if (Goal6BPowerComesHome.HasCommitment(State))
+        if (HoldingFacts.HasCommitment(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Finish or cancel the physical commitment before Attunement.");
         }
 
         var modifiers = command.Modifiers ?? [];
-        if (!Goal6AActionPlanning.TryValidateExpression(
+        if (!CombatRules.TryValidateExpression(
                 State,
                 command.Verb,
                 modifiers,
@@ -317,7 +317,7 @@ public sealed class ChronicleSimulation
         {
             Loadout = LoadoutState.Empty.WithSlot(0, slot),
             Attunement = new LoadAttunementState(
-                Goal6BPowerComesHome.NextAttunementCapacity(State),
+                HoldingFacts.NextAttunementCapacity(State),
                 State.Tick),
         };
         AddCombatResult(new CombatResultSnapshot(State.Tick, CombatResultKind.Command, message));
@@ -326,13 +326,13 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult ConfigurePlan(ConfigureEngagementPlan command)
     {
-        if (!Goal6AActionPlanning.IsAvailable(State))
+        if (!CombatRules.IsAvailable(State))
         {
             return ChronicleCommandResult.Rejected(
                 "An Engagement Plan requires a World Grammar v4 Chronicle.");
         }
 
-        if (Goal6AActionPlanning.IsImmediateDanger(State))
+        if (CombatRules.IsImmediateDanger(State))
         {
             return ChronicleCommandResult.Rejected(
                 "The Engagement Plan can change only while safe.");
@@ -360,25 +360,25 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult SetWeaponStance(SetWeaponStance command)
     {
-        if (!Goal6AActionPlanning.IsAvailable(State))
+        if (!CombatRules.IsAvailable(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Iron Cleaver stance requires a World Grammar v4 Chronicle.");
         }
 
-        if (Goal6BPowerComesHome.IsCarrying(State))
+        if (HoldingFacts.IsCarrying(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Set down the Resonant Lode before using the Iron Cleaver; carrying occupies both hands.");
         }
 
-        if (Goal6BPowerComesHome.HasCommitment(State))
+        if (HoldingFacts.HasCommitment(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Finish or cancel the physical commitment before using the Iron Cleaver.");
         }
 
-        if (!Goal6AActionPlanning.IsImmediateDanger(State))
+        if (!CombatRules.IsImmediateDanger(State))
         {
             var combat = State.Combat!;
             if (combat.WeaponStanceActive == command.Active)
@@ -401,7 +401,7 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult PrepareBurnInvocation(PrepareBurn command)
     {
-        if (!Goal6AActionPlanning.IsAvailable(State))
+        if (!CombatRules.IsAvailable(State))
         {
             return ChronicleCommandResult.Rejected("Burn requires a World Grammar v4 Chronicle.");
         }
@@ -419,14 +419,14 @@ public sealed class ChronicleSimulation
                 Target: command.Target));
         }
 
-        if (State.Speed != ChronicleSpeed.Paused && Goal6AActionPlanning.IsImmediateDanger(State))
+        if (State.Speed != ChronicleSpeed.Paused && CombatRules.IsImmediateDanger(State))
         {
             return QueueTacticalAction(new TacticalActionState(
                 TacticalActionKind.PrepareBurn,
                 Target: command.Target));
         }
 
-        if (!Goal6AActionPlanning.TryStartPreparation(State, command.Target, out var prepared, out var message))
+        if (!CombatRules.TryStartPreparation(State, command.Target, out var prepared, out var message))
         {
             return ChronicleCommandResult.Rejected(message);
         }
@@ -438,9 +438,9 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult CancelTacticalAction()
     {
-        if (!Goal6AActionPlanning.IsAvailable(State))
+        if (!CombatRules.IsAvailable(State))
         {
-            return ChronicleCommandResult.Rejected("There is no Goal 6A tactical action to cancel.");
+            return ChronicleCommandResult.Rejected("There is no tactical action to cancel.");
         }
 
         if (State.Speed != ChronicleSpeed.Paused)
@@ -465,13 +465,13 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult SkipInvocationRecovery()
     {
-        if (!Goal6AActionPlanning.CanSkipRecovery(State))
+        if (!CombatRules.CanSkipRecovery(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Recovery can skip only while no meaningful interruption is possible.");
         }
 
-        State = Goal6AActionPlanning.SkipRecovery(State);
+        State = CombatRules.SkipRecovery(State);
         const string message = "Burn Recovery skipped safely to completion.";
         AddCombatResult(new CombatResultSnapshot(State.Tick, CombatResultKind.RecoverySkipped, message));
         return ChronicleCommandResult.Succeeded(message);
@@ -506,14 +506,14 @@ public sealed class ChronicleSimulation
         return ChronicleCommandResult.Succeeded(message);
     }
 
-    private ChronicleState MoveGoal6A(MoveIncarnation move)
+    private ChronicleState MoveUnderCombatRules(MoveIncarnation move)
     {
         if (State.Intent == OpeningIntent.Unchosen)
         {
             return State;
         }
 
-        if (Goal6BPowerComesHome.HasCommitment(State))
+        if (HoldingFacts.HasCommitment(State))
         {
             AddCombatResult(new CombatResultSnapshot(
                 State.Tick,
@@ -526,25 +526,25 @@ public sealed class ChronicleSimulation
             State.Address.Stratum,
             checked(State.Address.X + move.DeltaX),
             checked(State.Address.Y + move.DeltaY));
-        if (Goal6AActionPlanning.IsOccupiedByLivingMireBrute(State, destination) ||
-            Goal6BPowerComesHome.BlocksMovement(State, destination))
+        if (CombatRules.IsOccupiedByLivingMireBrute(State, destination) ||
+            HoldingFacts.BlocksMovement(State, destination))
         {
             AddCombatResult(new CombatResultSnapshot(
                 State.Tick,
                 CombatResultKind.Command,
-                Goal6AActionPlanning.IsOccupiedByLivingMireBrute(State, destination)
+                CombatRules.IsOccupiedByLivingMireBrute(State, destination)
                     ? "The living Mire Brute occupies that cell."
-                    : "A physical Goal 6B subject occupies that cell.",
+                    : "A physical subject occupies that cell.",
                 Address: destination));
             return State;
         }
 
-        var immediateDanger = Goal6AActionPlanning.IsImmediateDanger(State);
+        var immediateDanger = CombatRules.IsImmediateDanger(State);
         // Slow is tactical only within, or while crossing into, the authored
         // threat boundary. A distant living opponent must not turn ordinary
         // exploration after physical work into a repeated auto-pause queue.
         var entersImmediateDanger = !immediateDanger &&
-                                    Goal6AActionPlanning.IsImmediateDanger(State with { Address = destination });
+                                    CombatRules.IsImmediateDanger(State with { Address = destination });
         if (immediateDanger ||
             (State.Speed == ChronicleSpeed.Slow && entersImmediateDanger))
         {
@@ -556,14 +556,14 @@ public sealed class ChronicleSimulation
         }
 
         State = State.TravelTo(destination);
-        State = Goal6AActionPlanning.ApplyEngagement(State, _recentCombatResults);
+        State = CombatRules.ApplyEngagement(State, _recentCombatResults);
         AddCombatResult(new CombatResultSnapshot(State.Tick, CombatResultKind.Movement, "The Incarnation moves.", Address: State.Address));
         return State;
     }
 
     private ChronicleCommandResult BeginPowerWork(PowerCommitmentKind kind)
     {
-        if (!Goal6BPowerComesHome.TryBeginCommitment(State, kind, out var updated, out var message))
+        if (!HoldingRules.TryBeginCommitment(State, kind, out var updated, out var message))
         {
             return ChronicleCommandResult.Rejected(message);
         }
@@ -589,13 +589,13 @@ public sealed class ChronicleSimulation
             State.Tick,
             CombatResultKind.PowerHome,
             message,
-            Address: Goal6BPowerComesHome.LodeWorldAddress(State) ?? State.Address));
+            Address: HoldingRules.LodeWorldAddress(State) ?? State.Address));
         return ChronicleCommandResult.Succeeded(message);
     }
 
     private ChronicleCommandResult ReadBurnPrimerAtHome()
     {
-        if (!Goal6BPowerComesHome.TryReadBurnPrimer(State, out var updated, out var message))
+        if (!HoldingRules.TryReadBurnPrimer(State, out var updated, out var message))
         {
             return ChronicleCommandResult.Rejected(message);
         }
@@ -605,7 +605,7 @@ public sealed class ChronicleSimulation
             State.Tick,
             CombatResultKind.PowerHome,
             message,
-            Address: Goal6BPowerComesHome.BurnPrimerAddress));
+            Address: HoldingRules.BurnPrimerAddress));
         return ChronicleCommandResult.Succeeded(message);
     }
 
@@ -662,7 +662,7 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult ConfigureSlot(ConfigureLoadoutSlot command)
     {
-        if (Goal6AActionPlanning.IsAvailable(State))
+        if (CombatRules.IsAvailable(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Use AttuneExpression for the successor Verb-and-Modifier Loadout.");
@@ -724,7 +724,7 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult ClearSlot(ClearLoadoutSlot command)
     {
-        if (Goal6AActionPlanning.IsAvailable(State))
+        if (CombatRules.IsAvailable(State))
         {
             return ChronicleCommandResult.Rejected(
                 "Use AttuneExpression for the successor Verb-and-Modifier Loadout.");
@@ -760,7 +760,7 @@ public sealed class ChronicleSimulation
             return ChronicleCommandResult.Rejected($"Loadout slot {command.SlotIndex + 1} is empty.");
         }
 
-        if (Goal6AActionPlanning.IsAvailable(State))
+        if (CombatRules.IsAvailable(State))
         {
             return slot.Verb == WordIds.Burn && command.Target is { } target
                 ? PrepareBurnInvocation(new PrepareBurn(target))

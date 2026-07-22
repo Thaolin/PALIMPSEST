@@ -122,7 +122,7 @@ not.
 | Decision | What happens next and when | What interrupts it | What it prevents | Required visible result |
 | --- | --- | --- | --- | --- |
 | Extract | Two active Heartbeats unseat the Lode; while paused it remains `0/2` | explicit Cancel, hostile damage, or Incarnation death | movement, Weapon actions, Invocation, Attunement, and another commitment | Seam and Lode pulse together; progress and affected cell remain named |
-| Lift | Immediate while adjacent and unoccupied | invalid carrier or Lode state rejects without mutation | carrying a second object; while carried, Weapon stance, Burn Preparation, Fly, and Attunement are unavailable | loose Lode disappears from its cell and appears on the Incarnation carrier overlay in the same frame |
+| Lift | Immediate while on the Lode's cell or cardinally adjacent and unoccupied | invalid carrier or Lode state rejects without mutation | carrying a second object; while carried, Weapon stance, Burn Preparation, Fly, and Attunement are unavailable | loose Lode disappears from its cell and appears on the Incarnation carrier overlay in the same frame |
 | Carry/move | The existing pending movement resolves on the next active Heartbeat with the Lode attached | normal movement rejection or Incarnation death; death drops the Lode | Weapon stance, Burn Preparation, Fly, and Attunement until Set Down | forecast names carrier movement; map moves actor and Lode together |
 | Set Down | Immediate onto the Incarnation's current valid cell | occupied or invalid destination rejects without mutation | nothing after success | carrier overlay clears and one loose Lode appears at that cell |
 | Build | Three active Heartbeats turn the Lode into one Resonator at the highlighted Home site | Cancel, hostile damage, or death; progress remains materially present | movement, combat actions, Invocation, Attunement, and other Home actions while active | foundation progresses `0/3` to `3/3`; completion names future capacity, not an immediate Loadout change |
@@ -148,7 +148,13 @@ only.
   `place.singing-seam.41337`.
 - The embedded Lode has stable identity `resource.resonant-lode.41337` and
   immutable `OriginAddress = surface:8,3`.
-- Extraction takes `2` Heartbeats while cardinally adjacent.
+- Every bounded Goal 6B interaction accepts the subject's own cell or one
+  cardinally adjacent cell. A non-blocking book, loose Lode, foundation, or
+  destroyed Source does not become uninteractable when the Incarnation stands
+  directly over it.
+- Extraction takes `2` Heartbeats while on the Seam's cell or cardinally
+  adjacent. The embedded Seam currently blocks entry, so the accepted fixture
+  normally begins from an adjacent cell.
 - After extraction, the empty Seam remains generated and inspectable. The Lode
   becomes one durable movable subject whose state is exactly one of embedded,
   loose at an Address, carried by one Incarnation, committed to construction,
@@ -182,7 +188,8 @@ this fixture neither implements nor constrains its eventual interface.
 ### Hearth Resonator
 
 - Building requires an existing Home, the carried Lode, the exact eligible
-  adjacent site, safety, and no other pending commitment.
+  site under or beside the Incarnation, safety, and no other pending
+  commitment.
 - Initial construction takes `3` Heartbeats. Cancel or interruption preserves
   completed construction steps and the Lode at the site; resuming continues the
   same structure rather than refunding an abstract material count.
@@ -492,7 +499,7 @@ Profile: `goal6b-power-home-uat`
 
 1. Begin directly at The First Hearth with no opening-path chooser. Confirm the
    map and checklist identify the unread Burn Primer one tile north. Press `P`
-   while adjacent and confirm reading spends no Heartbeat, leaves the book
+   while on its cell or adjacent and confirm reading spends no Heartbeat, leaves the book
    visibly read, and adds `Burn`, `Quickly`, and `Lasting` to the Codex. Open
    Attunement while safe and inspect `Burn + Quickly + Lasting`. Confirm the
    interface says it needs `12`, only `8` is available, and one intact Hearth

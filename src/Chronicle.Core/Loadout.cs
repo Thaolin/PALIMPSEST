@@ -187,7 +187,7 @@ public readonly record struct LoadoutState(
                 {
                     if (!WordCatalogue.TryGet(modifierId, out var modifier) ||
                         modifier.Kind != WordKind.Modifier ||
-                        !verb.SupportedModifiers.Contains(modifierId))
+                        !WordCatalogue.AreCompatible(verb, modifier))
                     {
                         throw new InvalidOperationException(
                             $"Loadout Modifier identity '{modifierId}' is incompatible with {verb.DisplayName}.");

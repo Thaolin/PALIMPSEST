@@ -170,7 +170,7 @@ not legible has not met the presentation contract.
   Attunement, including one for a replacement Incarnation, and never invalidates
   the already-attuned Loadout remotely.
 - World Grammar v5 owns one generated Singing Seam and its one persistent-
-  origin Resonant Lode. `Goal6BPowerComesHome` owns the exclusive physical
+  origin Resonant Lode. `HoldingRules` owns the exclusive physical
   Lode state, the sole Home-relative Hearth Resonator, bounded physical
   commitments, Source vulnerability, and current-versus-next-Attunement facts
   behind `ChronicleSimulation`; neither Godot nor P-GEN owns those rules.

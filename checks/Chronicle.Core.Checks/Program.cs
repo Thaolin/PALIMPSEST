@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using System.Security.Cryptography;
+using System.Text;
 using Chronicle.Core;
 
 const long Seed = 41_337;
@@ -10,8 +12,11 @@ Run("Burn plans, Load, and attunement safety", VerifyExpressionRules);
 Run("target preview and release revalidation", VerifyTargetsAndRevalidation);
 Run("recovery, persistence, death, and replay", VerifyPersistenceDeathAndReplay);
 Run("strict v6 and literal predecessor migration", VerifyPersistenceAndMigration);
-Run("Goal 6B physical return, Attunement, loss, and rebuild", VerifyGoal6BPowerComesHome);
+Run("Goal 6B physical return, Attunement, loss, and rebuild", VerifyHoldingRules);
 Run("Goal 6B strict v7 replay, malformed state, and migration", VerifyGoal6BPersistenceAndReplay);
+Run("Core owns facts, not player-facing copy", VerifyCoreOwnsNoPresentationCopy);
+Run("authored Word effects extend without resolver edits", VerifyAuthoredWordEffects);
+Run("accepted pre-6C save bytes remain stable", VerifyHistoricalSaveOracle);
 
 Console.WriteLine("RETAINED FOUNDATION MIGRATION PASS world-grammar=0-3 home=preserved bell=preserved cairn=preserved nouns=retired");
 Console.WriteLine("GOAL6A CORE ACCEPTANCE PASS retained grammar=4 combat=deterministic migration=v6-v1+pre-envelope");
@@ -27,9 +32,10 @@ static void VerifyAuthoredFixture()
     var lasting = WordCatalogue.Get(WordIds.Lasting);
     Assert(
         burn.Kind == WordKind.Verb && burn.Load == 1 &&
-        burn.SupportedModifiers.SequenceEqual([WordIds.Quickly, WordIds.Lasting]) &&
         quickly.Kind == WordKind.Modifier && quickly.Load == 6 &&
-        lasting.Kind == WordKind.Modifier && lasting.Load == 5,
+        quickly.SupportedVerbs.SequenceEqual([WordIds.Burn]) &&
+        lasting.Kind == WordKind.Modifier && lasting.Load == 5 &&
+        lasting.SupportedVerbs.SequenceEqual([WordIds.Burn]),
         "Burn, Quickly, and Lasting must retain their fixed authored successor definitions.");
 
     var fresh = new ChronicleSimulation(Goal6AFixture());
@@ -60,20 +66,42 @@ static void VerifyWorldGrammarSubjects()
     var basalt = area.Cells.Single(cell => cell.Address == basaltAddress);
 
     Assert(
-        brute.MireBrute is
+        brute.Subject(WorldSubjectKind.Creature) is
         {
             Identity: var identity,
-            HitPoints: CombatState.MireBruteMaximumHitPoints,
-            IsLiving: true,
+            Archetype: WorldSubjects.MireBruteArchetype,
+            Progress: { Current: CombatState.MireBruteMaximumHitPoints, Maximum: CombatState.MireBruteMaximumHitPoints },
+            Condition: WorldSubjects.Living,
         } && identity == WorldArea.GeneratedMireBruteIdentity(Seed),
         "WG4 must generate one stable Mire Brute identity, placement, HP, and living state.");
     Assert(
-        basalt.Target is
+        basalt.Subject(WorldSubjectKind.Target) is
         {
-            Kind: CombatTargetKind.Basalt,
+            Archetype: WorldSubjects.BasaltArchetype,
             Identity: var basaltIdentity,
         } && basaltIdentity == WorldArea.GeneratedBasaltIdentity(Seed),
         "WG4 must generate the stable basalt place Target.");
+    AssertArgumentThrows(
+        () => _ = new WorldSubjectProgress(-1, 2),
+        "WorldSubject progress must reject a current value below zero.");
+    AssertArgumentThrows(
+        () => _ = new WorldSubjectProgress(3, 2),
+        "WorldSubject progress must reject a current value above its maximum.");
+    AssertArgumentThrows(
+        () => _ = new WorldSubject(
+            "subject.too-many-marks",
+            WorldSubjectKind.Target,
+            "verification",
+            "present",
+            marks:
+            [
+                WorldSubjectMark.Wounded,
+                WorldSubjectMark.Burning,
+                WorldSubjectMark.Selected,
+                WorldSubjectMark.Wounded,
+                WorldSubjectMark.Burning,
+            ]),
+        "WorldSubject marks must remain explicitly bounded.");
     Assert(
         area.Cells.Where(cell => cell.Address.Y == 0 && cell.Address.X is >= 0 and <= 5)
             .All(cell => cell.Ground == WorldGround.Grass && cell.Feature is null),
@@ -91,7 +119,7 @@ static void VerifyWorldGrammarSubjects()
         SurfacePatch.SurfaceStratum,
         new WorldRectangle(bruteAddress.X, bruteAddress.Y, 1, 1)).Cells.Single();
     Assert(
-        overlapping.MireBrute is not null && overlapping.IsScorched,
+        overlapping.Has(WorldSubjectKind.Creature) && overlapping.IsScorched,
         "WorldArea must expose a Brute state and a scorch overlay independently at one Address.");
 
     var oldGrammar = Goal6AFixture() with { WorldGrammarVersion = 3, Combat = null };
@@ -99,7 +127,9 @@ static void VerifyWorldGrammarSubjects()
         oldGrammar,
         SurfacePatch.SurfaceStratum,
         new WorldRectangle(bruteAddress.X, bruteAddress.Y, 1, 1));
-    Assert(oldArea.Cells.Single().MireBrute is null, "Older World Grammar pins must not gain the Brute retroactively.");
+    Assert(
+        !oldArea.Cells.Single().Has(WorldSubjectKind.Creature),
+        "Older World Grammar pins must not gain the Brute retroactively.");
 }
 
 static void VerifyEngagementAndHeartbeatOrder()
@@ -526,7 +556,7 @@ static void VerifyPersistenceAndMigration()
         "Pre-envelope input must remain accepted and rewrite through strict v7 without a Brute.");
 }
 
-static void VerifyGoal6BPowerComesHome()
+static void VerifyHoldingRules()
 {
     var testingStart = new ChronicleSimulation(ChronicleState.Begin(Seed));
     Assert(testingStart.Apply(new ChooseHereIntent()).Applied,
@@ -541,7 +571,7 @@ static void VerifyGoal6BPowerComesHome()
             IsRead: false,
         } &&
         primerAddress == new WorldAddress(SurfacePatch.SurfaceStratum, 0, 2) &&
-        unreadPrimer.Summary.Contains("CHECKLIST · LEARN BURN", StringComparison.Ordinal) &&
+        unreadPrimer.Objective.Kind == HoldingObjectiveKind.LearnBurn &&
         unreadPrimer.Actions.Single(action => action.Id == "read-primer").Available,
         "The neutral start must expose one unread Burn Primer directly north of Home and no implicit Burn path reward.");
     var primerCell = WorldArea.Generate(
@@ -549,13 +579,22 @@ static void VerifyGoal6BPowerComesHome()
         SurfacePatch.SurfaceStratum,
         new WorldRectangle(0, 2, 1, 1)).Cells.Single();
     Assert(
-        primerCell.BurnPrimer is { IsRead: false } &&
-        primerCell.BurnPrimer.Identity == unreadPrimer.BurnPrimer.Identity &&
+        primerCell.Subject(WorldSubjectKind.StudySource) is
+        {
+            Condition: WorldSubjects.Unread,
+            Identity: var primerIdentity,
+        } &&
+        primerIdentity == unreadPrimer.BurnPrimer.Identity &&
         primerCell.Ground == WorldGround.Soil &&
         primerCell.Feature is null &&
         primerCell.MotifIdentity == "surface-burn-primer-clearing",
         "The unread Burn Primer must be a stable visible World subject on a clear-soil cell at its Core-owned Address.");
     AssertRoundTrip(testingStart.State, "unread Burn Primer");
+    var standingOnPrimer = new ChronicleSimulation(testingStart.State with { Address = unreadPrimer.BurnPrimer.Address });
+    Assert(
+        standingOnPrimer.PowerComesHomeContext.Actions.Single(action => action.Id == "read-primer").Available &&
+        standingOnPrimer.Apply(new ReadBurnPrimer()).Applied,
+        "Standing on a non-blocking Goal 6B subject must be as valid for interaction as standing cardinally adjacent.");
     var primerTick = testingStart.State.Tick;
     Assert(testingStart.Apply(new ReadBurnPrimer()).Applied &&
            testingStart.State.Tick == primerTick &&
@@ -565,7 +604,7 @@ static void VerifyGoal6BPowerComesHome()
         "The nearby Burn Primer must teach the complete Goal 6B test Expression without spending a Heartbeat.");
     Assert(
         testingStart.PowerComesHomeContext.BurnPrimer.IsRead &&
-        testingStart.PowerComesHomeContext.Summary.Contains("CHECKLIST · GET THE GOLD LODE", StringComparison.Ordinal) &&
+        testingStart.PowerComesHomeContext.Objective.Kind == HoldingObjectiveKind.GetTheLode &&
         !testingStart.PowerComesHomeContext.Actions.Single(action => action.Id == "read-primer").Available,
         "Reading the Primer must persist its state and switch immediately to the Lode checklist.");
     AssertRoundTrip(testingStart.State, "read Burn Primer");
@@ -580,7 +619,17 @@ static void VerifyGoal6BPowerComesHome()
         context.Lode.OriginAddress == context.SeamAddress &&
         context.ResonatorSite == new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3),
         "WG5 must expose the exact generated Seam, persistent Lode origin, Home, and sole eligible Source site.");
-    AssertChecklist(context, "embedded", "GET THE GOLD LODE", "P — Extract", "STOPS:", "LOCKS:");
+    AssertObjective(
+        context,
+        "embedded",
+        HoldingObjectiveKind.GetTheLode,
+        HoldingActionKind.Extract,
+        actionHeartbeats: 2,
+        constraints:
+        [
+            HoldingConstraint.HostileInterruptionKeepsProgress,
+            HoldingConstraint.LocksAllOtherActionsWhileActive,
+        ]);
     var broad = WorldArea.Generate(
         simulation.State,
         SurfacePatch.SurfaceStratum,
@@ -590,15 +639,17 @@ static void VerifyGoal6BPowerComesHome()
         SurfacePatch.SurfaceStratum,
         new WorldRectangle(8, 3, 2, 2));
     Assert(
-        broad.Cells.Single(cell => cell.Address == context.SeamAddress).SingingSeam?.Identity == context.SeamIdentity &&
-        overlap.Cells.Single(cell => cell.Address == context.SeamAddress).ResonantLode?.Identity == context.Lode.Identity,
+        broad.Cells.Single(cell => cell.Address == context.SeamAddress)
+            .Subject(WorldSubjectKind.MaterialSeam)?.Identity == context.SeamIdentity &&
+        overlap.Cells.Single(cell => cell.Address == context.SeamAddress)
+            .Subject(WorldSubjectKind.LooseMaterial)?.Identity == context.Lode.Identity,
         "Differently bounded and ordered queries must reproduce the exact Seam and Lode identities.");
     var sourceSite = WorldArea.Generate(
         simulation.State,
         SurfacePatch.SurfaceStratum,
         new WorldRectangle(context.ResonatorSite!.Value.X, context.ResonatorSite.Value.Y, 1, 1)).Cells.Single();
     Assert(
-        sourceSite.IsHearthResonatorSite &&
+        sourceSite.Has(WorldSubjectKind.ConstructionSite) &&
         sourceSite.Ground == WorldGround.Soil &&
         sourceSite.Feature is null &&
         sourceSite.MotifIdentity == "surface-home-source-foundation",
@@ -622,7 +673,20 @@ static void VerifyGoal6BPowerComesHome()
     simulation.AdvanceClockPulse();
     Assert(simulation.State == paused && simulation.PowerComesHomeContext.Commitment is { CompletedTicks: 0, WaitingForHeartbeat: true },
         "A paused extraction must stay visibly queued at 0/2.");
-    AssertChecklist(simulation.PowerComesHomeContext, "extracting", "EXTRACT LODE 0/2", "SPACE", "NEXT", "LOCKS:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "extracting",
+        HoldingObjectiveKind.Commitment,
+        HoldingActionKind.AdvanceHeartbeat,
+        outcome: HoldingOutcome.ExtractionProgressRemains,
+        commitmentCompletedTicks: 0,
+        commitmentTotalTicks: 2,
+        waitingForHeartbeat: true,
+        constraints:
+        [
+            HoldingConstraint.HostileInterruptionKeepsProgress,
+            HoldingConstraint.LocksAllOtherActionsWhileActive,
+        ]);
     AdvanceActive(simulation, 1);
     Assert(simulation.State.PowerHome is { ExtractionProgress: 1, Commitment.CompletedTicks: 1 },
         "The first active extraction Heartbeat must persist represented 1/2 progress.");
@@ -638,7 +702,13 @@ static void VerifyGoal6BPowerComesHome()
         simulation.PowerComesHomeContext.SeamIsEmpty,
         "The second extraction Heartbeat must leave one loose Lode and a persistent empty Seam.");
     AssertRoundTrip(simulation.State, "loose Lode");
-    AssertChecklist(simulation.PowerComesHomeContext, "loose", "LIFT GOLD LODE", "P — Lift", "Carry it to HOME", "CARRYING LOCKS:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "loose",
+        HoldingObjectiveKind.LiftTheLode,
+        HoldingActionKind.Lift,
+        showsCarryHomeStep: true,
+        constraints: [HoldingConstraint.CarryingLocksWeaponInvocationFlightAttunement]);
 
     var extractionExit = At(NewGoal6BFixture(), new WorldAddress(SurfacePatch.SurfaceStratum, 7, 3));
     Assert(extractionExit.Apply(new BeginPowerCommitment(PowerCommitmentKind.Extract)).Applied,
@@ -672,7 +742,17 @@ static void VerifyGoal6BPowerComesHome()
         "Lift must spend no Heartbeat and move the Lode exclusively onto the living Incarnation.");
     Assert(!simulation.Apply(new SetWeaponStance(true)).Applied,
         "The Iron Cleaver must reject while the Lode occupies both hands.");
-    AssertChecklist(simulation.PowerComesHomeContext, "carried", "CARRY LODE HOME", "P — Build", "STOPS WORK:", "CARRYING LOCKS:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "carried",
+        HoldingObjectiveKind.CarryLodeHome,
+        HoldingActionKind.Build,
+        actionHeartbeats: 3,
+        constraints:
+        [
+            HoldingConstraint.HostileInterruptionKeepsWorkProgress,
+            HoldingConstraint.CarryingLocksWeaponInvocationFlightAttunement,
+        ]);
     Assert(!simulation.Apply(new AttuneExpression(WordIds.Burn, [WordIds.Quickly])).Applied,
         "Focused Attunement must reject while carrying the Lode.");
     var carriedState = simulation.State;
@@ -748,7 +828,17 @@ static void VerifyGoal6BPowerComesHome()
            simulation.State.PowerHome!.Resonator is { Progress: 1 } &&
            simulation.State.PowerHome.Commitment is null,
         "Cancelling Build must preserve the committed Lode and material progress.");
-    AssertChecklist(simulation.PowerComesHomeContext, "construction", "FINISH RESONATOR", "Resume Build (2 Heartbeats)", "STOPS:", "LOCKS:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "construction",
+        HoldingObjectiveKind.FinishConstruction,
+        HoldingActionKind.ResumeBuild,
+        actionHeartbeats: 2,
+        constraints:
+        [
+            HoldingConstraint.HostileInterruptionKeepsProgress,
+            HoldingConstraint.LocksAllOtherActionsWhileActive,
+        ]);
     Assert(simulation.Apply(new BeginPowerCommitment(PowerCommitmentKind.Build)).Applied,
         "Build must resume the same represented foundation.");
     AdvanceActive(simulation, 1);
@@ -762,7 +852,14 @@ static void VerifyGoal6BPowerComesHome()
         simulation.PowerComesHomeContext.Attunement.CurrentUsedLoad == 0,
         "Source completion must expose future capacity 12 without remotely changing the current Loadout or last ceiling.");
     AssertRoundTrip(simulation.State, "intact Source");
-    AssertChecklist(simulation.PowerComesHomeContext, "intact before Attunement", "USE NEW LOAD", "G — Attune", "NEXT", "BLOCKED BY:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "intact before Attunement",
+        HoldingObjectiveKind.UseNewLoad,
+        HoldingActionKind.Attune,
+        fact: HoldingEstablishedFact.SourceContributesAtNextAttunement,
+        outcome: HoldingOutcome.LoadoutChangesAtAttunement,
+        constraints: [HoldingConstraint.BlockedByCarryingWorkOrDanger]);
 
     Assert(simulation.Apply(new AttuneExpression(
                WordIds.Burn,
@@ -775,7 +872,15 @@ static void VerifyGoal6BPowerComesHome()
         simulation.State.Attunement is { Capacity: 12, Tick: var attunedTick } &&
         attunedTick == simulation.State.Tick,
         "Combined Burn must be order-independent, canonical, three Links, Load 12, and record the exact Attunement tick.");
-    AssertChecklist(simulation.PowerComesHomeContext, "intact after Attunement", "TEST SOURCE LOSS", "CURRENT Loadout uses 12", "P — Dismantle", "LOCKS:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "intact after Attunement",
+        HoldingObjectiveKind.TestSourceLoss,
+        HoldingActionKind.Dismantle,
+        actionHeartbeats: 2,
+        fact: HoldingEstablishedFact.CurrentLoadoutSurvivesSourceLoss,
+        outcome: HoldingOutcome.DamagedThenDestroyedNextFallsToInherent,
+        constraints: [HoldingConstraint.LocksMovementFightInvocationAttunement]);
 
     Assert(simulation.Apply(new BeginPowerCommitment(PowerCommitmentKind.Dismantle)).Applied,
         "Controlled Dismantle must be available at the intact Source.");
@@ -784,7 +889,19 @@ static void VerifyGoal6BPowerComesHome()
         simulation.State.PowerHome!.Resonator?.Phase == HearthResonatorPhase.Damaged &&
         simulation.PowerComesHomeContext.Attunement.NextAttunementCapacity == 12,
         "Dismantling Heartbeat one must be visibly damaged while still contributing +4.");
-    AssertChecklist(simulation.PowerComesHomeContext, "dismantling", "DISMANTLE RESONATOR 1/2", "NEXT Attunement falls to 8", "STOPS:", "LOCKS:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "dismantling",
+        HoldingObjectiveKind.Commitment,
+        HoldingActionKind.AdvanceHeartbeat,
+        outcome: HoldingOutcome.ResonatorDestroyedNextFallsToInherent,
+        commitmentCompletedTicks: 1,
+        commitmentTotalTicks: 2,
+        constraints:
+        [
+            HoldingConstraint.HostileInterruptionKeepsProgress,
+            HoldingConstraint.LocksAllOtherActionsWhileActive,
+        ]);
     AssertRoundTrip(simulation.State, "damaged Source");
     simulation.AdvanceOneTick();
     var destroyed = simulation.State;
@@ -797,7 +914,15 @@ static void VerifyGoal6BPowerComesHome()
         { CurrentUsedLoad: 12, CapacityAtLastAttunement: 12, NextAttunementCapacity: 8 },
         "Dismantling Heartbeat two must expose the same Lode, lower only future capacity, and retain current 12/12.");
     AssertRoundTrip(destroyed, "destroyed Source");
-    AssertChecklist(simulation.PowerComesHomeContext, "destroyed", "REBUILD POWER", "NEXT Attunement 8", "P — Rebuild", "LOCKS:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "destroyed",
+        HoldingObjectiveKind.RebuildPower,
+        HoldingActionKind.Rebuild,
+        actionHeartbeats: 3,
+        fact: HoldingEstablishedFact.SourceDestroyedNextIsInherent,
+        outcome: HoldingOutcome.ResonatorIntactRestoresFullNext,
+        constraints: [HoldingConstraint.LocksMovementFightInvocationAttunement]);
     var beforeRejectedReattune = simulation.State;
     var rejectedAfterDestruction = simulation.Apply(
         new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]));
@@ -830,7 +955,14 @@ static void VerifyGoal6BPowerComesHome()
     AssertRoundTrip(simulation.State, "rebuilding 1/3");
     Assert(simulation.Apply(new CancelPowerCommitment()).Applied,
         "Rebuild cancellation must preserve represented progress.");
-    AssertChecklist(simulation.PowerComesHomeContext, "rebuilding", "FINISH REBUILD", "Resume Rebuild (2 Heartbeats)", "NEXT", "STOPS:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "rebuilding",
+        HoldingObjectiveKind.FinishRebuild,
+        HoldingActionKind.ResumeRebuild,
+        actionHeartbeats: 2,
+        outcome: HoldingOutcome.ResonatorIntactRestoresFullNext,
+        constraints: [HoldingConstraint.LocksMovementFightInvocationAttunement]);
     Assert(simulation.Apply(new BeginPowerCommitment(PowerCommitmentKind.Rebuild)).Applied,
         "Rebuild must resume represented progress after cancellation.");
     AdvanceActive(simulation, 1);
@@ -840,9 +972,148 @@ static void VerifyGoal6BPowerComesHome()
            simulation.PowerComesHomeContext.Attunement.NextAttunementCapacity == 12 &&
            simulation.State.Attunement is null,
         "Rebuild must restore only future capacity without automatic replacement Loadout changes.");
-    AssertChecklist(simulation.PowerComesHomeContext, "rebuilt before Attunement", "USE NEW LOAD", "G — Attune", "NEXT", "BLOCKED BY:");
+    AssertObjective(
+        simulation.PowerComesHomeContext,
+        "rebuilt before Attunement",
+        HoldingObjectiveKind.UseNewLoad,
+        HoldingActionKind.Attune,
+        fact: HoldingEstablishedFact.SourceContributesAtNextAttunement,
+        outcome: HoldingOutcome.LoadoutChangesAtAttunement,
+        constraints: [HoldingConstraint.BlockedByCarryingWorkOrDanger]);
     Assert(simulation.Apply(new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting])).Applied,
         "Explicit post-rebuild Attunement must restore the combined Expression.");
+}
+
+static void VerifyCoreOwnsNoPresentationCopy()
+{
+    var coreRoot = LocateCoreSources();
+    var bannedTokens = new[]
+    {
+        "[ ]", "[x]", "[P]", "[Q]", "[L]", "[G]", "[X]",
+        "SPACE", "Press G", "Press P", "Press Q", "Press L", "press the",
+        "CHECKLIST", "GOLD SEAM", "GOLD LODE", "OUTLINED", "BURN PRIMER",
+        "STOPS:", "LOCKS:", "BLOCKED BY:", "keybind", "hotkey",
+    };
+
+    var offences = new List<string>();
+    foreach (var file in Directory.EnumerateFiles(coreRoot, "*.cs", SearchOption.AllDirectories))
+    {
+        if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+            file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        var lineNumber = 0;
+        foreach (var line in File.ReadLines(file))
+        {
+            lineNumber++;
+            if (!line.Contains('"'))
+            {
+                continue;
+            }
+
+            foreach (var token in bannedTokens)
+            {
+                if (line.Contains(token, StringComparison.Ordinal))
+                {
+                    offences.Add($"{Path.GetFileName(file)}:{lineNumber} contains '{token}'");
+                }
+            }
+        }
+    }
+
+    Assert(
+        offences.Count == 0,
+        "Chronicle.Core must contain no input key name, HUD label, or checklist glyph: " +
+        string.Join("; ", offences));
+}
+
+static string LocateCoreSources()
+{
+    var directory = new DirectoryInfo(AppContext.BaseDirectory);
+    while (directory is not null)
+    {
+        var candidate = Path.Combine(directory.FullName, "src", "Chronicle.Core");
+        if (Directory.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        directory = directory.Parent;
+    }
+
+    throw new InvalidOperationException("The Chronicle.Core sources are required for the vocabulary gate.");
+}
+
+static void VerifyAuthoredWordEffects()
+{
+    var burn = WordCatalogue.Get(WordIds.Burn);
+    var quickly = WordCatalogue.Get(WordIds.Quickly);
+    var lasting = WordCatalogue.Get(WordIds.Lasting);
+
+    Assert(
+        WordEffects.Compose(burn, []) is { Preparation: 3, Consequence: 3, Recovery: 8, Damage: 4 },
+        "Burn must carry its authored 3/3/8 timing and 4 damage as catalogue data.");
+    Assert(
+        WordEffects.Compose(burn, [quickly]) is { Preparation: 1, Consequence: 3 },
+        "Quickly must shorten authored Preparation to one Heartbeat through its own data.");
+    Assert(
+        WordEffects.Compose(burn, [lasting]) is { Preparation: 3, Consequence: 6 },
+        "Lasting must extend authored consequence to six Heartbeats through its own data.");
+    Assert(
+        WordEffects.Compose(burn, [quickly, lasting]) ==
+        WordEffects.Compose(burn, [lasting, quickly]),
+        "Composed Modifier effects must be order-independent.");
+
+    // A fourth Modifier is authoring data alone: composing it changes resolved
+    // timing without one line of resolver change.
+    var steadily = new WordDefinition(
+        new WordId("word.steadily"),
+        "Steadily",
+        WordKind.Modifier,
+        "Lengthen the exposed preparation of an authored compatible Verb.",
+        0,
+        Array.Empty<WordId>(),
+        Load: 2,
+        Effect: new WordEffect(Preparation: 2, Consequence: 1),
+        CompatibleVerbs: Array.AsReadOnly([WordIds.Burn]));
+
+    Assert(
+        WordEffects.Compose(burn, [steadily]) is { Preparation: 5, Consequence: 4, Recovery: 8, Damage: 4 },
+        "A fourth authored Modifier must change resolved timing through catalogue data alone.");
+    Assert(
+        WordEffects.Compose(burn, [quickly, steadily]) is { Preparation: 3 },
+        "Authored Modifier deltas must accumulate rather than switch on individual Words.");
+    using (WordCatalogue.UseDefinitionsForVerification(WordCatalogue.Words.Append(steadily)))
+    {
+        var fixture = Goal6AFixture() with
+        {
+            Intent = OpeningIntent.Against,
+            Codex = new CodexState().Learn(WordIds.Burn).Learn(steadily.Id),
+        };
+        var simulation = new ChronicleSimulation(fixture);
+        Assert(
+            simulation.Apply(new AttuneExpression(WordIds.Burn, [steadily.Id])).Applied,
+            "The fourth Modifier must attune through the production expression validator.");
+        simulation = At(
+            simulation,
+            new WorldAddress(SurfacePatch.SurfaceStratum, 2, 0));
+        Assert(
+            simulation.Apply(new PrepareBurn(WorldArea.GeneratedMireBruteAddress(Seed))).Applied &&
+            simulation.State.Combat?.Preparation?.RemainingTicks == 5,
+            "The fourth Modifier must change production Burn preparation timing through its definition alone.");
+
+        var loaded = ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(simulation.State));
+        Assert(
+            loaded.Combat?.Preparation?.RemainingTicks == 5 &&
+            loaded.ActiveLoadout.Slots.Single(slot => !slot.IsEmpty).Modifiers.SequenceEqual([steadily.Id]),
+            "Strict v7 validation and save/load must accept the authored fourth Modifier without a resolver edit.");
+    }
+
+    Assert(
+        WordCatalogue.Words.All(word => word.Id != steadily.Id),
+        "The test-only fourth Modifier must never enter the shipped Word Catalogue.");
 }
 
 static void VerifyGoal6BPersistenceAndReplay()
@@ -949,8 +1220,19 @@ static void VerifyGoal6BPersistenceAndReplay()
         v6,
         SurfacePatch.SurfaceStratum,
         new WorldRectangle(8, 3, 1, 1));
-    Assert(wg4Area.Cells[0].SingingSeam is null && wg4Area.Cells[0].ResonantLode is null,
+    Assert(
+        !wg4Area.Cells[0].Has(WorldSubjectKind.MaterialSeam) &&
+        !wg4Area.Cells[0].Has(WorldSubjectKind.LooseMaterial),
         "WG4 and older pins must never gain the WG5 Seam or Lode retroactively.");
+}
+
+static void VerifyHistoricalSaveOracle()
+{
+    var bytes = Encoding.UTF8.GetBytes(ChronicleSaveCodec.Serialize(ChronicleState.Begin(Seed)));
+    var digest = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+    Assert(
+        digest == "8adb027068df2ccb5ebf69ff5a6e7e66b75ba88fff4af28e03293689d2d6f5c1",
+        $"The accepted pre-6C canonical v7 fixture must remain byte-identical; actual {digest}.");
 }
 
 static ChronicleSimulation NewGoal6BFixture()
@@ -983,14 +1265,33 @@ static void AssertRoundTrip(ChronicleState state, string phase)
         $"Strict v7 must round-trip {phase} exactly.");
 }
 
-static void AssertChecklist(PowerComesHomeContextSnapshot context, string stage, params string[] required)
+static void AssertObjective(
+    PowerComesHomeContextSnapshot context,
+    string stage,
+    HoldingObjectiveKind kind,
+    HoldingActionKind action,
+    int actionHeartbeats = 0,
+    HoldingEstablishedFact fact = HoldingEstablishedFact.None,
+    HoldingOutcome outcome = HoldingOutcome.None,
+    bool showsCarryHomeStep = false,
+    int commitmentCompletedTicks = 0,
+    int commitmentTotalTicks = 0,
+    bool waitingForHeartbeat = false,
+    IReadOnlyList<HoldingConstraint>? constraints = null)
 {
-    var lines = context.Summary.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    var objective = context.Objective;
     Assert(
-        context.Summary.StartsWith("CHECKLIST · ", StringComparison.Ordinal) &&
-        lines.Length <= 5 &&
-        required.All(item => context.Summary.Contains(item, StringComparison.Ordinal)),
-        $"Goal 6B {stage} guidance must be one concise state checklist with no more than five lines.");
+        objective.Kind == kind &&
+        objective.Action == action &&
+        objective.ActionHeartbeats == actionHeartbeats &&
+        objective.EstablishedFact == fact &&
+        objective.NextOutcome == outcome &&
+        objective.ShowsCarryHomeStep == showsCarryHomeStep &&
+        objective.CommitmentCompletedTicks == commitmentCompletedTicks &&
+        objective.CommitmentTotalTicks == commitmentTotalTicks &&
+        objective.WaitingForHeartbeat == waitingForHeartbeat &&
+        objective.Constraints.SequenceEqual(constraints ?? []),
+        $"Goal 6B {stage} guidance must state exactly the authored material facts.");
 }
 
 static string Version6Fixture() =>
@@ -1268,6 +1569,20 @@ static void AssertThrows(Action action, string message)
         action();
     }
     catch (InvalidOperationException)
+    {
+        return;
+    }
+
+    throw new InvalidOperationException(message);
+}
+
+static void AssertArgumentThrows(Action action, string message)
+{
+    try
+    {
+        action();
+    }
+    catch (ArgumentException)
     {
         return;
     }

@@ -1,6 +1,6 @@
 # Active Handoff Contract
 
-Last reconciled: 2026-07-22
+Last reconciled: 2026-07-22 (Goal 6C accepted)
 
 This is the short-lived execution contract for the current gate. It may narrow
 the active slice but may never expand or contradict [AGENTS.md](../AGENTS.md),
@@ -10,7 +10,56 @@ authorized future slice contract.
 
 ## Current gate
 
-**Goal 6B and Goal 6 are complete and player-accepted; stop and await separate production authorization**
+**Goal 6C — One Rulebook, One Vocabulary is complete and player-accepted; the
+complete retained gate is green after the focused-Space and top-rail
+correction**
+
+- Goal 6B's complete material loop remains player-accepted; this review passed
+  the Lode, carrying, construction, and Attunement path unchanged.
+- The first pre-Goal-7 review failed Goal 6C on ownership, extensibility,
+  compatibility-oracle, log, and player-clarity findings. The user authorized
+  correcting the complete review set. Goal 6C now repairs those gaps under
+  [Goal 6C — One Rulebook, One Vocabulary](GOAL-6C-ONE-RULEBOOK.md). It adds no
+  new system, content, inventory framework, or broad Chronicle rule; the one
+  explicit mechanical correction is same-cell reach for existing interactions.
+- Delivered: HUD copy and key names removed from `Chronicle.Core`
+  behind a gate assertion; Word effects moved onto `WordDefinition` as authored
+  data; one `WorldSubject` model replacing the per-fixture `WorldCell` fields
+  with one visual resolution path; `ChronicleState.cs` split into five files
+  under 900 lines each; the forecast placeholder, consequence truncation, and
+  duplicated/ambiguous log entries fixed; the right rail now switches from
+  combat to material state when no fight is active; checklist/action parity,
+  focus, contrast, consequence wrapping, and terse state-specific guidance are
+  enforced by the rendered journey; frozen pre-6C save-byte and render-plan
+  digests prevent compatibility regressions; every unreachable `verify.ps1` function and its
+  runtime roots deleted with the pass marker corrected; `Goal6AActionPlanning`
+  and `Goal6BPowerComesHome` renamed to `CombatRules` and `HoldingRules` with
+  the dependency running one way through `HoldingFacts` and
+  `IMaterialCommitments`; and the Codex/Loadout surface direction recorded as a
+  decision only.
+- The complete gate passed after these corrections on 2026-07-22 with zero
+  build warnings or errors.
+- First hands-on Goal 6C review then rejected combat: after Engagement, a
+  keyboard-focused action treated `Space` as GUI activation, queued `Ready Iron
+  Cleaver`, and immediately returned to pause without delivering a Heartbeat.
+  Pending-action text also overflowed the Clock plate into place/save controls.
+- The actual Godot-input regression reproduced the failure twice. The fix
+  reserves `Space` for the Chronicle Clock before focused-button handling,
+  retains keyboard focus and Enter activation, advances exactly one hostile
+  Heartbeat, shortens the top Clock to `PAUSED · HN`, and keeps pending detail
+  in Forecast and Message Log. Layout assertions prove the Clock and pause
+  plate do not intersect place or controls.
+- Per the same player note, the existing Goal 6B interactions now accept the
+  subject's own cell or one cardinally adjacent cell. Core and the actual Godot
+  journey prove reading the Primer while standing directly on it; this adds no
+  interaction framework or new subject type.
+- `checks/verify.ps1` passed again with zero warnings, zero errors, and exit
+  code `0`, including P-GEN isolation, Core/migration, Visuals, Inspector
+  parity, both Goal 6A journeys, the focused-Space regression, all eight Goal
+  6B captures, and packaging.
+- Player combat re-UAT passed on 2026-07-22 with “Yep pass.” Goal 6C is closed.
+  Goal 7 is the next design gate but its production work still requires a
+  separately approved bounded child-slice contract.
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -364,6 +413,11 @@ reported.
 
 ## Current permitted scope
 
+Goal 6C is complete and player-accepted under
+[its contract](GOAL-6C-ONE-RULEBOOK.md). The user has authorized commit, push,
+and merge. There is no active production scope after publication; Goal 7 is the
+next contract-design gate.
+
 E5, E5.1, Goal 6A, Goal 6B, and Goal 6 are complete and accepted. Goal 6A is
 closed with a qualified prototype verdict under
 [its contract](GOAL-6A-A-REAL-FIGHT.md). Goal 6B is closed under
@@ -569,7 +623,8 @@ Goal 7, and broader gameplay frameworks require separate authorization.
 
 ## Stop and hand off
 
-Goal 6B player UAT passed and the verdict is reconciled. Stop. Do not make
-further production changes or implement Goal 6A's recorded polish debt, broader
-Word acquisition/equipping UX, the future inventory, Goal 7, Slice 8, or
-same-scale Area production without separate authorization.
+Publish the complete, player-accepted Goal 6C branch as explicitly authorized,
+then stop before Goal 7 production. Do not implement the recorded
+Codex/Loadout surface, Goal 6A's remaining polish debt, broader Word
+acquisition/equipping UX, the future inventory, Goal 7, Slice 8, or same-scale
+Area production without a separately approved bounded contract.

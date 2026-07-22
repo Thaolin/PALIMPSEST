@@ -905,7 +905,7 @@ public partial class WorldAtlasInspector : Node
             Position = position,
             Size = size,
             Text = text,
-            FocusMode = Control.FocusModeEnum.None,
+            FocusMode = Control.FocusModeEnum.All,
         };
         button.AddThemeFontSizeOverride("font_size", 12);
         button.Pressed += action;
@@ -928,7 +928,7 @@ public partial class WorldAtlasInspector : Node
             Size = new Vector2(334, 20),
             Text = text,
             ButtonPressed = initialValue,
-            FocusMode = Control.FocusModeEnum.None,
+            FocusMode = Control.FocusModeEnum.All,
         };
         toggle.AddThemeFontSizeOverride("font_size", 12);
         toggle.Pressed += action;
@@ -992,15 +992,15 @@ public partial class WorldAtlasInspector : Node
                 "Surface request must retain Core water, vegetation, and stone semantics.");
             Verify(
                 surface.Cells.Any(cell =>
-                    cell.MireBrute is { Identity: var bruteIdentity } &&
+                    cell.Subject(WorldSubjectKind.Creature) is { Identity: var bruteIdentity } &&
                     string.Equals(
                         bruteIdentity,
                         WorldArea.GeneratedMireBruteIdentity(_generationInput.Seed),
                         StringComparison.Ordinal)) &&
                 surface.Cells.Any(cell =>
-                    cell.Target is
+                    cell.Subject(WorldSubjectKind.Target) is
                     {
-                        Kind: CombatTargetKind.Basalt,
+                        Archetype: WorldSubjects.BasaltArchetype,
                         Identity: var basaltIdentity,
                     } &&
                     string.Equals(
@@ -1223,15 +1223,16 @@ public partial class WorldAtlasInspector : Node
                 VisualViewportBounds.WithOneCellSemanticHalo(visibleBounds));
             var seamCell = semanticArea.Cells.Single(cell => cell.Address == context.SeamAddress);
             Verify(
-                seamCell.SingingSeam is { } &&
-                seamCell.SingingSeam.State ==
-                    (stage.Name == "embedded" ? SingingSeamVisualState.Embedded : SingingSeamVisualState.Empty),
+                seamCell.Subject(WorldSubjectKind.MaterialSeam) is { } seamSubject &&
+                seamSubject.Condition == WorldSubjects.Condition(
+                    stage.Name == "embedded" ? SingingSeamVisualState.Embedded : SingingSeamVisualState.Empty),
                 $"Goal 6B Inspector '{stage.Name}' must expose the exact Singing Seam semantic state.");
             if (stage.State.PowerHome!.Resonator is { } source)
             {
                 var sourceCell = semanticArea.Cells.Single(cell => cell.Address == source.Address);
                 Verify(
-                    sourceCell.HearthResonator?.Phase == source.Phase,
+                    sourceCell.Subject(WorldSubjectKind.LoadSource)?.Condition ==
+                        WorldSubjects.Condition(source.Phase),
                     $"Goal 6B Inspector '{stage.Name}' must expose the exact Source semantic state.");
             }
 

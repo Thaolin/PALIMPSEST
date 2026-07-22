@@ -208,26 +208,31 @@ static void VerifyGoal6AVisualVocabularyAndLayerCoexistence()
     var basaltCell = semantic.Cells.Single(cell => cell.Address == basaltAddress);
 
     Assert(
-        bruteCell.MireBrute is
+        bruteCell.Subject(WorldSubjectKind.Creature) is
         {
             Identity: var bruteIdentity,
-            HitPoints: CombatState.MireBruteMaximumHitPoints - 8,
-            MaximumHitPoints: CombatState.MireBruteMaximumHitPoints,
-            IsLiving: true,
-            IsBurning: true,
-        } &&
+            Archetype: WorldSubjects.MireBruteArchetype,
+            Condition: WorldSubjects.Living,
+            Progress:
+            {
+                Current: CombatState.MireBruteMaximumHitPoints - 8,
+                Maximum: CombatState.MireBruteMaximumHitPoints,
+            },
+        } creatureSubject &&
+        creatureSubject.Marks.SequenceEqual(
+            [WorldSubjectMark.Wounded, WorldSubjectMark.Burning]) &&
         bruteIdentity == brute.Identity &&
         bruteCell.IsScorched,
         "WorldArea must project the Core-owned wounded, burning Mire Brute and independent scorch delta without inventing presentation state.");
     Assert(
-        basaltCell.Target is
+        basaltCell.Subject(WorldSubjectKind.Target) is
         {
             Identity: var basaltIdentity,
-            Kind: CombatTargetKind.Basalt,
+            Archetype: WorldSubjects.BasaltArchetype,
             DisplayName: "Basalt",
         } &&
         basaltIdentity == WorldArea.GeneratedBasaltIdentity(state.Seed),
-        "WorldArea must expose the authored basalt Target as Core-owned target semantics.");
+        "WorldArea must expose the authored basalt Target as one Core-owned durable subject.");
 
     var actionEmphases = new[]
     {
@@ -528,9 +533,11 @@ static void VerifyGoal6BVisualVocabularyAndSemanticStates()
         (WithSource(HearthResonatorPhase.Destroyed, 2, ResonantLodeDisposition.Loose), "source.hearth-resonator.destroyed"),
         (WithSource(HearthResonatorPhase.Rebuilding, 1, ResonantLodeDisposition.Committed), "source.hearth-resonator.rebuilding"),
     };
+    var sourceDigests = new List<string>(sourceCases.Length);
     foreach (var (state, visualId) in sourceCases)
     {
         var broad = Compose(state, new WorldRectangle(0, 2, 4, 3));
+        sourceDigests.Add(broad.Digest);
         var overlap = Compose(state, new WorldRectangle(1, 3, 1, 1));
         Assert(
             broad.Marks.Any(mark => mark.Address == site && mark.VisualId == visualId) &&
@@ -538,6 +545,21 @@ static void VerifyGoal6BVisualVocabularyAndSemanticStates()
                 .SequenceEqual(broad.Marks.Where(mark => mark.Address == site).Select(mark => mark.VisualId)),
             $"The map must render '{visualId}' identically in broad and overlapping deterministic requests.");
     }
+
+
+    var acceptedDigestBytes = Encoding.UTF8.GetBytes(string.Join(
+        "\n",
+        new[]
+        {
+            embeddedPlan.Digest,
+            readPrimerPlan.Digest,
+            loosePlan.Digest,
+            carriedPlan.Digest,
+        }.Concat(sourceDigests)));
+    var acceptedDigest = Convert.ToHexString(SHA256.HashData(acceptedDigestBytes)).ToLowerInvariant();
+    Assert(
+        acceptedDigest == "3e36190bed4e1cc15f66831adf96b2e69d1d6bde81bc02c62e60394d0707e936",
+        $"The accepted pre-6C Goal 6B render plans must retain their historical digest; actual {acceptedDigest}.");
 }
 
 static (string VisualId, VisualLayerClass Layer)[] Goal6BVisualVocabulary() =>

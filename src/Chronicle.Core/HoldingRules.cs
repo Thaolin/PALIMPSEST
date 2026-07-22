@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json.Serialization;
+using static Chronicle.Core.HoldingFacts;
 
 namespace Chronicle.Core;
 
@@ -59,24 +60,42 @@ public sealed record PowerHomeState(
 
 public sealed record LoadAttunementState(int Capacity, long Tick);
 
+public enum PowerActionAvailabilityReason
+{
+    Available = 1,
+    AlreadyRead = 2,
+    ImmediateDanger = 3,
+    CommitmentActive = 4,
+    CarryingLode = 5,
+    PrimerOutOfReach = 6,
+    AlreadyExtracted = 7,
+    SeamOutOfReach = 8,
+    LodeNotLoose = 9,
+    LodeOutOfReach = 10,
+    NotCarryingLode = 11,
+    HomeMissing = 12,
+    SiteOutOfReach = 13,
+    LodeNotAtHome = 14,
+    SourceUnavailable = 15,
+    SourceOutOfReach = 16,
+}
+
 public sealed record PowerActionSnapshot(
     PowerCommitmentKind? Kind,
     string Id,
-    string Label,
+    bool IsResumption,
     bool Available,
-    string Availability,
-    string WhatHappensNext,
-    string When,
-    string Interruptions,
-    string Prevents);
+    PowerActionAvailabilityReason AvailabilityReason,
+    int Heartbeats,
+    HoldingOutcome Outcome,
+    IReadOnlyList<HoldingConstraint> Constraints);
 
 public sealed record ResonantLodeSnapshot(
     string Identity,
     WorldAddress OriginAddress,
     ResonantLodeDisposition Disposition,
     WorldAddress? Address,
-    long? CarrierIncarnationId,
-    string Status);
+    long? CarrierIncarnationId);
 
 public sealed record HearthResonatorSnapshot(
     string Identity,
@@ -84,27 +103,23 @@ public sealed record HearthResonatorSnapshot(
     HearthResonatorPhase Phase,
     int Progress,
     int TotalProgress,
-    int LoadContribution,
-    string Status);
+    int LoadContribution);
 
 public sealed record BurnPrimerSnapshot(
     string Identity,
     WorldAddress Address,
-    bool IsRead,
-    string Status);
+    bool IsRead);
 
 public sealed record PowerCommitmentSnapshot(
     PowerCommitmentKind Kind,
-    string DisplayName,
     WorldAddress Address,
     int CompletedTicks,
     int RemainingTicks,
     int TotalTicks,
     long NextTick,
     bool WaitingForHeartbeat,
-    string NextTransition,
-    string Interruptions,
-    string Prevents);
+    HoldingOutcome NextOutcome,
+    IReadOnlyList<HoldingConstraint> Constraints);
 
 public sealed record AttunementCapacitySnapshot(
     int CurrentUsedLoad,
@@ -113,8 +128,8 @@ public sealed record AttunementCapacitySnapshot(
     int NextAttunementCapacity,
     int InherentCapacity,
     int SourceContribution,
-    string CurrentStatus,
-    string NextStatus);
+    int MaximumSourceContribution,
+    int DesiredExpressionLoad);
 
 public sealed record PowerComesHomeContextSnapshot(
     WorldAddress SeamAddress,
@@ -127,7 +142,7 @@ public sealed record PowerComesHomeContextSnapshot(
     PowerCommitmentSnapshot? Commitment,
     AttunementCapacitySnapshot Attunement,
     IReadOnlyList<PowerActionSnapshot> Actions,
-    string Summary);
+    HoldingObjectiveSnapshot Objective);
 
 public enum SingingSeamVisualState
 {
@@ -161,18 +176,12 @@ internal readonly record struct PowerAdvanceResult(
     string? Message,
     WorldAddress? Address);
 
-internal static class Goal6BPowerComesHome
+internal static class HoldingRules
 {
-    internal const int InherentLoadCapacity = 8;
-    internal const int SourceLoadContribution = 4;
-    internal const int LinkCapacity = 3;
     internal const int ExtractTicks = 2;
     internal const int BuildTicks = 3;
     internal const int DismantleTicks = 2;
     internal const int RebuildTicks = 3;
-
-    internal static readonly WorldAddress SingingSeamAddress =
-        new(SurfacePatch.SurfaceStratum, 8, 3);
 
     internal static readonly WorldAddress BurnPrimerAddress =
         new(SurfacePatch.SurfaceStratum, 0, 2);
@@ -194,9 +203,6 @@ internal static class Goal6BPowerComesHome
         state.Codex.Contains(WordIds.Quickly) &&
         state.Codex.Contains(WordIds.Lasting);
 
-    internal static bool IsAvailable(ChronicleState state) =>
-        state.WorldGrammarVersion == 5 && state.PowerHome is not null;
-
     internal static PowerHomeState Create(long seed) => new(
         new ResonantLodeState(
             ResonantLodeIdentity(seed),
@@ -210,28 +216,6 @@ internal static class Goal6BPowerComesHome
         home.Address.X < long.MaxValue
             ? home.Address with { X = home.Address.X + 1 }
             : null;
-
-    internal static bool IsCarrying(ChronicleState state) =>
-        IsAvailable(state) &&
-        state.PowerHome!.Lode is
-        {
-            Disposition: ResonantLodeDisposition.Carried,
-            CarrierIncarnationId: var carrier,
-        } && carrier == state.IncarnationId;
-
-    internal static bool HasCommitment(ChronicleState state) =>
-        IsAvailable(state) && state.PowerHome!.Commitment is not null;
-
-    internal static bool SourceContributes(ChronicleState state) =>
-        IsAvailable(state) &&
-        state.PowerHome!.Resonator?.Phase is
-            HearthResonatorPhase.Intact or HearthResonatorPhase.Damaged;
-
-    internal static int NextAttunementCapacity(ChronicleState state) =>
-        InherentLoadCapacity + (SourceContributes(state) ? SourceLoadContribution : 0);
-
-    internal static int LinkCapacityFor(ChronicleState state) =>
-        IsAvailable(state) ? LinkCapacity : CombatState.Goal6ALinkCapacity;
 
     internal static int CurrentUsedLoad(ChronicleState state)
     {
@@ -254,24 +238,6 @@ internal static class Goal6BPowerComesHome
             : lode.Address;
     }
 
-    internal static bool BlocksMovement(ChronicleState state, WorldAddress destination)
-    {
-        if (!IsAvailable(state))
-        {
-            return false;
-        }
-
-        var power = state.PowerHome!;
-        if (destination == SingingSeamAddress &&
-            power.Lode.Disposition == ResonantLodeDisposition.Embedded)
-        {
-            return true;
-        }
-
-        return power.Resonator is { } source &&
-               source.Address == destination &&
-               source.Phase != HearthResonatorPhase.Destroyed;
-    }
 
     internal static PowerComesHomeContextSnapshot Snapshot(ChronicleState state)
     {
@@ -282,8 +248,7 @@ internal static class Goal6BPowerComesHome
                 SingingSeamAddress,
                 ResonantLodeDisposition.Embedded,
                 SingingSeamAddress,
-                null,
-                "This World Grammar pin has no Resonant Lode.");
+                null);
             return new PowerComesHomeContextSnapshot(
                 SingingSeamAddress,
                 SingingSeamIdentity(state.Seed),
@@ -292,14 +257,13 @@ internal static class Goal6BPowerComesHome
                 new BurnPrimerSnapshot(
                     BurnPrimerIdentity(state.Seed),
                     BurnPrimerAddress,
-                    IsRead: false,
-                    "The Burn Primer is unavailable in this World Grammar pin."),
+                    IsRead: false),
                 emptyLode,
                 null,
                 null,
                 CapacitySnapshot(state),
                 [],
-                "Power Comes Home is unavailable in this World Grammar pin.");
+                UnavailableObjective);
         }
 
         var power = state.PowerHome!;
@@ -309,8 +273,7 @@ internal static class Goal6BPowerComesHome
             power.Lode.OriginAddress,
             power.Lode.Disposition,
             lodeAddress,
-            power.Lode.CarrierIncarnationId,
-            LodeStatus(state));
+            power.Lode.CarrierIncarnationId);
         var resonator = power.Resonator is { } source
             ? new HearthResonatorSnapshot(
                 source.Identity,
@@ -318,22 +281,23 @@ internal static class Goal6BPowerComesHome
                 source.Phase,
                 source.Progress,
                 TotalFor(source.Phase),
-                SourceContributes(state) ? SourceLoadContribution : 0,
-                ResonatorStatus(state, source))
+                SourceContributes(state) ? SourceLoadContribution : 0)
             : null;
         var commitment = power.Commitment is { } active
             ? new PowerCommitmentSnapshot(
                 active.Kind,
-                CommitmentName(active.Kind),
                 active.Address,
                 active.CompletedTicks,
                 active.TotalTicks - active.CompletedTicks,
                 active.TotalTicks,
                 checked(state.Tick + 1),
                 state.Speed == ChronicleSpeed.Paused,
-                NextTransition(active),
-                "Cancel, hostile damage, or Incarnation death interrupts it; represented material progress remains.",
-                "Movement, Weapon actions, Invocation, Attunement, Lift/Set Down, and another commitment.")
+                CommitmentOutcome(active),
+                Array.AsReadOnly(new[]
+                {
+                    HoldingConstraint.HostileInterruptionKeepsProgress,
+                    HoldingConstraint.LocksAllOtherActionsWhileActive,
+                }))
             : null;
         var primerIsRead = HasBurnPrimerKnowledge(state);
         return new PowerComesHomeContextSnapshot(
@@ -344,16 +308,13 @@ internal static class Goal6BPowerComesHome
             new BurnPrimerSnapshot(
                 BurnPrimerIdentity(state.Seed),
                 BurnPrimerAddress,
-                primerIsRead,
-                primerIsRead
-                    ? "READ — Burn, Quickly, and Lasting remain in the Codex."
-                    : "UNREAD — teaches Burn, Quickly, and Lasting for the Goal 6B Load test."),
+                primerIsRead),
             lode,
             resonator,
             commitment,
             CapacitySnapshot(state),
             Actions(state),
-            Summary(state));
+            Objective(state));
     }
 
     internal static bool TryBeginCommitment(
@@ -375,7 +336,7 @@ internal static class Goal6BPowerComesHome
             return false;
         }
 
-        if (Goal6AActionPlanning.IsImmediateDanger(state))
+        if (CombatRules.IsImmediateDanger(state))
         {
             message = "Physical work requires safety; leave the Mire Brute's immediate threat range.";
             return false;
@@ -400,9 +361,9 @@ internal static class Goal6BPowerComesHome
                     return false;
                 }
 
-                if (!AreAdjacent(state.Address, SingingSeamAddress))
+                if (!IsWithinInteractionReach(state.Address, SingingSeamAddress))
                 {
-                    message = $"Stand cardinally adjacent to the Singing Seam at {SingingSeamAddress}.";
+                    message = $"Stand on or cardinally adjacent to the Singing Seam at {SingingSeamAddress}.";
                     return false;
                 }
 
@@ -422,9 +383,9 @@ internal static class Goal6BPowerComesHome
                     return false;
                 }
 
-                if (!AreAdjacent(state.Address, buildSite))
+                if (!IsWithinInteractionReach(state.Address, buildSite))
                 {
-                    message = $"Stand cardinally adjacent to the highlighted Home site at {buildSite}.";
+                    message = $"Stand on or cardinally adjacent to the highlighted Home site at {buildSite}.";
                     return false;
                 }
 
@@ -475,9 +436,9 @@ internal static class Goal6BPowerComesHome
                     return false;
                 }
 
-                if (!AreAdjacent(state.Address, dismantled.Address))
+                if (!IsWithinInteractionReach(state.Address, dismantled.Address))
                 {
-                    message = $"Stand cardinally adjacent to the Hearth Resonator at {dismantled.Address}.";
+                    message = $"Stand on or cardinally adjacent to the Hearth Resonator at {dismantled.Address}.";
                     return false;
                 }
 
@@ -498,9 +459,9 @@ internal static class Goal6BPowerComesHome
                     return false;
                 }
 
-                if (!AreAdjacent(state.Address, destroyed.Address))
+                if (!IsWithinInteractionReach(state.Address, destroyed.Address))
                 {
-                    message = $"Stand cardinally adjacent to the destroyed Source at {destroyed.Address}.";
+                    message = $"Stand on or cardinally adjacent to the destroyed Source at {destroyed.Address}.";
                     return false;
                 }
 
@@ -554,7 +515,8 @@ internal static class Goal6BPowerComesHome
         };
         message = $"{CommitmentName(kind)} pending at {commitment.Address}: " +
                   $"{commitment.CompletedTicks}/{commitment.TotalTicks} Heartbeats. " +
-                  "PAUSED — progress waits for SPACE. Cancel, hostile damage, or death interrupts; " +
+                  "PAUSED — progress waits for the next active Heartbeat. " +
+                  "Cancel, hostile damage, or death interrupts; " +
                   "movement, combat actions, Invocation, Attunement, and other physical work are disabled.";
         return true;
     }
@@ -567,7 +529,7 @@ internal static class Goal6BPowerComesHome
         updated = state;
         if (!IsAvailable(state))
         {
-            message = "The Burn Primer exists only in the Goal 6B testing Chronicle.";
+            message = "This Chronicle contains no Burn Primer.";
             return false;
         }
 
@@ -589,15 +551,15 @@ internal static class Goal6BPowerComesHome
             return false;
         }
 
-        if (Goal6AActionPlanning.IsImmediateDanger(state))
+        if (CombatRules.IsImmediateDanger(state))
         {
             message = "Leave immediate danger before reading the Burn Primer.";
             return false;
         }
 
-        if (!AreAdjacent(state.Address, BurnPrimerAddress))
+        if (!IsWithinInteractionReach(state.Address, BurnPrimerAddress))
         {
-            message = $"Stand cardinally adjacent to the Burn Primer at {BurnPrimerAddress}.";
+            message = $"Stand on or cardinally adjacent to the Burn Primer at {BurnPrimerAddress}.";
             return false;
         }
 
@@ -643,9 +605,9 @@ internal static class Goal6BPowerComesHome
             return false;
         }
 
-        if (!AreAdjacent(state.Address, lodeAddress))
+        if (!IsWithinInteractionReach(state.Address, lodeAddress))
         {
-            message = $"Stand cardinally adjacent to the Resonant Lode at {lodeAddress}.";
+            message = $"Stand on or cardinally adjacent to the Resonant Lode at {lodeAddress}.";
             return false;
         }
 
@@ -928,15 +890,6 @@ internal static class Goal6BPowerComesHome
         var contribution = next - InherentLoadCapacity;
         var current = CurrentUsedLoad(state);
         var attunement = state.Attunement;
-        var currentStatus = attunement is null
-            ? $"CURRENT: none. This body must Attune under the {next}-Load limit."
-            : $"CURRENT: {current}/{attunement.Capacity} (Attuned H{attunement.Tick}). Stays active until another Attunement or death.";
-        var sourceText = contribution > 0
-            ? "8 inherent + 4 Hearth Resonator = 12"
-            : "8 inherent; Resonator +0 while absent, unfinished, or destroyed";
-        var applicationText = contribution > 0
-            ? " Press G to apply it; building alone changes nothing."
-            : " 12 Load will not fit; CURRENT stays active.";
         return new AttunementCapacitySnapshot(
             current,
             attunement?.Capacity,
@@ -944,19 +897,21 @@ internal static class Goal6BPowerComesHome
             next,
             InherentLoadCapacity,
             contribution,
-            currentStatus,
-            $"NEXT ATTUNEMENT: {next} = {sourceText}.{applicationText}");
+            SourceLoadContribution,
+            WordCatalogue.Get(WordIds.Burn).Load +
+            WordCatalogue.Get(WordIds.Quickly).Load +
+            WordCatalogue.Get(WordIds.Lasting).Load);
     }
 
     private static IReadOnlyList<PowerActionSnapshot> Actions(ChronicleState state)
     {
         var power = state.PowerHome!;
         var committed = power.Commitment is not null;
-        var safe = !Goal6AActionPlanning.IsImmediateDanger(state);
+        var safe = !CombatRules.IsImmediateDanger(state);
         var lodeAddress = power.Lode.Address;
         var site = ResonatorSite(state);
-        var looseIsAdjacent = lodeAddress is { } looseAddress &&
-                              AreAdjacent(state.Address, looseAddress);
+        var looseIsInReach = lodeAddress is { } looseAddress &&
+                             IsWithinInteractionReach(state.Address, looseAddress);
         var dismantleSource = power.Resonator is
             { Phase: HearthResonatorPhase.Intact or HearthResonatorPhase.Damaged }
             ? power.Resonator
@@ -965,344 +920,350 @@ internal static class Goal6BPowerComesHome
             { Phase: HearthResonatorPhase.Destroyed or HearthResonatorPhase.Rebuilding }
             ? power.Resonator
             : null;
+        var primerInReach = IsWithinInteractionReach(state.Address, BurnPrimerAddress);
+        var seamInReach = IsWithinInteractionReach(state.Address, SingingSeamAddress);
+        var carrying = IsCarrying(state);
+        var building = power.Resonator?.Phase == HearthResonatorPhase.UnderConstruction;
+        var siteInReach = site is { } buildSite && IsWithinInteractionReach(state.Address, buildSite);
         return Array.AsReadOnly(new[]
         {
-            new PowerActionSnapshot(
+            Action(
                 null,
                 "read-primer",
-                "READ BURN PRIMER",
-                !HasBurnPrimerKnowledge(state) && safe && !committed && !IsCarrying(state) &&
-                AreAdjacent(state.Address, BurnPrimerAddress),
-                HasBurnPrimerKnowledge(state)
-                    ? "The Burn Primer has already been read."
-                    : !safe
-                        ? "Leave immediate danger before reading."
-                        : committed
-                            ? "Finish or cancel the current commitment."
-                            : IsCarrying(state)
-                                ? "Set down the Resonant Lode before reading."
-                                : !AreAdjacent(state.Address, BurnPrimerAddress)
-                                    ? "Stand next to BURN PRIMER."
-                                    : "Available.",
-                "Add Burn, Quickly, and Lasting to the persistent Codex.",
-                "Immediate; no Heartbeat is spent.",
-                "Invalid state rejects without mutation.",
-                "Nothing after success."),
+                false,
+                !HasBurnPrimerKnowledge(state) && safe && !committed && !carrying && primerInReach,
+                HasBurnPrimerKnowledge(state) ? PowerActionAvailabilityReason.AlreadyRead :
+                !safe ? PowerActionAvailabilityReason.ImmediateDanger :
+                committed ? PowerActionAvailabilityReason.CommitmentActive :
+                carrying ? PowerActionAvailabilityReason.CarryingLode :
+                !primerInReach ? PowerActionAvailabilityReason.PrimerOutOfReach :
+                PowerActionAvailabilityReason.Available,
+                0,
+                HoldingOutcome.BurnWordsEnterCodex,
+                [HoldingConstraint.NothingStopsOrLocks]),
             Action(
                 PowerCommitmentKind.Extract,
                 "extract",
-                "EXTRACT LODE",
-                safe && !committed && power.Lode.Disposition == ResonantLodeDisposition.Embedded && AreAdjacent(state.Address, SingingSeamAddress),
-                power.Lode.Disposition != ResonantLodeDisposition.Embedded
-                    ? "The Lode has already been extracted."
-                    : !safe
-                        ? "Leave immediate danger before extracting."
-                        : !AreAdjacent(state.Address, SingingSeamAddress)
-                            ? "Stand next to GOLD SEAM."
-                            : committed ? "Finish or cancel the current commitment." : "Available.",
-                "Unseat the Resonant Lode and leave the Singing Seam visibly empty.",
-                $"{ExtractTicks - power.ExtractionProgress} active Heartbeat(s); paused time does not advance it."),
-            new PowerActionSnapshot(
+                false,
+                safe && !committed && power.Lode.Disposition == ResonantLodeDisposition.Embedded && seamInReach,
+                power.Lode.Disposition != ResonantLodeDisposition.Embedded ? PowerActionAvailabilityReason.AlreadyExtracted :
+                !safe ? PowerActionAvailabilityReason.ImmediateDanger :
+                committed ? PowerActionAvailabilityReason.CommitmentActive :
+                !seamInReach ? PowerActionAvailabilityReason.SeamOutOfReach :
+                PowerActionAvailabilityReason.Available,
+                ExtractTicks - power.ExtractionProgress,
+                HoldingOutcome.LodeLooseAndSeamEmpty,
+                [HoldingConstraint.HostileInterruptionKeepsProgress, HoldingConstraint.LocksAllOtherActionsWhileActive]),
+            Action(
                 null,
                 "lift",
-                "LIFT LODE",
-                safe && !committed && power.Lode.Disposition == ResonantLodeDisposition.Loose && looseIsAdjacent,
-                power.Lode.Disposition != ResonantLodeDisposition.Loose
-                    ? "The Lode is not loose in the world."
-                    : !looseIsAdjacent
-                        ? "Stand next to loose GOLD LODE."
-                        : committed ? "Finish or cancel the current commitment." : "Available.",
-                "Attach the Lode visibly to this Incarnation.",
-                "Immediate; no Heartbeat is spent.",
-                "Invalid state rejects without mutation.",
-                "A second carried object; Cleaver, Burn, Fly, and Attunement until Set Down or Build."),
-            new PowerActionSnapshot(
+                false,
+                safe && !committed && power.Lode.Disposition == ResonantLodeDisposition.Loose && looseIsInReach,
+                power.Lode.Disposition != ResonantLodeDisposition.Loose ? PowerActionAvailabilityReason.LodeNotLoose :
+                !safe ? PowerActionAvailabilityReason.ImmediateDanger :
+                committed ? PowerActionAvailabilityReason.CommitmentActive :
+                !looseIsInReach ? PowerActionAvailabilityReason.LodeOutOfReach :
+                PowerActionAvailabilityReason.Available,
+                0,
+                HoldingOutcome.LodeCarried,
+                [HoldingConstraint.CarryingLocksWeaponInvocationFlightAttunement]),
+            Action(
                 null,
                 "drop",
-                "SET DOWN",
-                IsCarrying(state) && !committed,
-                !IsCarrying(state) ? "This Incarnation is not carrying the Lode." : committed ? "Finish or cancel the current commitment." : "Available.",
-                "Place exactly one loose Resonant Lode on the carrier's current cell.",
-                "Immediate; no Heartbeat is spent.",
-                "Invalid destination rejects without mutation.",
-                "Nothing after success."),
+                false,
+                carrying && !committed,
+                !carrying ? PowerActionAvailabilityReason.NotCarryingLode :
+                committed ? PowerActionAvailabilityReason.CommitmentActive :
+                PowerActionAvailabilityReason.Available,
+                0,
+                HoldingOutcome.LodeSetDown,
+                [HoldingConstraint.NothingStopsOrLocks]),
             Action(
                 PowerCommitmentKind.Build,
                 "build",
-                power.Resonator?.Phase == HearthResonatorPhase.UnderConstruction ? "RESUME BUILD" : "BUILD",
-                safe && !committed && site is { } buildSite && AreAdjacent(state.Address, buildSite) &&
-                (IsCarrying(state) || power.Resonator?.Phase == HearthResonatorPhase.UnderConstruction),
-                site is null
-                    ? "Found Home first."
-                    : !safe
-                        ? "Leave immediate danger before building."
-                        : !AreAdjacent(state.Address, site.Value)
-                            ? "Stand next to OUTLINED HOME SITE."
-                            : !IsCarrying(state) && power.Resonator?.Phase != HearthResonatorPhase.UnderConstruction
-                                ? "Carry the Resonant Lode to Home."
-                                : committed ? "Finish or cancel the current commitment." : "Available.",
-                "Raise the sole Hearth Resonator around the same physical Lode.",
-                $"{BuildTicks - (power.Resonator?.Phase == HearthResonatorPhase.UnderConstruction ? power.Resonator.Progress : 0)} active Heartbeat(s); paused time does not advance it."),
+                building,
+                safe && !committed && siteInReach && (carrying || building),
+                site is null ? PowerActionAvailabilityReason.HomeMissing :
+                !safe ? PowerActionAvailabilityReason.ImmediateDanger :
+                committed ? PowerActionAvailabilityReason.CommitmentActive :
+                !siteInReach ? PowerActionAvailabilityReason.SiteOutOfReach :
+                !carrying && !building ? PowerActionAvailabilityReason.LodeNotAtHome :
+                PowerActionAvailabilityReason.Available,
+                BuildTicks - (building ? power.Resonator!.Progress : 0),
+                HoldingOutcome.ResonatorIntactOffersFourNext,
+                [HoldingConstraint.HostileInterruptionKeepsProgress, HoldingConstraint.LocksAllOtherActionsWhileActive]),
             Action(
                 PowerCommitmentKind.Dismantle,
                 "dismantle",
-                "DISMANTLE",
-                safe && !committed && dismantleSource is { } && AreAdjacent(state.Address, dismantleSource.Address),
-                dismantleSource is null
-                    ? "An intact or damaged Hearth Resonator is required."
-                    : !AreAdjacent(state.Address, dismantleSource.Address)
-                        ? "Stand next to RESONATOR."
-                        : !safe ? "Leave immediate danger before dismantling." : committed ? "Finish or cancel the current commitment." : "Available.",
-                "Remove one brace. The first active Heartbeat leaves the Resonator DAMAGED but still worth +4; the second DESTROYS it and exposes the same Lode.",
-                $"{(power.Resonator?.Phase == HearthResonatorPhase.Damaged ? 1 : DismantleTicks)} active Heartbeat(s)."),
+                false,
+                safe && !committed && dismantleSource is { } && IsWithinInteractionReach(state.Address, dismantleSource.Address),
+                dismantleSource is null ? PowerActionAvailabilityReason.SourceUnavailable :
+                !safe ? PowerActionAvailabilityReason.ImmediateDanger :
+                committed ? PowerActionAvailabilityReason.CommitmentActive :
+                !IsWithinInteractionReach(state.Address, dismantleSource.Address) ? PowerActionAvailabilityReason.SourceOutOfReach :
+                PowerActionAvailabilityReason.Available,
+                power.Resonator?.Phase == HearthResonatorPhase.Damaged ? 1 : DismantleTicks,
+                HoldingOutcome.DamagedThenDestroyedNextFallsToInherent,
+                [HoldingConstraint.HostileInterruptionKeepsProgress, HoldingConstraint.LocksAllOtherActionsWhileActive]),
             Action(
                 PowerCommitmentKind.Rebuild,
                 "rebuild",
-                power.Resonator?.Phase == HearthResonatorPhase.Rebuilding ? "RESUME REBUILD" : "REBUILD",
-                safe && !committed && rebuildSource is { } && AreAdjacent(state.Address, rebuildSource.Address),
-                rebuildSource is null
-                    ? "A destroyed Hearth Resonator is required."
-                    : !AreAdjacent(state.Address, rebuildSource.Address)
-                        ? "Stand next to DESTROYED RESONATOR."
-                        : !safe ? "Leave immediate danger before rebuilding." : committed ? "Finish or cancel the current commitment." : "Available.",
-                "Raise the same Source around the exposed Lode and restore +4 future capacity.",
-                $"{RebuildTicks - (power.Resonator?.Phase == HearthResonatorPhase.Rebuilding ? power.Resonator.Progress : 0)} active Heartbeat(s)."),
+                power.Resonator?.Phase == HearthResonatorPhase.Rebuilding,
+                safe && !committed && rebuildSource is { } && IsWithinInteractionReach(state.Address, rebuildSource.Address),
+                rebuildSource is null ? PowerActionAvailabilityReason.SourceUnavailable :
+                !safe ? PowerActionAvailabilityReason.ImmediateDanger :
+                committed ? PowerActionAvailabilityReason.CommitmentActive :
+                !IsWithinInteractionReach(state.Address, rebuildSource.Address) ? PowerActionAvailabilityReason.SourceOutOfReach :
+                PowerActionAvailabilityReason.Available,
+                RebuildTicks - (power.Resonator?.Phase == HearthResonatorPhase.Rebuilding ? power.Resonator.Progress : 0),
+                HoldingOutcome.ResonatorIntactRestoresFullNext,
+                [HoldingConstraint.HostileInterruptionKeepsProgress, HoldingConstraint.LocksAllOtherActionsWhileActive]),
         });
     }
 
     private static PowerActionSnapshot Action(
-        PowerCommitmentKind kind,
+        PowerCommitmentKind? kind,
         string id,
-        string label,
+        bool isResumption,
         bool available,
-        string availability,
-        string next,
-        string when) => new(
+        PowerActionAvailabilityReason availabilityReason,
+        int heartbeats,
+        HoldingOutcome outcome,
+        IReadOnlyList<HoldingConstraint> constraints) => new(
             kind,
             id,
-            label,
+            isResumption,
             available,
-            availability,
-            next,
-            when,
-            "Cancel, hostile damage, or Incarnation death; represented progress remains.",
-            "Movement, Weapon actions, Invocation, Attunement, Lift/Set Down, and another commitment while active.");
+            availabilityReason,
+            heartbeats,
+            outcome,
+            Array.AsReadOnly(constraints.ToArray()));
 
-    private static string Summary(ChronicleState state)
+    private static readonly HoldingObjectiveSnapshot UnavailableObjective = new(
+        HoldingObjectiveKind.ReturnTheLode,
+        HoldingSubject.None,
+        TravelSubjectLocated: false,
+        TravelSubjectInReach: false,
+        TravelOffset: null,
+        HoldingActionKind.None,
+        ActionHeartbeats: 0,
+        HoldingEstablishedFact.None,
+        HoldingOutcome.None,
+        ShowsCarryHomeStep: false,
+        CommitmentCompletedTicks: 0,
+        CommitmentTotalTicks: 0,
+        WaitingForHeartbeat: false,
+        NextTick: 0,
+        Array.Empty<HoldingConstraint>());
+
+    private static HoldingObjectiveSnapshot Objective(ChronicleState state)
     {
         var power = state.PowerHome!;
         if (power.Commitment is { } commitment)
         {
-            var advance = state.Speed == ChronicleSpeed.Paused
-                ? "[ ] SPACE — run 1 Heartbeat"
-                : $"[ ] H{state.Tick + 1} — work advances";
-            return $"CHECKLIST · {CommitmentChecklistName(commitment.Kind)} {commitment.CompletedTicks}/{commitment.TotalTicks}\n" +
-                   advance + "\n" +
-                   $"[ ] NEXT — {ChecklistTransition(commitment)}\n" +
-                   "STOPS: X / damage / death · progress stays\n" +
-                   "LOCKS: move / fight / invoke / Attune / carry / other work";
+            return Objective(
+                HoldingObjectiveKind.Commitment,
+                [
+                    HoldingConstraint.HostileInterruptionKeepsProgress,
+                    HoldingConstraint.LocksAllOtherActionsWhileActive,
+                ],
+                action: HoldingActionKind.AdvanceHeartbeat,
+                nextOutcome: CommitmentOutcome(commitment),
+                commitmentCompletedTicks: commitment.CompletedTicks,
+                commitmentTotalTicks: commitment.TotalTicks,
+                waitingForHeartbeat: state.Speed == ChronicleSpeed.Paused,
+                nextTick: state.Tick + 1);
         }
 
         if (!HasBurnPrimerKnowledge(state))
         {
-            var travelStep = AreAdjacent(state.Address, BurnPrimerAddress)
-                ? "[x] Standing beside BURN PRIMER"
-                : $"[ ] Go toward BURN PRIMER: {RelativeOffset(state.Address, BurnPrimerAddress)}";
-            return "CHECKLIST · LEARN BURN\n" +
-                   travelStep + "\n" +
-                   "[ ] P — Read (instant)\n" +
-                   "[ ] NEXT — Burn + Quickly + Lasting enter Codex\n" +
-                   "STOPS: nothing · LOCKS: nothing";
+            return Objective(
+                HoldingObjectiveKind.LearnBurn,
+                [HoldingConstraint.NothingStopsOrLocks],
+                travelSubject: HoldingSubject.BurnPrimer,
+                travelTarget: BurnPrimerAddress,
+                state: state,
+                action: HoldingActionKind.Read,
+                nextOutcome: HoldingOutcome.BurnWordsEnterCodex);
         }
 
         if (IsCarrying(state))
         {
             var site = ResonatorSite(state);
-            var travelStep = site is null
-                ? "[ ] Find HOME"
-                : AreAdjacent(state.Address, site.Value)
-                    ? "[x] Standing beside OUTLINED SITE"
-                    : $"[ ] Go toward HOME: {RelativeOffset(state.Address, site.Value)}";
-            return "CHECKLIST · CARRY LODE HOME\n" +
-                   travelStep + "\n" +
-                   "[ ] P — Build (3 Heartbeats)\n" +
-                   "STOPS WORK: X / damage / death · progress stays\n" +
-                   "CARRYING LOCKS: Cleaver / Burn / Fly / Attune";
+            return Objective(
+                HoldingObjectiveKind.CarryLodeHome,
+                [
+                    HoldingConstraint.HostileInterruptionKeepsWorkProgress,
+                    HoldingConstraint.CarryingLocksWeaponInvocationFlightAttunement,
+                ],
+                travelSubject: site is null ? HoldingSubject.Home : HoldingSubject.ResonatorSite,
+                travelTarget: site,
+                state: state,
+                action: HoldingActionKind.Build,
+                actionHeartbeats: BuildTicks);
         }
 
         if (power.Lode.Disposition == ResonantLodeDisposition.Embedded)
         {
-            var travelStep = AreAdjacent(state.Address, SingingSeamAddress)
-                ? "[x] Standing beside GOLD SEAM"
-                : $"[ ] Go toward GOLD SEAM: {RelativeOffset(state.Address, SingingSeamAddress)}";
-            return "CHECKLIST · GET THE GOLD LODE\n" +
-                   travelStep + "\n" +
-                   "[ ] P — Extract (2 Heartbeats)\n" +
-                   "STOPS: X / damage / death · progress stays\n" +
-                   "LOCKS: move / fight / invoke / Attune / carry / other work";
+            return Objective(
+                HoldingObjectiveKind.GetTheLode,
+                [
+                    HoldingConstraint.HostileInterruptionKeepsProgress,
+                    HoldingConstraint.LocksAllOtherActionsWhileActive,
+                ],
+                travelSubject: HoldingSubject.SingingSeam,
+                travelTarget: SingingSeamAddress,
+                state: state,
+                action: HoldingActionKind.Extract,
+                actionHeartbeats: ExtractTicks);
         }
 
         if (power.Resonator is null && power.Lode.Disposition == ResonantLodeDisposition.Loose)
         {
-            var lodeAddress = power.Lode.Address;
-            var travelStep = lodeAddress is { } address && AreAdjacent(state.Address, address)
-                ? "[x] Standing beside GOLD LODE"
-                : lodeAddress is { } destination
-                    ? $"[ ] Go toward GOLD LODE: {RelativeOffset(state.Address, destination)}"
-                    : "[ ] Find the GOLD LODE";
-            return "CHECKLIST · LIFT GOLD LODE\n" +
-                   travelStep + "\n" +
-                   "[ ] P — Lift (instant)\n" +
-                   "[ ] Carry it to HOME\n" +
-                   "CARRYING LOCKS: Cleaver / Burn / Fly / Attune";
+            return Objective(
+                HoldingObjectiveKind.LiftTheLode,
+                [HoldingConstraint.CarryingLocksWeaponInvocationFlightAttunement],
+                travelSubject: HoldingSubject.ResonantLode,
+                travelTarget: power.Lode.Address,
+                state: state,
+                action: HoldingActionKind.Lift,
+                showsCarryHomeStep: true);
         }
 
         if (power.Resonator is { Phase: HearthResonatorPhase.UnderConstruction } construction)
         {
-            return "CHECKLIST · FINISH RESONATOR\n" +
-                   AdjacentChecklistStep(state, construction.Address, "OUTLINED SITE") + "\n" +
-                   $"[ ] P — Resume Build ({BuildTicks - construction.Progress} Heartbeats)\n" +
-                   "STOPS: X / damage / death · progress stays\n" +
-                   "LOCKS: move / fight / invoke / Attune / carry / other work";
+            return Objective(
+                HoldingObjectiveKind.FinishConstruction,
+                [
+                    HoldingConstraint.HostileInterruptionKeepsProgress,
+                    HoldingConstraint.LocksAllOtherActionsWhileActive,
+                ],
+                travelSubject: HoldingSubject.ResonatorSite,
+                travelTarget: construction.Address,
+                state: state,
+                action: HoldingActionKind.ResumeBuild,
+                actionHeartbeats: BuildTicks - construction.Progress);
         }
 
         if (power.Resonator is { Phase: HearthResonatorPhase.Intact })
         {
-            var isTwelveLoadCurrent = state.Attunement?.Capacity == InherentLoadCapacity + SourceLoadContribution;
-            return isTwelveLoadCurrent
-                ? "CHECKLIST · TEST SOURCE LOSS\n" +
-                  "[x] CURRENT Loadout uses 12; source loss will not disable it\n" +
-                  "[ ] P — Dismantle (2 Heartbeats)\n" +
-                  "[ ] NEXT — damaged, then destroyed; NEXT Attunement falls to 8\n" +
-                  "STOPS: X / damage / death · LOCKS: move / fight / invoke / Attune"
-                : "CHECKLIST · USE NEW LOAD\n" +
-                  "[x] Resonator gives +4 at NEXT Attunement\n" +
-                  "[ ] G — Attune Burn + Quickly + Lasting (12/12)\n" +
-                  "[ ] NEXT — Loadout changes at Attunement\n" +
-                  "BLOCKED BY: carrying / work / immediate danger";
+            var currentUsesSourceCapacity =
+                state.Attunement?.Capacity == InherentLoadCapacity + SourceLoadContribution;
+            return currentUsesSourceCapacity
+                ? Objective(
+                    HoldingObjectiveKind.TestSourceLoss,
+                    [HoldingConstraint.LocksMovementFightInvocationAttunement],
+                    action: HoldingActionKind.Dismantle,
+                    actionHeartbeats: DismantleTicks,
+                    establishedFact: HoldingEstablishedFact.CurrentLoadoutSurvivesSourceLoss,
+                    nextOutcome: HoldingOutcome.DamagedThenDestroyedNextFallsToInherent)
+                : Objective(
+                    HoldingObjectiveKind.UseNewLoad,
+                    [HoldingConstraint.BlockedByCarryingWorkOrDanger],
+                    action: HoldingActionKind.Attune,
+                    establishedFact: HoldingEstablishedFact.SourceContributesAtNextAttunement,
+                    nextOutcome: HoldingOutcome.LoadoutChangesAtAttunement);
         }
 
         if (power.Resonator is { Phase: HearthResonatorPhase.Damaged })
         {
-            return "CHECKLIST · FINISH DISMANTLING\n" +
-                   "[x] Resonator damaged; still +4 at NEXT Attunement\n" +
-                   "[ ] P — Destroy (1 Heartbeat)\n" +
-                   "[ ] NEXT — NEXT Attunement falls to 8; CURRENT stays\n" +
-                   "STOPS: X / damage / death · LOCKS: move / fight / invoke / Attune";
+            return Objective(
+                HoldingObjectiveKind.FinishDismantling,
+                [HoldingConstraint.LocksMovementFightInvocationAttunement],
+                action: HoldingActionKind.Destroy,
+                actionHeartbeats: 1,
+                establishedFact: HoldingEstablishedFact.SourceDamagedStillContributes,
+                nextOutcome: HoldingOutcome.ResonatorDestroyedNextFallsToInherent);
         }
 
         if (power.Resonator is { Phase: HearthResonatorPhase.Destroyed })
         {
-            return "CHECKLIST · REBUILD POWER\n" +
-                   "[x] Source destroyed: NEXT Attunement 8; CURRENT stays\n" +
-                   "[ ] P — Rebuild (3 Heartbeats)\n" +
-                   "[ ] NEXT — intact source restores NEXT Attunement to 12\n" +
-                   "STOPS: X / damage / death · LOCKS: move / fight / invoke / Attune";
+            return Objective(
+                HoldingObjectiveKind.RebuildPower,
+                [HoldingConstraint.LocksMovementFightInvocationAttunement],
+                action: HoldingActionKind.Rebuild,
+                actionHeartbeats: RebuildTicks,
+                establishedFact: HoldingEstablishedFact.SourceDestroyedNextIsInherent,
+                nextOutcome: HoldingOutcome.ResonatorIntactRestoresFullNext);
         }
 
         if (power.Resonator is { Phase: HearthResonatorPhase.Rebuilding } rebuilding)
         {
-            return "CHECKLIST · FINISH REBUILD\n" +
-                   AdjacentChecklistStep(state, rebuilding.Address, "DESTROYED RESONATOR") + "\n" +
-                   $"[ ] P — Resume Rebuild ({RebuildTicks - rebuilding.Progress} Heartbeats)\n" +
-                   "[ ] NEXT — intact source restores NEXT Attunement to 12\n" +
-                   "STOPS: X / damage / death · LOCKS: move / fight / invoke / Attune";
+            return Objective(
+                HoldingObjectiveKind.FinishRebuild,
+                [HoldingConstraint.LocksMovementFightInvocationAttunement],
+                travelSubject: HoldingSubject.DestroyedHearthResonator,
+                travelTarget: rebuilding.Address,
+                state: state,
+                action: HoldingActionKind.ResumeRebuild,
+                actionHeartbeats: RebuildTicks - rebuilding.Progress,
+                nextOutcome: HoldingOutcome.ResonatorIntactRestoresFullNext);
         }
 
-        return "CHECKLIST · RETURN THE LODE\n" +
-               "[ ] Find the GOLD LODE\n" +
-               "[ ] Carry it to HOME";
+        return Objective(
+            HoldingObjectiveKind.ReturnTheLode,
+            [],
+            travelSubject: HoldingSubject.ResonantLode,
+            travelTarget: null,
+            state: state,
+            showsCarryHomeStep: true);
     }
 
-    private static string AdjacentChecklistStep(ChronicleState state, WorldAddress target, string label) =>
-        AreAdjacent(state.Address, target)
-            ? $"[x] Standing beside {label}"
-            : $"[ ] Go toward {label}: {RelativeOffset(state.Address, target)}";
+    private static HoldingObjectiveSnapshot Objective(
+        HoldingObjectiveKind kind,
+        IReadOnlyList<HoldingConstraint> constraints,
+        HoldingSubject travelSubject = HoldingSubject.None,
+        WorldAddress? travelTarget = null,
+        ChronicleState? state = null,
+        HoldingActionKind action = HoldingActionKind.None,
+        int actionHeartbeats = 0,
+        HoldingEstablishedFact establishedFact = HoldingEstablishedFact.None,
+        HoldingOutcome nextOutcome = HoldingOutcome.None,
+        bool showsCarryHomeStep = false,
+        int commitmentCompletedTicks = 0,
+        int commitmentTotalTicks = 0,
+        bool waitingForHeartbeat = false,
+        long nextTick = 0) =>
+        new(
+            kind,
+            travelSubject,
+            travelTarget is not null,
+            travelTarget is { } target && state is { } located && IsWithinInteractionReach(located.Address, target),
+            travelTarget is { } destination && state is { } from
+                ? Offset(from.Address, destination)
+                : null,
+            action,
+            actionHeartbeats,
+            establishedFact,
+            nextOutcome,
+            showsCarryHomeStep,
+            commitmentCompletedTicks,
+            commitmentTotalTicks,
+            waitingForHeartbeat,
+            nextTick,
+            Array.AsReadOnly(constraints.ToArray()));
 
-    private static string CommitmentChecklistName(PowerCommitmentKind kind) => kind switch
-    {
-        PowerCommitmentKind.Extract => "EXTRACT LODE",
-        PowerCommitmentKind.Build => "BUILD RESONATOR",
-        PowerCommitmentKind.Dismantle => "DISMANTLE RESONATOR",
-        PowerCommitmentKind.Rebuild => "REBUILD RESONATOR",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown commitment kind."),
-    };
-
-    private static string ChecklistTransition(PowerCommitmentState commitment) => commitment.Kind switch
+    private static HoldingOutcome CommitmentOutcome(PowerCommitmentState commitment) => commitment.Kind switch
     {
         PowerCommitmentKind.Extract when commitment.CompletedTicks + 1 < commitment.TotalTicks =>
-            "Seam shows extraction progress",
-        PowerCommitmentKind.Extract => "Lode becomes loose; Seam becomes empty",
+            HoldingOutcome.ExtractionProgressRemains,
+        PowerCommitmentKind.Extract => HoldingOutcome.LodeLooseAndSeamEmpty,
         PowerCommitmentKind.Build when commitment.CompletedTicks + 1 < commitment.TotalTicks =>
-            "Construction advances",
-        PowerCommitmentKind.Build => "Resonator becomes intact; +4 ready for NEXT Attunement",
+            HoldingOutcome.ConstructionAdvances,
+        PowerCommitmentKind.Build => HoldingOutcome.ResonatorIntactOffersFourNext,
         PowerCommitmentKind.Dismantle when commitment.CompletedTicks == 0 =>
-            "Resonator becomes damaged; still +4 at NEXT Attunement",
-        PowerCommitmentKind.Dismantle => "Resonator destroyed; NEXT Attunement falls to 8",
+            HoldingOutcome.ResonatorDamagedStillContributes,
+        PowerCommitmentKind.Dismantle => HoldingOutcome.ResonatorDestroyedNextFallsToInherent,
         PowerCommitmentKind.Rebuild when commitment.CompletedTicks + 1 < commitment.TotalTicks =>
-            "Rebuild advances",
-        PowerCommitmentKind.Rebuild => "Resonator intact; NEXT Attunement returns to 12",
-        _ => "Work advances",
+            HoldingOutcome.RebuildAdvances,
+        PowerCommitmentKind.Rebuild => HoldingOutcome.ResonatorIntactRestoresFullNext,
+        _ => HoldingOutcome.WorkAdvances,
     };
 
-    private static string RelativeOffset(WorldAddress from, WorldAddress to)
-    {
-        if (!string.Equals(from.Stratum, to.Stratum, StringComparison.Ordinal))
-        {
-            return $"in {to.Stratum}";
-        }
-
-        var parts = new List<string>(2);
-        var deltaX = (BigInteger)to.X - from.X;
-        var deltaY = (BigInteger)to.Y - from.Y;
-        if (!deltaX.IsZero)
-        {
-            var distance = BigInteger.Abs(deltaX);
-            parts.Add($"{distance} {(distance == BigInteger.One ? "TILE" : "TILES")} {(deltaX.Sign > 0 ? "EAST" : "WEST")}");
-        }
-
-        if (!deltaY.IsZero)
-        {
-            var distance = BigInteger.Abs(deltaY);
-            parts.Add($"{distance} {(distance == BigInteger.One ? "TILE" : "TILES")} {(deltaY.Sign > 0 ? "SOUTH" : "NORTH")}");
-        }
-
-        return parts.Count == 0 ? "HERE" : string.Join(" and ", parts);
-    }
-
-    private static string LodeStatus(ChronicleState state)
-    {
-        var lode = state.PowerHome!.Lode;
-        return lode.Disposition switch
-        {
-            ResonantLodeDisposition.Embedded =>
-                $"Resonant Lode embedded at its Singing Seam origin {lode.OriginAddress}; extraction {state.PowerHome.ExtractionProgress}/{ExtractTicks}.",
-            ResonantLodeDisposition.Loose =>
-                $"Resonant Lode loose at {lode.Address}; persistent origin {lode.OriginAddress}.",
-            ResonantLodeDisposition.Carried =>
-                $"Resonant Lode carried by Incarnation {lode.CarrierIncarnationId} at {state.Address}; persistent origin {lode.OriginAddress}.",
-            ResonantLodeDisposition.Committed =>
-                $"Resonant Lode committed to the Hearth Resonator at {lode.Address}; persistent origin {lode.OriginAddress}.",
-            ResonantLodeDisposition.Installed =>
-                $"Resonant Lode installed in the Hearth Resonator at {lode.Address}; persistent origin {lode.OriginAddress}.",
-            _ => throw new InvalidOperationException($"Unknown Resonant Lode state '{lode.Disposition}'."),
-        };
-    }
-
-    private static string ResonatorStatus(ChronicleState state, HearthResonatorState source) => source.Phase switch
-    {
-        HearthResonatorPhase.UnderConstruction =>
-            $"UNDER CONSTRUCTION {source.Progress}/{BuildTicks}; contributes 0 until complete.",
-        HearthResonatorPhase.Intact =>
-            "INTACT — contributes +4 to the next Attunement; current Loadout changes only by explicit Attunement.",
-        HearthResonatorPhase.Damaged =>
-            "DAMAGED — still contributes +4; one more dismantling Heartbeat destroys it.",
-        HearthResonatorPhase.Destroyed =>
-            "DESTROYED — contributes 0; current Loadout remains until Attunement or death; the same Lode is exposed.",
-        HearthResonatorPhase.Rebuilding =>
-            $"REBUILDING {source.Progress}/{RebuildTicks}; contributes 0 until complete.",
-        _ => throw new InvalidOperationException($"Unknown Hearth Resonator phase '{source.Phase}'."),
-    };
+    private static HoldingOffsetSnapshot Offset(WorldAddress from, WorldAddress to) =>
+        string.Equals(from.Stratum, to.Stratum, StringComparison.Ordinal)
+            ? new HoldingOffsetSnapshot(true, to.Stratum, to.X - from.X, to.Y - from.Y)
+            : new HoldingOffsetSnapshot(false, to.Stratum, 0, 0);
 
     private static int TotalFor(HearthResonatorPhase phase) => phase switch
     {
@@ -1311,25 +1272,6 @@ internal static class Goal6BPowerComesHome
         HearthResonatorPhase.Rebuilding => RebuildTicks,
         HearthResonatorPhase.Intact => BuildTicks,
         _ => 0,
-    };
-
-    private static string NextTransition(PowerCommitmentState commitment) => commitment.Kind switch
-    {
-        PowerCommitmentKind.Extract when commitment.CompletedTicks + 1 < commitment.TotalTicks =>
-            "Extraction progress remains on the Singing Seam.",
-        PowerCommitmentKind.Extract => "The Lode becomes loose and the persistent Seam becomes empty.",
-        PowerCommitmentKind.Build when commitment.CompletedTicks + 1 < commitment.TotalTicks =>
-            "The visible foundation advances one construction step.",
-        PowerCommitmentKind.Build => "The Resonator becomes intact and offers +4 at the next Attunement.",
-        PowerCommitmentKind.Dismantle when commitment.CompletedTicks == 0 =>
-            "The Source becomes visibly damaged but still contributes +4.",
-        PowerCommitmentKind.Dismantle =>
-            "The Source becomes destroyed, next capacity falls to 8, and the same Lode is exposed.",
-        PowerCommitmentKind.Rebuild when commitment.CompletedTicks + 1 < commitment.TotalTicks =>
-            "The visible rebuilding state advances one step.",
-        PowerCommitmentKind.Rebuild =>
-            "The Source becomes intact and restores +4 at the next Attunement.",
-        _ => "The physical commitment advances.",
     };
 
     private static PowerCommitmentState NewCommitment(
@@ -1355,12 +1297,37 @@ internal static class Goal6BPowerComesHome
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown commitment kind."),
     };
 
-    internal static bool AreAdjacent(WorldAddress first, WorldAddress second) =>
+    internal static bool IsWithinInteractionReach(WorldAddress first, WorldAddress second) =>
         string.Equals(first.Stratum, second.Stratum, StringComparison.Ordinal) &&
-        ((first.X == second.X && AreConsecutive(first.Y, second.Y)) ||
+        ((first.X == second.X && first.Y == second.Y) ||
+         (first.X == second.X && AreConsecutive(first.Y, second.Y)) ||
          (first.Y == second.Y && AreConsecutive(first.X, second.X)));
 
     private static bool AreConsecutive(long first, long second) =>
         (first != long.MaxValue && first + 1 == second) ||
         (second != long.MaxValue && second + 1 == first);
+}
+
+/// <summary>
+/// The production material commitment hooks. This is the one place where the
+/// Holding rulebook is handed to the combat rulebook.
+/// </summary>
+internal sealed class HoldingCommitments : IMaterialCommitments
+{
+    internal static readonly HoldingCommitments Instance = new();
+
+    private HoldingCommitments()
+    {
+    }
+
+    public PowerAdvanceResult AdvanceAfterTick(ChronicleState state) =>
+        HoldingRules.AdvanceAfterTick(state);
+
+    public ChronicleState InterruptAfterHostileDamage(
+        ChronicleState state,
+        ICollection<CombatResultSnapshot> results) =>
+        HoldingRules.InterruptAfterHostileDamage(state, results);
+
+    public ChronicleState EndIncarnation(ChronicleState state) =>
+        HoldingRules.EndIncarnation(state);
 }

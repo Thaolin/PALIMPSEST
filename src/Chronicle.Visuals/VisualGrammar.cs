@@ -63,6 +63,34 @@ public static class VisualGrammar
     private const int SupportedPackFormatVersion = 1;
     private const int SupportedComposerVersion = 2;
 
+    private static readonly IReadOnlyDictionary<(string Archetype, string Condition), string> SubjectVisuals =
+        new Dictionary<(string, string), string>
+        {
+            [(WorldSubjects.MireBruteArchetype, WorldSubjects.Living)] = "subject.mire-brute.living",
+            [(WorldSubjects.MireBruteArchetype, WorldSubjects.Dead)] = "subject.mire-brute.dead",
+            [(WorldSubjects.BurnPrimerArchetype, WorldSubjects.Read)] = "glyph.codex",
+            [(WorldSubjects.BurnPrimerArchetype, WorldSubjects.Unread)] = "glyph.codex",
+            [(WorldSubjects.SingingSeamArchetype, "embedded")] = "place.singing-seam.embedded",
+            [(WorldSubjects.SingingSeamArchetype, "empty")] = "place.singing-seam.empty",
+            [(WorldSubjects.ResonantLodeArchetype, "embedded")] = "resource.resonant-lode.embedded",
+            [(WorldSubjects.ResonantLodeArchetype, "loose")] = "resource.resonant-lode.loose",
+            [(WorldSubjects.ResonantLodeArchetype, "carried")] = "resource.resonant-lode.carried",
+            [(WorldSubjects.HearthResonatorArchetype, "under-construction")] = "source.hearth-resonator.construction",
+            [(WorldSubjects.HearthResonatorArchetype, "intact")] = "source.hearth-resonator.intact",
+            [(WorldSubjects.HearthResonatorArchetype, "damaged")] = "source.hearth-resonator.damaged",
+            [(WorldSubjects.HearthResonatorArchetype, "destroyed")] = "source.hearth-resonator.destroyed",
+            [(WorldSubjects.HearthResonatorArchetype, "rebuilding")] = "source.hearth-resonator.rebuilding",
+            [(WorldSubjects.HearthResonatorSiteArchetype, WorldSubjects.Ready)] = "emphasis.home-source-site",
+        };
+
+    private static readonly IReadOnlyDictionary<WorldSubjectMark, string> SubjectMarkVisuals =
+        new Dictionary<WorldSubjectMark, string>
+        {
+            [WorldSubjectMark.Wounded] = "emphasis.mire-brute.wounded",
+            [WorldSubjectMark.Burning] = "effect.mire-brute.burning",
+            [WorldSubjectMark.Selected] = "emphasis.target.selected",
+        };
+
     public static VisualRenderPlan Compose(VisualCompositionInput input)
     {
         ArgumentNullException.ThrowIfNull(input);
@@ -98,17 +126,16 @@ public static class VisualGrammar
             AddAdjacency(input, cell, cells, layers);
             AddFeature(input, cell, cells, layers);
             AddDurableSubject(input, cell, layers);
-            AddMireBrute(input, cell, layers);
-            AddPowerComesHome(input, cell, layers);
+            AddWorldSubjects(input, cell, layers);
 
             if (dangers.Contains(cell.Address))
             {
                 Add(
                     input,
                     cell.Address,
-                    cell.MireBrute is null
-                        ? "emphasis.danger.river-ward"
-                        : "emphasis.danger.mire-brute",
+                    cell.Has(WorldSubjectKind.Creature)
+                        ? "emphasis.danger.mire-brute"
+                        : "emphasis.danger.river-ward",
                     layers);
             }
 
@@ -127,9 +154,9 @@ public static class VisualGrammar
                 Add(
                     input,
                     cell.Address,
-                    cell.MireBrute is null && cell.Target is null
-                        ? "emphasis.selection"
-                        : "emphasis.target.selected",
+                    cell.Has(WorldSubjectKind.Creature) || cell.Has(WorldSubjectKind.Target)
+                        ? "emphasis.target.selected"
+                        : "emphasis.selection",
                     layers);
             }
 
@@ -327,92 +354,25 @@ public static class VisualGrammar
         }
     }
 
-    private static void AddMireBrute(
+    /// <summary>
+    /// One table-owned resolution path for every durable subject. Core exposes
+    /// semantic archetype, condition, and bounded marks only.
+    /// </summary>
+    private static void AddWorldSubjects(
         VisualCompositionInput input,
         WorldCell cell,
         IReadOnlyList<List<VisualRenderMark>> layers)
     {
-        var brute = cell.MireBrute;
-        if (brute is null)
+        foreach (var subject in cell.Subjects)
         {
-            return;
-        }
-
-        if (!brute.IsLiving)
-        {
-            Add(input, cell.Address, "subject.mire-brute.dead", layers);
-            return;
-        }
-
-        Add(input, cell.Address, "subject.mire-brute.living", layers);
-        if (brute.HitPoints < brute.MaximumHitPoints)
-        {
-            Add(input, cell.Address, "emphasis.mire-brute.wounded", layers);
-        }
-
-        if (brute.IsBurning)
-        {
-            Add(input, cell.Address, "effect.mire-brute.burning", layers);
-        }
-    }
-
-    private static void AddPowerComesHome(
-        VisualCompositionInput input,
-        WorldCell cell,
-        IReadOnlyList<List<VisualRenderMark>> layers)
-    {
-        if (cell.BurnPrimer is { } primer)
-        {
-            Add(input, cell.Address, "glyph.codex", layers);
-            if (!primer.IsRead)
-            {
-                Add(input, cell.Address, "emphasis.target.selected", layers);
-            }
-        }
-
-        if (cell.IsHearthResonatorSite && cell.HearthResonator is null)
-        {
-            Add(input, cell.Address, "emphasis.home-source-site", layers);
-        }
-
-        if (cell.SingingSeam is { } seam)
-        {
-            Add(
-                input,
-                cell.Address,
-                seam.State == SingingSeamVisualState.Embedded
-                    ? "place.singing-seam.embedded"
-                    : "place.singing-seam.empty",
-                layers);
-        }
-
-        if (cell.HearthResonator is { } source)
-        {
-            var visualId = source.Phase switch
-            {
-                HearthResonatorPhase.UnderConstruction => "source.hearth-resonator.construction",
-                HearthResonatorPhase.Intact => "source.hearth-resonator.intact",
-                HearthResonatorPhase.Damaged => "source.hearth-resonator.damaged",
-                HearthResonatorPhase.Destroyed => "source.hearth-resonator.destroyed",
-                HearthResonatorPhase.Rebuilding => "source.hearth-resonator.rebuilding",
-                _ => throw new InvalidOperationException($"Unknown Source phase '{source.Phase}'."),
-            };
-            Add(input, cell.Address, visualId, layers);
-        }
-
-        if (cell.ResonantLode is { } lode)
-        {
-            var visualId = lode.Disposition switch
-            {
-                ResonantLodeDisposition.Embedded => "resource.resonant-lode.embedded",
-                ResonantLodeDisposition.Loose => "resource.resonant-lode.loose",
-                ResonantLodeDisposition.Carried => "resource.resonant-lode.carried",
-                ResonantLodeDisposition.Committed or ResonantLodeDisposition.Installed => null,
-                _ => throw new InvalidOperationException($"Unknown Lode disposition '{lode.Disposition}'."),
-            };
-            if (visualId is not null)
+            if (SubjectVisuals.TryGetValue((subject.Archetype, subject.Condition), out var visualId))
             {
                 Add(input, cell.Address, visualId, layers);
+            }
+
+            foreach (var mark in subject.Marks)
+            {
+                Add(input, cell.Address, SubjectMarkVisuals[mark], layers);
             }
         }
     }

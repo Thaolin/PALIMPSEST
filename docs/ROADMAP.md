@@ -426,6 +426,52 @@ Goal 6 deliberately does not add a broad bestiary, inventory, loot economy,
 crafting framework, production chain, anonymous workers, or raid simulation.
 Each child slice requires its own contract, automated proof, and player UAT.
 
+### 6C — One Rulebook, One Vocabulary
+
+**Contract state:** authorized as a bounded consolidation gate on 2026-07-22
+under [Goal 6C — One Rulebook, One Vocabulary](GOAL-6C-ONE-RULEBOOK.md).
+Implemented on `codex/goal-6c-one-rulebook`. First player review passed the
+material loop but rejected combat because a focused action consumed `Space`
+and immediately re-paused, while pending text overlapped the top rail. The
+bounded correction reserves `Space` for the Clock before GUI activation,
+compacts the rail, and accepts the subject's own cell as Goal 6B interaction
+reach. The complete retained gate is green. Player re-UAT passed on 2026-07-22
+with “Yep pass”; Goal 6C is complete and accepted.
+
+Goal 6C adds no new system, content, inventory framework, or broad Chronicle
+rule. Apart from the explicit same-cell interaction correction, it repairs the
+ownership gaps the pre-Goal-7 review found in the accepted Goal 6 build, so Goal
+7 does not harden the Goal 6 fixture shape:
+
+- `Chronicle.Core` states structured facts; Godot owns every sentence, key
+  label, and checklist glyph, proved by a gate assertion over Core sources.
+- Word Preparation, consequence, Recovery, and damage are authored
+  `WordDefinition` data, so a fourth Modifier changes no resolver code.
+- One `WorldSubject` model replaces the per-fixture `WorldCell` fields, with
+  one subject-to-visual resolution path.
+- `ChronicleState.cs` is split into state, save codec, migration, document
+  validation, and state validation, none over 900 lines.
+- Player feedback defects are fixed: future-state forecast counters, rejection
+  and interruption contradictions, checklist/action parity, truncated
+  consequence rows, duplicated or ambiguous log entries, stale combat rails,
+  keyboard focus, disabled-state contrast, and verbose test-oracle language.
+- Focused buttons cannot steal the Clock's `Space` input, pending combat text
+  cannot overlap the top rail, and the actual Godot journey proves the next
+  hostile Heartbeat occurs.
+- Frozen accepted save bytes and Goal 6B render-plan digests prove that the
+  consolidation did not silently change persistence or visuals.
+- `checks/verify.ps1` contains no unreachable function, and the Codemap and
+  pass marker describe exactly what runs.
+- `CombatRules` and `HoldingRules` replace the fixture-named modules, and the
+  dependency between them runs one way.
+- The Codex and Loadout surface direction is recorded as a decision only.
+
+**Accept when:** the complete gate is green with zero warnings and the player
+confirms combat resumes through focused `Space` without overlap and the eight
+regenerated Goal 6B captures reproduce the accepted material behaviour apart
+from the bounded feedback and same-cell reach corrections. Completion does not
+authorize Goal 7.
+
 ## North-star expansion — One World, Many Areas
 
 **Status:** Product and architecture direction settled; primary-source
@@ -456,10 +502,9 @@ Decision record:
 
 ## Goal 7 — Home Has People
 
-**Status:** Not authorized. Goal 4 proved the Home–expedition rhythm and Slice 5
-proved shared authored predecessor composition. Goal 6 must first establish the
-successor RPG and material power loop; no Goal 7 child slice may begin without
-Goal 6 acceptance and a separately approved bounded contract.
+**Status:** Next design gate; production not yet authorized. Goal 6 and its 6C
+consolidation are complete and player-accepted. No Goal 7 child slice may begin
+production without its separately approved bounded contract.
 
 ### 7A — Someone Comes Home
 

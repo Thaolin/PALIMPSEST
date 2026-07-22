@@ -118,6 +118,25 @@ public partial class ChronicleApp : Node
         RefreshPresentation();
     }
 
+    public override void _Input(InputEvent @event)
+    {
+        if (_simulation.State.Intent == OpeningIntent.Unchosen ||
+            !_simulation.State.HasLivingIncarnation ||
+            !@event.IsActionPressed(PauseAction))
+        {
+            return;
+        }
+
+        // Space is the Chronicle Clock control even while a HUD button owns
+        // keyboard focus. Reserve it before Godot can also treat the same key
+        // as ui_accept and activate that focused action.
+        GetViewport().SetInputAsHandled();
+        Issue(new SetChronicleSpeed(
+            _simulation.State.Speed == ChronicleSpeed.Paused
+                ? ChronicleSpeed.Slow
+                : ChronicleSpeed.Paused));
+    }
+
     public override void _UnhandledInput(InputEvent @event)
     {
         if (_simulation.State.Intent == OpeningIntent.Unchosen)
@@ -304,7 +323,7 @@ public partial class ChronicleApp : Node
             Position = position,
             Size = new Vector2(260, 76),
             Text = text,
-            FocusMode = Control.FocusModeEnum.None,
+            FocusMode = Control.FocusModeEnum.All,
         };
         button.AddThemeFontSizeOverride("font_size", 18);
         button.Pressed += action;
@@ -321,10 +340,19 @@ public partial class ChronicleApp : Node
 
     private void Issue(ChronicleCommand command)
     {
+        var beforeResults = _simulation.CombatContext.RecentResults;
+        var beforeLast = beforeResults.LastOrDefault();
+        var beforeCount = beforeResults.Count;
         var result = _simulation.Apply(command);
-        _presentationStatus = string.IsNullOrWhiteSpace(result.Message)
-            ? result.Applied ? AppliedCommandMessage(command) : "Nothing changed."
-            : result.Message;
+        var afterResults = _simulation.CombatContext.RecentResults;
+        var commandRecorded = result.Applied &&
+                              (afterResults.Count != beforeCount ||
+                               afterResults.LastOrDefault() != beforeLast);
+        _presentationStatus = commandRecorded
+            ? string.Empty
+            : string.IsNullOrWhiteSpace(result.Message)
+                ? result.Applied ? AppliedCommandMessage(command) : "Nothing changed."
+                : result.Message;
         RefreshPresentation(forceMap: true);
     }
 
@@ -368,7 +396,9 @@ public partial class ChronicleApp : Node
         var action = SelectPowerPrimary(_simulation.PowerComesHomeContext);
         if (action is null || PowerCommand(action) is not { } command)
         {
-            _presentationStatus = action?.Availability ?? "No contextual Power Comes Home action is available here.";
+            _presentationStatus = action is null
+                ? "No contextual Power Comes Home action is available here."
+                : HoldingPresentation.ActionAvailability(action);
             RefreshPresentation();
             return;
         }
@@ -599,24 +629,38 @@ public partial class ChronicleApp : Node
             ? string.Empty
             : TargetOutcomeText(selected, combat);
         var power = _simulation.PowerComesHomeContext;
-        var forecast = power.Commitment is { } commitment
-            ? new[]
-            {
-                $"H{commitment.NextTick} · {commitment.NextTransition}",
-                $"{commitment.CompletedTicks}/{commitment.TotalTicks} · {commitment.RemainingTicks} remaining",
-            }
+        var showsCombatContext =
+            state.WorldGrammarVersion != 5 ||
+            combat.Danger.IsImmediate ||
+            combat.PendingAction is not null ||
+            combat.Preparation is not null ||
+            combat.Recovery.RemainingTicks > 0 ||
+            combat.MireBrute?.IsBurning == true;
+        if (!showsCombatContext)
+        {
+            targetHeading = HoldingPresentation.MaterialHeading(power);
+            targetFacts = HoldingPresentation.MaterialFacts(power);
+            targetOutcome = HoldingPresentation.MaterialDecision(power);
+        }
+        var forecast = power.Commitment is not null
+            ? HoldingPresentation.CommitmentForecast(power)
+            : !showsCombatContext
+            ? HoldingPresentation.MaterialForecast(power)
             : combat.Forecast.Count == 0
-            ? ["— No meaningful event while the Chronicle is paused."]
+            ? [EmptyForecastReason(state, combat)]
             : combat.Forecast
                 .Take(4)
                 .Select(CompactForecastText)
                 .ToArray();
-        var messages = combat.RecentResults
-            .Select(result => $"H{result.Tick}: {result.Text}")
+        var logged = combat.RecentResults
+            .Select(LogText)
+            .ToArray();
+        var messages = logged
             .Append(_presentationStatus)
             .Where(text => !string.IsNullOrWhiteSpace(text))
+            .TakeLast(3)
             .ToArray();
-        var targets = combat.Targets
+        var targets = (showsCombatContext ? combat.Targets : [])
             .Select(target => new ChronicleHudTarget(
                 target.Kind.ToString().ToLowerInvariant(),
                 target.DisplayName.ToUpperInvariant(),
@@ -625,8 +669,7 @@ public partial class ChronicleApp : Node
             .ToArray();
         return new ChronicleHudSnapshot(
             $"INCARNATION #{state.IncarnationId}",
-            $"{state.Speed.ToString().ToUpperInvariant()} · HEARTBEAT {state.Tick}" +
-            (combat.PendingAction is null ? string.Empty : $" · PENDING {combat.PendingAction.DisplayName.ToUpperInvariant()}"),
+            $"{state.Speed.ToString().ToUpperInvariant()} · H{state.Tick}",
             $"{state.Address.Stratum.ToUpperInvariant()}  {state.Address.X},{state.Address.Y}",
             targetHeading,
             targetFacts,
@@ -637,15 +680,16 @@ public partial class ChronicleApp : Node
             BuildActions(state, combat, selected),
             combat.Incarnation.HitPoints,
             combat.Incarnation.MaximumHitPoints,
-            selected?.HitPoints,
-            selected?.MaximumHitPoints,
+            showsCombatContext ? selected?.HitPoints : null,
+            showsCombatContext ? selected?.MaximumHitPoints : null,
             $"LOAD {power.Attunement.CurrentUsedLoad}/{power.Attunement.CapacityAtLastAttunement?.ToString() ?? "—"}",
             $"CLEAVER {combat.Equipment.WeaponDamage}/{combat.Equipment.WeaponCadence} · " +
             $"JACK −{combat.Equipment.ArmorReduction} · WARD +{combat.Equipment.MaximumHitPointBonus}",
             PowerHeadingState(power),
-            power.Summary,
+            HoldingPresentation.Checklist(power),
             CompactPowerCapacity(power.Attunement),
             string.Empty,
+            showsCombatContext,
             !state.HasLivingIncarnation,
             !state.HasLivingIncarnation
                 ? $"BODY ENDED · CHRONICLE HELD\nBrute and scorch persist. Choose NEW BODY below."
@@ -719,6 +763,8 @@ public partial class ChronicleApp : Node
         var combinedActive = combat.Expression.Modifiers.SequenceEqual([WordIds.Quickly, WordIds.Lasting]);
         var hasCombinedWords = power.BurnPrimer.IsRead;
         var canRequestAttunement = safe && !carrying && !committed && hasCombinedWords;
+        var requiredLoad = power.Attunement.DesiredExpressionLoad;
+        var nextCapacity = power.Attunement.NextAttunementCapacity;
         var combinedDetail = combinedActive
             ? "BURN + QUICK + LAST"
             : !hasCombinedWords
@@ -729,7 +775,7 @@ public partial class ChronicleApp : Node
                     ? $"SET DOWN · NEXT {power.Attunement.NextAttunementCapacity}"
                     : committed
                         ? "FINISH OR CANCEL WORK"
-                        : power.Attunement.NextAttunementCapacity < 12
+                        : nextCapacity < requiredLoad
                             ? "NEEDS RESONATOR"
                             : "BURN + QUICK + LAST";
         var secondary = committed
@@ -768,10 +814,17 @@ public partial class ChronicleApp : Node
 
         return
         [
-            new("attune-combined", combinedActive ? "◆ ATTUNED 12/12" : "[G] ATTUNE 12/12", new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]), canRequestAttunement, combinedDetail),
+            new(
+                "attune-combined",
+                combinedActive
+                    ? $"◆ ATTUNED {requiredLoad}/{power.Attunement.CapacityAtLastAttunement ?? nextCapacity}"
+                    : $"[G] ATTUNE {requiredLoad}/{nextCapacity}",
+                new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]),
+                canRequestAttunement,
+                combinedDetail),
             new(
                 "power-primary",
-                primary is null ? "[P] POWER" : $"[P] {primary.Label}",
+                primary is null ? "[P] POWER" : $"[P] {HoldingPresentation.ActionLabel(primary)}",
                 primaryCommand,
                 primary?.Available == true,
                 PowerPrimaryButtonDetail(primary)),
@@ -888,11 +941,14 @@ public partial class ChronicleApp : Node
         return power.Resonator?.Phase switch
         {
             HearthResonatorPhase.UnderConstruction => "HEARTH RESONATOR · BUILDING",
-            HearthResonatorPhase.Intact when power.Attunement.CapacityAtLastAttunement is not 12 =>
-                "HEARTH RESONATOR · +4 LOAD READY",
-            HearthResonatorPhase.Intact => "HEARTH RESONATOR · 12-LOAD POWER",
-            HearthResonatorPhase.Damaged => "HEARTH RESONATOR · DAMAGED, +4 STILL READY",
-            HearthResonatorPhase.Destroyed => "HEARTH RESONATOR · DESTROYED, NEXT LOAD 8",
+            HearthResonatorPhase.Intact when power.Attunement.CapacityAtLastAttunement != power.Attunement.DesiredExpressionLoad =>
+                $"HEARTH RESONATOR · +{power.Attunement.SourceContribution} LOAD READY",
+            HearthResonatorPhase.Intact =>
+                $"HEARTH RESONATOR · {power.Attunement.DesiredExpressionLoad}-LOAD POWER",
+            HearthResonatorPhase.Damaged =>
+                $"HEARTH RESONATOR · DAMAGED, +{power.Attunement.SourceContribution} STILL READY",
+            HearthResonatorPhase.Destroyed =>
+                $"HEARTH RESONATOR · DESTROYED, NEXT LOAD {power.Attunement.NextAttunementCapacity}",
             HearthResonatorPhase.Rebuilding => "HEARTH RESONATOR · REBUILDING",
             { } phase => "HEARTH RESONATOR · " + phase.ToString().ToUpperInvariant(),
             null when power.Lode.Disposition == ResonantLodeDisposition.Embedded => "GOAL · BRING THE GOLD LODE HOME",
@@ -912,6 +968,32 @@ public partial class ChronicleApp : Node
         CombatForecastKind.Engagement => $"H{item.Tick} · ENGAGEMENT pauses",
         _ => $"H{item.Tick} · {item.Text}",
     };
+
+    private static string LogText(CombatResultSnapshot result) => result.Kind switch
+    {
+        CombatResultKind.Movement when result.Address is { } address =>
+            $"H{result.Tick}: Moved to {address}.",
+        _ => $"H{result.Tick}: {result.Text}",
+    };
+
+    private static string EmptyForecastReason(
+        ChronicleState state,
+        CombatContextSnapshot combat)
+    {
+        if (!state.HasLivingIncarnation)
+        {
+            return "— No forecast: this body has ended. Choose a new body.";
+        }
+
+        if (state.Speed == ChronicleSpeed.Paused)
+        {
+            return "— PAUSED · nothing resolves until the next Heartbeat.";
+        }
+
+        return combat.Danger.IsImmediate
+            ? "— No timed event yet: no Invocation, Weapon action, or work is pending."
+            : "— No timed event: nothing is pending and no threat is engaged.";
+    }
 
     private static string TargetOutcomeText(
         TargetPreviewSnapshot target,
@@ -936,12 +1018,18 @@ public partial class ChronicleApp : Node
         var when = preparationTargetsSelection && combat.Preparation is { } preparing
             ? $"H+{preparing.RemainingTicks} of {preparing.TotalTicks}"
             : $"{target.PreparationTicks} Heartbeat preparation";
-        var interruption = "Brute swing before release";
+        var interruption = !target.CanBurn
+            ? "None — Burn cannot begin"
+            : combat.Danger.IsImmediate && target.Kind == CombatTargetKind.MireBrute
+                ? "Mire Brute swing before release"
+                : "Target leaves range before release";
         var prevention = combat.Preparation is null
             ? "Nothing"
             : "Cleaver strike";
         return $"STATE  {eligibility} · {eligibilityDetail}\n" +
-               $"WHEN   {when} · BURN {target.ConsequenceTicks}\n" +
+               (target.CanBurn
+                   ? $"WHEN   {when} · BURN {target.ConsequenceTicks}\n"
+                   : "WHEN   Rejected before time begins\n") +
                $"INTERRUPTS   {interruption}\n" +
                $"PREVENTS   {prevention}\n" +
                $"RECOVERY   {combat.Recovery.RemainingTicks}/{target.RecoveryTicks}";
@@ -951,7 +1039,7 @@ public partial class ChronicleApp : Node
     {
         _simulation = CreateTestingStart();
         _selectedTargetKind = CombatTargetKind.MireBrute;
-        _presentationStatus = "Goal 6B rendered acceptance Chronicle.";
+        _presentationStatus = string.Empty;
         _renderKey = string.Empty;
         RefreshPresentation(forceMap: true);
         await CaptureGoal6BProof("burn-primer");
@@ -966,9 +1054,23 @@ public partial class ChronicleApp : Node
                 mark.VisualId == "glyph.codex") &&
             _map.CurrentPlan.Marks.Any(mark =>
                 mark.Address == _simulation.PowerComesHomeContext.BurnPrimer.Address &&
-                mark.VisualId == "emphasis.target.selected"),
+                mark.VisualId == "emphasis.target.selected") &&
+            _hud.TargetHeading.Text == "BURN PRIMER · UNREAD" &&
+            _hud.TargetButtons.All(button => !button.Visible),
             "A fresh player Chronicle must skip opening paths and visibly direct P to the nearby unread Burn Primer.");
 
+        var safeBasalt = _simulation.CombatContext.Targets.Single(target => target.Kind == CombatTargetKind.Basalt);
+        var safeRejection = TargetOutcomeText(safeBasalt, _simulation.CombatContext);
+        Verify(
+            safeRejection.Contains("Rejected before time begins", StringComparison.Ordinal) &&
+            !safeRejection.Contains("Brute swing", StringComparison.Ordinal),
+            "A rejected Burn outside combat must not invent a hostile interruption that the forecast says is absent.");
+
+        TriggerInput(MoveNorthAction);
+        Verify(
+            _simulation.State.Address == _simulation.PowerComesHomeContext.BurnPrimer.Address &&
+            ActionButton("power-primary").Text == "[P] READ BURN PRIMER\nPRESS P NOW",
+            "Standing directly on the non-blocking Burn Primer must keep the contextual interaction available.");
         var primerTick = _simulation.State.Tick;
         Press(ActionButton("power-primary"));
         Verify(
@@ -979,6 +1081,10 @@ public partial class ChronicleApp : Node
             _simulation.PowerComesHomeContext.BurnPrimer.IsRead &&
             _hud.PowerStatus.Text.Contains("CHECKLIST · GET THE GOLD LODE", StringComparison.Ordinal),
             "Reading the Burn Primer must spend no Heartbeat, persist the complete test Expression, and switch checklists.");
+        TriggerInput(MoveSouthAction);
+        Verify(
+            _simulation.State.Address == ChronicleState.AcceptedHomeFixtureAddress,
+            "The same-cell Primer proof must return to the accepted Home start before the retained journey continues.");
 
         await CaptureGoal6BProof("embedded");
         Verify(
@@ -1039,7 +1145,8 @@ public partial class ChronicleApp : Node
         Verify(
             _simulation.State.Address == extractionAddress with { Y = extractionAddress.Y + 1 } &&
             _simulation.State.Speed == ChronicleSpeed.Slow &&
-            _simulation.CombatContext.PendingAction is null,
+            _simulation.CombatContext.PendingAction is null &&
+            !_hud.MessageReadout.Text.Contains("physically attached", StringComparison.Ordinal),
             "After extraction completes, one safe keyboard move must resolve once without re-entering auto-pause or leaving a queued step.");
         TriggerInput(MoveNorthAction);
         Verify(
@@ -1172,8 +1279,16 @@ public partial class ChronicleApp : Node
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         Verify(
             _hud.PowerStatus.GetMinimumSize().Y <= _hud.PowerStatus.Size.Y &&
-            _hud.PowerCapacity.GetMinimumSize().Y <= _hud.PowerCapacity.Size.Y,
-            $"Goal 6B '{stage}' must not clip its checklist or compact capacity line.");
+            _hud.PowerCapacity.GetMinimumSize().Y <= _hud.PowerCapacity.Size.Y &&
+            _hud.TargetHeading.GetMinimumSize().X <= _hud.TargetHeading.Size.X &&
+            _hud.TargetFacts.GetMinimumSize().Y <= _hud.TargetFacts.Size.Y &&
+            _hud.ConsequenceRows.Where(row => row.Visible)
+                .All(row => row.GetMinimumSize().Y <= row.Size.Y) &&
+            _hud.MessageReadout.GetMinimumSize().Y <= _hud.MessageReadout.Size.Y &&
+            _hud.ActionButtons.All(button =>
+                button.FocusMode == Control.FocusModeEnum.All &&
+                button.GetThemeColor("font_disabled_color").A >= 0.75f),
+            $"Goal 6B '{stage}' must not clip its checklist, material state, decisions, or recent log, and every action must retain keyboard focus and readable disabled text.");
         RenderingServer.ForceDraw(swapBuffers: false);
         var image = GetViewport().GetTexture().GetImage();
         Verify(image is not null && image.GetWidth() == 1600 && image.GetHeight() == 900,
@@ -1208,6 +1323,8 @@ public partial class ChronicleApp : Node
 
     private async Task RunQuicklyAcceptance()
     {
+        await VerifyFocusedSpaceResumesCombat();
+
         StartFreshAcceptance();
         TriggerInput(SlowAction);
         Press(ActionButton("attune-quickly"));
@@ -1250,6 +1367,49 @@ public partial class ChronicleApp : Node
         Press(_hud.GetNode<Button>("SaveAction"));
         Verify(SaveVersion() == 7, "Quickly journey must rewrite through strict save v7.");
         GD.Print("GOAL6A QUICKLY SAVE READY hud=map-first target=basalt-rejected scorch=present brute=dead save=7");
+    }
+
+    private async Task VerifyFocusedSpaceResumesCombat()
+    {
+        StartFreshAcceptance();
+        TriggerInput(SlowAction);
+        MoveToThreat(useKeyboard: true);
+
+        Press(ActionButton("weapon"));
+        Verify(
+            _simulation.CombatContext.PendingAction?.DisplayName == "Ready Iron Cleaver",
+            "The pending-header fixture must queue the focused Cleaver action.");
+        Verify(
+            !_hud.ClockReadout.Text.Contains("PENDING", StringComparison.Ordinal) &&
+            _hud.ClockReadout.GetMinimumSize().X <= _hud.ClockReadout.Size.X,
+            "The top-rail Clock must remain compact instead of repeating or clipping the pending action.");
+        Verify(
+            _hud.ForecastReadout.Text.Contains("CLEAVER", StringComparison.Ordinal) &&
+            _hud.MessageReadout.Text.Contains("pending while paused", StringComparison.OrdinalIgnoreCase),
+            "The forecast and log must retain the pending-action explanation removed from the top rail.");
+        Verify(
+            !_hud.ClockReadout.GetRect().Intersects(_hud.PlaceReadout.GetRect()) &&
+            !_hud.PauseBadge.GetRect().Intersects(_hud.PlaceReadout.GetRect()),
+            "The Clock and pause plate must not overlap the top-rail place or controls.");
+
+        StartFreshAcceptance();
+        TriggerInput(SlowAction);
+        MoveToThreat(useKeyboard: true);
+
+        Verify(_simulation.State.Speed == ChronicleSpeed.Paused, "Focused-Space regression must begin at the engagement pause.");
+        var pausedTick = _simulation.State.Tick;
+        ActionButton("weapon").GrabFocus();
+        Verify(ActionButton("weapon").HasFocus(), "Focused-Space regression must give the combat action keyboard focus.");
+        await PushPhysicalKey(Key.Space);
+
+        Verify(
+            _simulation.State.Speed == ChronicleSpeed.Slow,
+            "A focused HUD action must not consume Space or leave combat infinitely paused.");
+        _heartbeatAccumulator = SlowHeartbeatSeconds;
+        _Process(0);
+        Verify(
+            _simulation.State.Tick == pausedTick + 1,
+            "Space after engagement must deliver the next hostile Heartbeat even when a HUD action had keyboard focus.");
     }
 
     private Task RunQuicklyRestartAcceptance()
@@ -1345,7 +1505,7 @@ public partial class ChronicleApp : Node
     {
         _simulation = new ChronicleSimulation(Goal6AFixture());
         _selectedTargetKind = CombatTargetKind.MireBrute;
-        _presentationStatus = "Goal 6A acceptance Chronicle.";
+        _presentationStatus = string.Empty;
         _renderKey = string.Empty;
         RefreshPresentation(forceMap: true);
     }
@@ -1381,13 +1541,15 @@ public partial class ChronicleApp : Node
             _hud.IncarnationHealthText.Text.Contains('/') &&
             _hud.PauseBadge.Visible &&
             _hud.PauseBadge.Position.Y < ChronicleHud.TopRailHeight &&
-            _hud.MessageReadout.Size.Y >= 304 &&
+            _hud.MessageReadout.Size.Y >= 258 &&
             _hud.ConsequenceRows.Count == 5 &&
             _hud.ConsequenceRows.All(row => !string.IsNullOrWhiteSpace(row.Text)) &&
             _map.IsPaused &&
             _map.VisibleColumns == ChronicleHud.MapColumns &&
             _map.VisibleRows == ChronicleHud.MapRows &&
             _hud.ActionButtons.Count(button => button.Icon is not null) >= 4 &&
+            _hud.ActionButtons.All(button => button.FocusMode == Control.FocusModeEnum.All) &&
+            _hud.TargetButtons.All(button => button.FocusMode == Control.FocusModeEnum.All) &&
             !string.IsNullOrWhiteSpace(_hud.ForecastReadout.Text) &&
             !string.IsNullOrWhiteSpace(_hud.MessageReadout.Text),
             "The revised HUD must expose value-integrated HP bars, top-rail pause, actor contrast, consequence rows, P-GEN action icons, forecast, and the enlarged Message Log.");
@@ -1474,6 +1636,24 @@ public partial class ChronicleApp : Node
             Pressed = true,
             Strength = 1,
         });
+    }
+
+    private async Task PushPhysicalKey(Key key)
+    {
+        GetViewport().PushInput(new InputEventKey
+        {
+            Keycode = key,
+            PhysicalKeycode = key,
+            Pressed = true,
+        });
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        GetViewport().PushInput(new InputEventKey
+        {
+            Keycode = key,
+            PhysicalKeycode = key,
+            Pressed = false,
+        });
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
     }
 
     private int SaveVersion()

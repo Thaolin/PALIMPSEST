@@ -64,6 +64,14 @@ seed and persistent history without hand-built levels or an authored outer
 edge.
 _Avoid_: Random-content machine, fixed campaign map, hand-authored level
 
+**World Subject**:
+A durable semantic thing at a World Address, identified by its persistent
+identity, authored archetype, current condition, a bounded set of meaningful
+marks, and at most one bounded current/maximum measure. Creatures, Targets,
+Study Sources, material resources, construction sites, and Load Sources share
+this vocabulary; presentation decides how each appears.
+_Avoid_: Per-feature cell field, render identifier, unbounded property bag
+
 **Visual Grammar**:
 The coherent presentation rules that make generated Chronicle state readable
 and distinctive through palette, symbols, tile composition, adjacency, and

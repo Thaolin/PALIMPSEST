@@ -43,6 +43,21 @@ public enum WordKind
     Modifier = 3,
 }
 
+/// <summary>
+/// The authored Chronicle-time and material effect of one Word. A Verb carries
+/// its own timing and damage; a Modifier carries the deltas it contributes to
+/// whatever compatible Verb it is linked to. Deltas are order-independent, so
+/// resolution never needs to know which Words exist.
+/// </summary>
+public sealed record WordEffect(
+    int Preparation = 0,
+    int Consequence = 0,
+    int Recovery = 0,
+    int Damage = 0)
+{
+    public static readonly WordEffect None = new();
+}
+
 public sealed record WordDefinition(
     WordId Id,
     string DisplayName,
@@ -51,10 +66,13 @@ public sealed record WordDefinition(
     int UnderstandingRequired,
     IReadOnlyList<WordId> CompatibleNouns,
     int Load = 0,
-    IReadOnlyList<WordId>? CompatibleModifiers = null)
+    WordEffect? Effect = null,
+    IReadOnlyList<WordId>? CompatibleVerbs = null)
 {
-    public IReadOnlyList<WordId> SupportedModifiers =>
-        CompatibleModifiers ?? Array.Empty<WordId>();
+    public WordEffect AuthoredEffect => Effect ?? WordEffect.None;
+
+    public IReadOnlyList<WordId> SupportedVerbs =>
+        CompatibleVerbs ?? Array.Empty<WordId>();
 }
 
 public static class WordCatalogue
@@ -90,7 +108,11 @@ public static class WordCatalogue
             0,
             Array.Empty<WordId>(),
             Load: 1,
-            CompatibleModifiers: Array.AsReadOnly([WordIds.Quickly, WordIds.Lasting])),
+            Effect: new WordEffect(
+                Preparation: 3,
+                Consequence: 3,
+                Recovery: 8,
+                Damage: 4)),
         new(
             WordIds.Quickly,
             "Quickly",
@@ -98,7 +120,9 @@ public static class WordCatalogue
             "Shorten the exposed preparation for an authored compatible Verb.",
             0,
             Array.Empty<WordId>(),
-            Load: 6),
+            Load: 6,
+            Effect: new WordEffect(Preparation: -2),
+            CompatibleVerbs: Array.AsReadOnly([WordIds.Burn])),
         new(
             WordIds.Lasting,
             "Lasting",
@@ -106,7 +130,9 @@ public static class WordCatalogue
             "Extend the authored consequence for an authored compatible Verb.",
             0,
             Array.Empty<WordId>(),
-            Load: 5),
+            Load: 5,
+            Effect: new WordEffect(Consequence: 3),
+            CompatibleVerbs: Array.AsReadOnly([WordIds.Burn])),
         new(
             WordIds.Stone,
             "Stone",
@@ -123,20 +149,20 @@ public static class WordCatalogue
             Array.Empty<WordId>()),
     ];
 
-    private static readonly IReadOnlyDictionary<WordId, WordDefinition> ById =
-        AuthoredWords.ToDictionary(word => word.Id);
+    private static readonly AsyncLocal<WordDefinition[]?> VerificationWords = new();
 
-    public static IReadOnlyList<WordDefinition> Words { get; } =
-        Array.AsReadOnly(AuthoredWords);
+    public static IReadOnlyList<WordDefinition> Words =>
+        Array.AsReadOnly(ActiveWords);
 
     public static WordDefinition Get(WordId id) =>
-        ById.TryGetValue(id, out var word)
+        ActiveWords.FirstOrDefault(word => word.Id == id) is { } word
             ? word
             : throw new KeyNotFoundException($"Unknown Word identity '{id}'.");
 
     internal static bool TryGet(WordId id, out WordDefinition definition)
     {
-        if (ById.TryGetValue(id, out var word))
+        var word = ActiveWords.FirstOrDefault(candidate => candidate.Id == id);
+        if (word is not null)
         {
             definition = word;
             return true;
@@ -144,6 +170,31 @@ public static class WordCatalogue
 
         definition = null!;
         return false;
+    }
+
+    internal static bool AreCompatible(WordDefinition verb, WordDefinition modifier) =>
+        verb.Kind == WordKind.Verb &&
+        modifier.Kind == WordKind.Modifier &&
+        modifier.SupportedVerbs.Contains(verb.Id);
+
+    /// <summary>
+    /// Test-only authoring seam. The production catalogue remains immutable;
+    /// verification can add one definition and drive the same resolver,
+    /// validation, and save/load path without changing those rules.
+    /// </summary>
+    internal static IDisposable UseDefinitionsForVerification(
+        IEnumerable<WordDefinition> definitions)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        var supplied = definitions.ToArray();
+        if (supplied.Length == 0 || supplied.Select(word => word.Id).Distinct().Count() != supplied.Length)
+        {
+            throw new ArgumentException("Verification Word definitions require unique identities.", nameof(definitions));
+        }
+
+        var previous = VerificationWords.Value;
+        VerificationWords.Value = supplied;
+        return new VerificationScope(previous);
     }
 
     internal static WordId[] Canonicalize(IEnumerable<WordId> words)
@@ -154,10 +205,29 @@ public static class WordCatalogue
             Get(word);
         }
 
-        return AuthoredWords
+        return ActiveWords
             .Where(word => requested.Contains(word.Id))
             .Select(word => word.Id)
             .ToArray();
+    }
+
+    private static WordDefinition[] ActiveWords =>
+        VerificationWords.Value ?? AuthoredWords;
+
+    private sealed class VerificationScope(WordDefinition[]? previous) : IDisposable
+    {
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            VerificationWords.Value = previous;
+            _disposed = true;
+        }
     }
 }
 
