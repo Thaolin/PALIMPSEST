@@ -1245,7 +1245,7 @@ try
     Assert-PlayerSaveAbsent "Goal 6B acceptance before launch"
     Invoke-GodotGoal6BRun
 
-    Write-Host "`nPASS: Goal 6B Power Comes Home implementation, strict v7 migration, eight rendered HUD proofs, Inspector parity, exact four-file packaging, and the complete retained Goal 6A/predecessor gate verified; player UAT remains pending."
+    Write-Host "`nPASS: Goal 6B Power Comes Home implementation, strict v7 migration, eight rendered HUD proofs, Inspector parity, exact four-file packaging, and the complete retained Goal 6A/predecessor gate verified."
 }
 finally
 {
