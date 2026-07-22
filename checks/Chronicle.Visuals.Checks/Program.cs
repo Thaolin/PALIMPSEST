@@ -9,6 +9,8 @@ using System.Text.Json.Nodes;
 
 VerifyCanonicalPGenBundleAndReaderFailures();
 VerifyPGenAndManualPacksComposeTheSameSemantics();
+VerifyGoal6AVisualVocabularyAndLayerCoexistence();
+VerifyGoal6BVisualVocabularyAndSemanticStates();
 VerifyConnectedSurfaceFeaturesUseExplicitCardinalMasks();
 VerifyGate3BManualPacksResolveRequiredVisualVocabulary();
 VerifyGate3BCompositionCropsAndLayersTheSharedSkySnapshot();
@@ -18,7 +20,7 @@ VerifyGoal4CManualPackAndStaticDangerSeam();
 VerifyGoal4CCairnSubjectsComposeOverCoreSemantics();
 VerifyMovedBellComposesAtItsCoreAddress();
 Console.WriteLine(
-    "PASS: E5 canonical P-GEN reader plus Gate 3B deterministic composition, connected features, and overlap verified.");
+    "PASS: Goal 6B canonical P-GEN reader, power-state vocabulary, retained combat semantics, deterministic composition, and overlap verified.");
 
 static void VerifyCanonicalPGenBundleAndReaderFailures()
 {
@@ -52,13 +54,18 @@ static void VerifyCanonicalPGenBundleAndReaderFailures()
         "glyph.loadout",
         "glyph.codex.fly",
         "glyph.codex.stone",
-    };
+    }
+    .Concat(Goal6AVisualVocabulary().Select(static expected => expected.VisualId))
+    .Concat(Goal6BVisualVocabulary().Select(static expected => expected.VisualId))
+    .ToArray();
 
     Assert(
         pack.Digest ==
-            "sha256:6ff87d0e52c494fe4e0ff79044606dd8694a559aa68fa0d412844ba639167acf" &&
+            "sha256:e3c5871dabefdb5a61078ad0b556e4304e4066b089d0cf50d36e1acbc96f3e71" &&
         fromDirectory.Digest == pack.Digest &&
-        pack.Definitions.Count == 249 &&
+        pack.Definitions.Count == 276 &&
+        pack.StyleVersion == 2 &&
+        pack.ComposerVersion == 2 &&
         requiredIds.All(id => pack.Resolve(id).VisualId == id),
         "The packaged P-GEN artifact must load through both reader Interfaces and resolve the exact current vocabulary.");
 
@@ -88,7 +95,7 @@ static void VerifyCanonicalPGenBundleAndReaderFailures()
 
     var futureReader = CloneFiles(files);
     validation = JsonNode.Parse(futureReader["validation.json"])!.AsObject();
-    validation["minimumReaderVersion"] = "2.0.0";
+    validation["minimumReaderVersion"] = "2.0.1";
     futureReader["validation.json"] = CanonicalJson(validation);
     RewriteHashes(futureReader);
     ExpectReaderFailure(ToPackFiles(futureReader), "PAL20-COMPAT-002");
@@ -112,7 +119,11 @@ static void VerifyCanonicalPGenBundleAndReaderFailures()
 
 static void VerifyPGenAndManualPacksComposeTheSameSemantics()
 {
-    var state = ChronicleState.Begin(41_337);
+    var state = ChronicleState.Begin(41_337) with
+    {
+        WorldGrammarVersion = 3,
+        Combat = null,
+    };
     var visible = new WorldRectangle(-6, -6, 13, 13);
     var semantic = WorldArea.Generate(
         state,
@@ -160,6 +171,398 @@ static void VerifyPGenAndManualPacksComposeTheSameSemantics()
         Compose(pgen).Marks.SequenceEqual(pgenPlan.Marks),
         "Repeated P-GEN composition must remain deterministic.");
 }
+
+static void VerifyGoal6AVisualVocabularyAndLayerCoexistence()
+{
+    var initial = Goal6AFixture();
+    var initialCombat = initial.Combat ?? throw new InvalidOperationException(
+        "Goal 6A visual proof requires the Core-owned combat snapshot.");
+    var brute = initialCombat.MireBrute;
+    var bruteAddress = brute.Address;
+    var basaltAddress = WorldArea.GeneratedBasaltAddress(initial.Seed);
+    var visibleBounds = new WorldRectangle(MinX: 0, MinY: 0, Width: 6, Height: 2);
+    var semanticBounds = VisualViewportBounds.WithOneCellSemanticHalo(visibleBounds);
+    var state = initial with
+    {
+        Address = new WorldAddress(SurfacePatch.SurfaceStratum, 2, 0),
+        Speed = ChronicleSpeed.Paused,
+        Combat = initialCombat with
+        {
+            MireBrute = brute with
+            {
+                HitPoints = CombatState.MireBruteMaximumHitPoints - 8,
+            },
+            OngoingBurn = new BurnConsequenceState(
+                brute.Identity,
+                CombatState.BurnDamage,
+                RemainingTicks: 2),
+            Scorch = new ScorchedGroundState(bruteAddress, initial.Tick),
+        },
+    };
+    var semantic = WorldArea.Generate(
+        state,
+        SurfacePatch.SurfaceStratum,
+        semanticBounds);
+    var semanticBeforeComposition = semantic.Cells.ToArray();
+    var bruteCell = semantic.Cells.Single(cell => cell.Address == bruteAddress);
+    var basaltCell = semantic.Cells.Single(cell => cell.Address == basaltAddress);
+
+    Assert(
+        bruteCell.MireBrute is
+        {
+            Identity: var bruteIdentity,
+            HitPoints: CombatState.MireBruteMaximumHitPoints - 8,
+            MaximumHitPoints: CombatState.MireBruteMaximumHitPoints,
+            IsLiving: true,
+            IsBurning: true,
+        } &&
+        bruteIdentity == brute.Identity &&
+        bruteCell.IsScorched,
+        "WorldArea must project the Core-owned wounded, burning Mire Brute and independent scorch delta without inventing presentation state.");
+    Assert(
+        basaltCell.Target is
+        {
+            Identity: var basaltIdentity,
+            Kind: CombatTargetKind.Basalt,
+            DisplayName: "Basalt",
+        } &&
+        basaltIdentity == WorldArea.GeneratedBasaltIdentity(state.Seed),
+        "WorldArea must expose the authored basalt Target as Core-owned target semantics.");
+
+    var actionEmphases = new[]
+    {
+        new VisualPresentationEmphasis(bruteAddress, VisualPresentationEmphasisKind.PendingAction),
+        new VisualPresentationEmphasis(bruteAddress, VisualPresentationEmphasisKind.Preparation),
+        new VisualPresentationEmphasis(bruteAddress, VisualPresentationEmphasisKind.Recovery),
+    };
+
+    VisualCompositionInput InputFor(CompiledVisualPack pack) => new(
+        semantic,
+        visibleBounds,
+        state.Seed,
+        pack,
+        pack.StyleVersion,
+        state.Address,
+        [bruteAddress, basaltAddress],
+        [bruteAddress, basaltAddress],
+        [bruteAddress],
+        actionEmphases);
+
+    var pgen = LoadPGenPack();
+    var manual = ManualVisualPack.CreateGate3B(20);
+    var pgenInput = InputFor(pgen);
+    var pgenPlan = VisualGrammar.Compose(pgenInput);
+    var manualPlan = VisualGrammar.Compose(InputFor(manual));
+
+    Assert(
+        pgenPlan.Marks.Select(mark => (
+                mark.Address,
+                mark.VisualId,
+                mark.FamilyId,
+                mark.VariantOrdinal,
+                mark.Layer,
+                mark.Anchor,
+                mark.OverviewPaletteIndex,
+                mark.Column,
+                mark.Row))
+            .SequenceEqual(manualPlan.Marks.Select(mark => (
+                mark.Address,
+                mark.VisualId,
+                mark.FamilyId,
+                mark.VariantOrdinal,
+                mark.Layer,
+                mark.Anchor,
+                mark.OverviewPaletteIndex,
+                mark.Column,
+                mark.Row))),
+        "The P-GEN and manual packs must render the same Goal 6A Core semantics at equivalent layers and cells.");
+
+    var expectedBruteMarks = new (string VisualId, VisualLayerClass Layer)[]
+    {
+        ("terrain.surface.scorched-ground", VisualLayerClass.GroundField),
+        ("subject.mire-brute.living", VisualLayerClass.LandmarkOrSubject),
+        ("emphasis.mire-brute.wounded", VisualLayerClass.TemporaryAction),
+        ("effect.mire-brute.burning", VisualLayerClass.TemporaryAction),
+        ("emphasis.danger.mire-brute", VisualLayerClass.TemporaryAction),
+        ("emphasis.target.selected", VisualLayerClass.TargetOrSelection),
+        ("emphasis.action.pending", VisualLayerClass.TemporaryAction),
+        ("emphasis.action.preparation", VisualLayerClass.TemporaryAction),
+        ("emphasis.action.recovery", VisualLayerClass.TemporaryAction),
+    };
+    Assert(
+        expectedBruteMarks.All(expected => pgenPlan.Marks.Any(mark =>
+            mark.Address == bruteAddress &&
+            mark.VisualId == expected.VisualId &&
+            mark.Layer == expected.Layer)),
+        "A wounded burning Mire Brute must retain ground, subject, danger, selected Target, and action-state marks together rather than replacing one another.");
+    Assert(
+        pgenPlan.Marks.Any(mark =>
+            mark.Address == basaltAddress &&
+            mark.VisualId == "emphasis.target.selected" &&
+            mark.Layer == VisualLayerClass.TargetOrSelection),
+        "The authored basalt Target must receive the selected-Target emphasis without becoming a collectible Word or subject glyph.");
+    Assert(
+        pgenPlan.Digest == VisualGrammar.Compose(pgenInput).Digest &&
+        pgenPlan.Marks.SequenceEqual(VisualGrammar.Compose(pgenInput).Marks) &&
+        pgenPlan.Digest == VisualGrammar.Compose(pgenInput with
+        {
+            ActionEmphases = actionEmphases.Reverse().ToArray(),
+        }).Digest,
+        "Goal 6A composition must be deterministic and independent of presentation-emphasis input order.");
+
+    var unhurtPlan = VisualGrammar.Compose(pgenInput with
+    {
+        SemanticArea = WorldArea.Generate(
+            initial,
+            SurfacePatch.SurfaceStratum,
+            semanticBounds),
+        DangerAddresses = [],
+        ActionEmphases = [],
+    });
+    var deadState = state with
+    {
+        Combat = state.Combat! with
+        {
+            MireBrute = state.Combat!.MireBrute with
+            {
+                HitPoints = 0,
+                DefeatedTick = state.Tick,
+            },
+            OngoingBurn = null,
+        },
+    };
+    var deadPlan = VisualGrammar.Compose(pgenInput with
+    {
+        SemanticArea = WorldArea.Generate(
+            deadState,
+            SurfacePatch.SurfaceStratum,
+            semanticBounds),
+        DangerAddresses = [],
+        ActionEmphases = [],
+    });
+    Assert(
+        unhurtPlan.Marks.Any(mark =>
+            mark.Address == bruteAddress &&
+            mark.VisualId == "subject.mire-brute.living") &&
+        !unhurtPlan.Marks.Any(mark =>
+            mark.Address == bruteAddress &&
+            (mark.VisualId == "emphasis.mire-brute.wounded" ||
+             mark.VisualId == "effect.mire-brute.burning" ||
+             mark.VisualId == "subject.mire-brute.dead")) &&
+        deadPlan.Marks.Any(mark =>
+            mark.Address == bruteAddress &&
+            mark.VisualId == "subject.mire-brute.dead") &&
+        !deadPlan.Marks.Any(mark =>
+            mark.Address == bruteAddress &&
+            (mark.VisualId == "subject.mire-brute.living" ||
+             mark.VisualId == "emphasis.mire-brute.wounded" ||
+             mark.VisualId == "effect.mire-brute.burning")),
+        "Mire Brute living, wounded/burning, and dead visual states must remain mutually legible from the Core snapshot.");
+
+    foreach (var pack in new[] { pgen, manual })
+    {
+        foreach (var expected in Goal6AVisualVocabulary())
+        {
+            var definition = pack.Resolve(expected.VisualId);
+            Assert(
+                definition.LayerClass == expected.Layer &&
+                ReadTilePixels(pack, definition).Any(index => pack.Palette[index].Alpha != 0),
+                $"Goal 6A visual '{expected.VisualId}' must resolve to its authored layer with visible raster content.");
+        }
+    }
+
+    Assert(
+        semantic.Cells.SequenceEqual(semanticBeforeComposition),
+        "Goal 6A visual composition must not mutate the Core-generated area snapshot.");
+}
+
+static (string VisualId, VisualLayerClass Layer)[] Goal6AVisualVocabulary() =>
+[
+    ("terrain.surface.scorched-ground", VisualLayerClass.GroundField),
+    ("subject.mire-brute.living", VisualLayerClass.LandmarkOrSubject),
+    ("emphasis.mire-brute.wounded", VisualLayerClass.TemporaryAction),
+    ("effect.mire-brute.burning", VisualLayerClass.TemporaryAction),
+    ("subject.mire-brute.dead", VisualLayerClass.LandmarkOrSubject),
+    ("emphasis.target.selected", VisualLayerClass.TargetOrSelection),
+    ("emphasis.danger.mire-brute", VisualLayerClass.TemporaryAction),
+    ("emphasis.action.pending", VisualLayerClass.TemporaryAction),
+    ("emphasis.action.preparation", VisualLayerClass.TemporaryAction),
+    ("emphasis.action.recovery", VisualLayerClass.TemporaryAction),
+    ("glyph.equipment.iron-cleaver", VisualLayerClass.UiGlyph),
+    ("glyph.equipment.quilted-jack", VisualLayerClass.UiGlyph),
+    ("glyph.equipment.copper-ward", VisualLayerClass.UiGlyph),
+    ("glyph.word.burn", VisualLayerClass.UiGlyph),
+    ("glyph.modifier.quickly", VisualLayerClass.UiGlyph),
+    ("glyph.modifier.lasting", VisualLayerClass.UiGlyph),
+];
+
+static void VerifyGoal6BVisualVocabularyAndSemanticStates()
+{
+    var pack = LoadPGenPack();
+    foreach (var expected in Goal6BVisualVocabulary())
+    {
+        var definition = pack.Resolve(expected.VisualId);
+        Assert(
+            definition.LayerClass == expected.Layer &&
+            ReadTilePixels(pack, definition).Any(index => pack.Palette[index].Alpha != 0),
+            $"Goal 6B visual '{expected.VisualId}' must resolve through the runtime reader with visible authored pixels.");
+    }
+
+    var legibilityMinimums = new Dictionary<string, (int Width, int Height)>(StringComparer.Ordinal)
+    {
+        ["place.singing-seam.embedded"] = (15, 15),
+        ["resource.resonant-lode.loose"] = (13, 13),
+        ["resource.resonant-lode.carried"] = (15, 11),
+        ["source.hearth-resonator.construction"] = (15, 15),
+        ["source.hearth-resonator.intact"] = (15, 15),
+        ["source.hearth-resonator.damaged"] = (15, 15),
+        ["source.hearth-resonator.destroyed"] = (15, 11),
+        ["source.hearth-resonator.rebuilding"] = (15, 15),
+    };
+    foreach (var (visualId, minimum) in legibilityMinimums)
+    {
+        var occupied = OpaqueBounds(pack, pack.Resolve(visualId));
+        Assert(
+            occupied.Width >= minimum.Width && occupied.Height >= minimum.Height,
+            $"Goal 6B visual '{visualId}' must occupy at least {minimum.Width}x{minimum.Height} native pixels so it cannot disappear into ridge terrain; actual {occupied.Width}x{occupied.Height}.");
+    }
+
+    var embedded = ChronicleState.Begin(41_337);
+    var primer = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 2);
+    var seam = new WorldAddress(SurfacePatch.SurfaceStratum, 8, 3);
+    var site = new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3);
+    VisualRenderPlan Compose(ChronicleState state, WorldRectangle visible)
+    {
+        var semanticBounds = VisualViewportBounds.WithOneCellSemanticHalo(visible);
+        return VisualGrammar.Compose(new VisualCompositionInput(
+            WorldArea.Generate(state, SurfacePatch.SurfaceStratum, semanticBounds),
+            visible,
+            state.Seed,
+            pack,
+            pack.StyleVersion,
+            state.Address,
+            [],
+            []));
+    }
+
+    var embeddedPlan = Compose(embedded, new WorldRectangle(0, 2, 10, 3));
+    Assert(
+        embeddedPlan.Marks.Any(mark => mark.Address == primer && mark.VisualId == "glyph.codex") &&
+        embeddedPlan.Marks.Any(mark => mark.Address == primer && mark.VisualId == "emphasis.target.selected") &&
+        embeddedPlan.Marks.Any(mark => mark.Address == seam && mark.VisualId == "place.singing-seam.embedded") &&
+        embeddedPlan.Marks.Any(mark => mark.Address == seam && mark.VisualId == "resource.resonant-lode.embedded") &&
+        embeddedPlan.Marks.Any(mark => mark.Address == site && mark.VisualId == "emphasis.home-source-site"),
+        "The generated map must simultaneously identify the unread Burn Primer, embedded resource, Singing Seam origin, Home, and eligible site.");
+
+    var readPrimer = new ChronicleSimulation(embedded);
+    Assert(readPrimer.Apply(new ChooseHereIntent()).Applied && readPrimer.Apply(new ReadBurnPrimer()).Applied,
+        "The visual fixture must read the Burn Primer through the real Core command.");
+    var readPrimerPlan = Compose(readPrimer.State, new WorldRectangle(0, 2, 2, 2));
+    Assert(
+        readPrimerPlan.Marks.Any(mark => mark.Address == primer && mark.VisualId == "glyph.codex") &&
+        !readPrimerPlan.Marks.Any(mark => mark.Address == primer && mark.VisualId == "emphasis.target.selected"),
+        "The read Burn Primer must remain visible while losing its unread selection brackets.");
+
+    var loose = embedded with
+    {
+        PowerHome = embedded.PowerHome! with
+        {
+            ExtractionProgress = 2,
+            Lode = embedded.PowerHome.Lode with
+            {
+                Disposition = ResonantLodeDisposition.Loose,
+                Address = seam,
+            },
+        },
+    };
+    var loosePlan = Compose(loose, new WorldRectangle(7, 2, 3, 3));
+    Assert(
+        loosePlan.Marks.Any(mark => mark.VisualId == "place.singing-seam.empty") &&
+        loosePlan.Marks.Any(mark => mark.VisualId == "resource.resonant-lode.loose"),
+        "Extraction must replace the embedded visual with an empty persistent Seam plus one loose Lode.");
+
+    var carried = loose with
+    {
+        Address = new WorldAddress(SurfacePatch.SurfaceStratum, 7, 3),
+        PowerHome = loose.PowerHome! with
+        {
+            Lode = loose.PowerHome.Lode with
+            {
+                Disposition = ResonantLodeDisposition.Carried,
+                Address = null,
+                CarrierIncarnationId = loose.IncarnationId,
+            },
+        },
+    };
+    var carriedPlan = Compose(carried, new WorldRectangle(6, 2, 3, 3));
+    Assert(
+        carriedPlan.Marks.Any(mark => mark.Address == carried.Address && mark.VisualId == "actor.incarnation") &&
+        carriedPlan.Marks.Any(mark => mark.Address == carried.Address && mark.VisualId == "resource.resonant-lode.carried"),
+        "The Lode carrier overlay must remain attached to the same map cell as the Incarnation.");
+
+    ChronicleState WithSource(HearthResonatorPhase phase, int progress, ResonantLodeDisposition disposition) =>
+        embedded with
+        {
+            PowerHome = embedded.PowerHome! with
+            {
+                ExtractionProgress = 2,
+                Lode = embedded.PowerHome.Lode with
+                {
+                    Disposition = disposition,
+                    Address = site,
+                    CarrierIncarnationId = null,
+                },
+                Resonator = new HearthResonatorState(
+                    "source.hearth-resonator.41337",
+                    site,
+                    phase,
+                    progress),
+            },
+        };
+
+    var sourceCases = new[]
+    {
+        (WithSource(HearthResonatorPhase.UnderConstruction, 1, ResonantLodeDisposition.Committed), "source.hearth-resonator.construction"),
+        (WithSource(HearthResonatorPhase.Intact, 3, ResonantLodeDisposition.Installed), "source.hearth-resonator.intact"),
+        (WithSource(HearthResonatorPhase.Damaged, 1, ResonantLodeDisposition.Installed), "source.hearth-resonator.damaged"),
+        (WithSource(HearthResonatorPhase.Destroyed, 2, ResonantLodeDisposition.Loose), "source.hearth-resonator.destroyed"),
+        (WithSource(HearthResonatorPhase.Rebuilding, 1, ResonantLodeDisposition.Committed), "source.hearth-resonator.rebuilding"),
+    };
+    foreach (var (state, visualId) in sourceCases)
+    {
+        var broad = Compose(state, new WorldRectangle(0, 2, 4, 3));
+        var overlap = Compose(state, new WorldRectangle(1, 3, 1, 1));
+        Assert(
+            broad.Marks.Any(mark => mark.Address == site && mark.VisualId == visualId) &&
+            overlap.Marks.Where(mark => mark.Address == site).Select(mark => mark.VisualId)
+                .SequenceEqual(broad.Marks.Where(mark => mark.Address == site).Select(mark => mark.VisualId)),
+            $"The map must render '{visualId}' identically in broad and overlapping deterministic requests.");
+    }
+}
+
+static (string VisualId, VisualLayerClass Layer)[] Goal6BVisualVocabulary() =>
+[
+    ("emphasis.home-source-site", VisualLayerClass.TargetOrSelection),
+    ("place.singing-seam.embedded", VisualLayerClass.LandmarkOrSubject),
+    ("place.singing-seam.empty", VisualLayerClass.LandmarkOrSubject),
+    ("resource.resonant-lode.embedded", VisualLayerClass.TemporaryAction),
+    ("resource.resonant-lode.loose", VisualLayerClass.LandmarkOrSubject),
+    ("resource.resonant-lode.carried", VisualLayerClass.Actor),
+    ("source.hearth-resonator.construction", VisualLayerClass.LandmarkOrSubject),
+    ("source.hearth-resonator.intact", VisualLayerClass.LandmarkOrSubject),
+    ("source.hearth-resonator.damaged", VisualLayerClass.LandmarkOrSubject),
+    ("source.hearth-resonator.destroyed", VisualLayerClass.LandmarkOrSubject),
+    ("source.hearth-resonator.rebuilding", VisualLayerClass.LandmarkOrSubject),
+];
+
+static ChronicleState Goal6AFixture() => ChronicleState.Begin(41_337) with
+{
+    Address = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 0),
+    WorldGrammarVersion = 4,
+    Home = null,
+    PowerHome = null,
+    Attunement = new LoadAttunementState(8, 0),
+};
 
 static CompiledVisualPack LoadPGenPack() =>
     CanonicalVisualPackReader.ReadDirectory(Path.Combine(
@@ -264,7 +667,12 @@ static void VerifyMovedBellComposesAtItsCoreAddress()
         SurfacePatch.SurfaceStratum,
         oldAddress.X,
         oldAddress.Y);
-    var state = ChronicleState.Begin(41_337) with { BellAddress = movedAddress };
+    var state = ChronicleState.Begin(41_337) with
+    {
+        WorldGrammarVersion = 3,
+        Combat = null,
+        BellAddress = movedAddress,
+    };
     var movedBounds = new WorldRectangle(movedAddress.X, movedAddress.Y, Width: 1, Height: 1);
     var oldBounds = new WorldRectangle(oldAddress.X, oldAddress.Y, Width: 1, Height: 1);
     var movedArea = WorldArea.Generate(
@@ -388,7 +796,11 @@ static void VerifyGoal4CManualPackAndStaticDangerSeam()
 
 static void VerifyGoal4CCairnSubjectsComposeOverCoreSemantics()
 {
-    var intactState = ChronicleState.Begin(41_337);
+    var intactState = ChronicleState.Begin(41_337) with
+    {
+        WorldGrammarVersion = 3,
+        Combat = null,
+    };
     var semanticBounds = new WorldRectangle(MinX: -1, MinY: 1, Width: 5, Height: 5);
     var visibleBounds = new WorldRectangle(MinX: 0, MinY: 2, Width: 3, Height: 3);
     var intactArea = WorldArea.Generate(
@@ -566,7 +978,7 @@ static void VerifyVisualCompositionAtNumericWorldEdges()
             edge.VisibleBounds,
             state.Seed,
             pack,
-            VisualStyleVersion: 1,
+            VisualStyleVersion: pack.StyleVersion,
             IncarnationAddress: null,
             TargetAddresses: [],
             SelectedAddresses: []));
@@ -602,6 +1014,8 @@ static void VerifyHomeHearthstoneComposesOverItsSurfaceRidge()
     var semanticHaloBounds = new WorldRectangle(MinX: -1, MinY: -1, Width: 4, Height: 6);
     var state = ChronicleState.Begin(41_337) with
     {
+        WorldGrammarVersion = 3,
+        Combat = null,
         Address = homeAddress,
         Home = new HomeState(
             "holding.home",
@@ -631,7 +1045,7 @@ static void VerifyHomeHearthstoneComposesOverItsSurfaceRidge()
             visibleBounds,
             state.Seed,
             pack,
-            VisualStyleVersion: 1,
+            VisualStyleVersion: pack.StyleVersion,
             IncarnationAddress: null,
             TargetAddresses: [],
             SelectedAddresses: []);
@@ -673,8 +1087,8 @@ static void VerifyHomeHearthstoneComposesOverItsSurfaceRidge()
 static void VerifyGate3BManualPacksResolveRequiredVisualVocabulary()
 {
     const int expectedFormatVersion = 1;
-    const int expectedStyleVersion = 1;
-    const int expectedComposerVersion = 1;
+    const int expectedStyleVersion = 2;
+    const int expectedComposerVersion = 2;
     var requiredVisualIds = new[]
     {
         "terrain.surface.grass",
@@ -697,7 +1111,9 @@ static void VerifyGate3BManualPacksResolveRequiredVisualVocabulary()
         "glyph.loadout",
         "glyph.codex.fly",
         "glyph.codex.stone",
-    };
+    }
+    .Concat(Goal6AVisualVocabulary().Select(static expected => expected.VisualId))
+    .ToArray();
 
     foreach (var cellSize in new[] { 16, 20 })
     {
@@ -705,8 +1121,8 @@ static void VerifyGate3BManualPacksResolveRequiredVisualVocabulary()
 
         Assert(pack.PackId == "chronicle.gate3b.manual", "The manual Gate 3B pack needs one stable identity.");
         Assert(pack.FormatVersion == expectedFormatVersion, "The Gate 3B pack format must be version 1.");
-        Assert(pack.StyleVersion == expectedStyleVersion, "The Gate 3B visual style must be version 1.");
-        Assert(pack.ComposerVersion == expectedComposerVersion, "The Gate 3B composer contract must be version 1.");
+        Assert(pack.StyleVersion == expectedStyleVersion, "The Gate 3B visual style must be version 2.");
+        Assert(pack.ComposerVersion == expectedComposerVersion, "The Gate 3B composer contract must be version 2.");
         Assert(pack.CellSize == cellSize, "The pack must retain the requested native cell size.");
         Assert(pack.AtlasWidth > 0 && pack.AtlasHeight > 0, "The pack must declare a non-empty atlas.");
         Assert(
@@ -734,6 +1150,15 @@ static void VerifyGate3BManualPacksResolveRequiredVisualVocabulary()
                 definition.AtlasRect.Y + definition.AtlasRect.Height <= pack.AtlasHeight,
                 $"The resolved '{visualId}' atlas rectangle must fit completely inside the atlas.");
         }
+
+        foreach (var expected in Goal6AVisualVocabulary())
+        {
+            var definition = pack.Resolve(expected.VisualId);
+            Assert(
+                definition.LayerClass == expected.Layer &&
+                ReadTilePixels(pack, definition).Any(index => pack.Palette[index].Alpha != 0),
+                $"The Goal 6A manual visual '{expected.VisualId}' must retain its authored layer and visible raster.");
+        }
     }
 }
 
@@ -756,7 +1181,7 @@ static void VerifyGate3BCompositionCropsAndLayersTheSharedSkySnapshot()
         visibleBounds,
         state.Seed,
         pack,
-        VisualStyleVersion: 1,
+        VisualStyleVersion: pack.StyleVersion,
         IncarnationAddress: skyOrigin,
         TargetAddresses: [looseStoneAddress],
         SelectedAddresses: [looseStoneAddress]);
@@ -933,7 +1358,11 @@ static void VerifyConnectedSurfaceFeaturesUseExplicitCardinalMasks()
         }
     }
 
-    var state = ChronicleState.Begin(41_337);
+    var state = ChronicleState.Begin(41_337) with
+    {
+        WorldGrammarVersion = 3,
+        Combat = null,
+    };
     var semanticHaloBounds = new WorldRectangle(MinX: -17, MinY: -12, Width: 35, Height: 25);
     var visibleBounds = new WorldRectangle(MinX: -16, MinY: -11, Width: 33, Height: 23);
     var overlapBounds = new WorldRectangle(MinX: -4, MinY: -4, Width: 8, Height: 8);
@@ -964,7 +1393,7 @@ static void VerifyConnectedSurfaceFeaturesUseExplicitCardinalMasks()
             visibleBounds,
             state.Seed,
             pack,
-            VisualStyleVersion: 1,
+            VisualStyleVersion: pack.StyleVersion,
             IncarnationAddress: null,
             TargetAddresses: [],
             SelectedAddresses: []));
@@ -973,7 +1402,7 @@ static void VerifyConnectedSurfaceFeaturesUseExplicitCardinalMasks()
             overlapBounds,
             state.Seed,
             pack,
-            VisualStyleVersion: 1,
+            VisualStyleVersion: pack.StyleVersion,
             IncarnationAddress: null,
             TargetAddresses: [],
             SelectedAddresses: []));
@@ -1126,6 +1555,37 @@ static IReadOnlyList<byte> ReadTilePixels(
             .Select(x => pack.AtlasIndices[
                 (definition.AtlasRect.Y + y) * pack.AtlasWidth + definition.AtlasRect.X + x]))
         .ToArray();
+
+static (int Width, int Height) OpaqueBounds(
+    CompiledVisualPack pack,
+    VisualDefinition definition)
+{
+    var minimumX = definition.AtlasRect.Width;
+    var minimumY = definition.AtlasRect.Height;
+    var maximumX = -1;
+    var maximumY = -1;
+    for (var y = 0; y < definition.AtlasRect.Height; y++)
+    {
+        for (var x = 0; x < definition.AtlasRect.Width; x++)
+        {
+            var paletteIndex = pack.AtlasIndices[
+                (definition.AtlasRect.Y + y) * pack.AtlasWidth + definition.AtlasRect.X + x];
+            if (pack.Palette[paletteIndex].Alpha == 0)
+            {
+                continue;
+            }
+
+            minimumX = Math.Min(minimumX, x);
+            minimumY = Math.Min(minimumY, y);
+            maximumX = Math.Max(maximumX, x);
+            maximumY = Math.Max(maximumY, y);
+        }
+    }
+
+    return maximumX < minimumX || maximumY < minimumY
+        ? (0, 0)
+        : (maximumX - minimumX + 1, maximumY - minimumY + 1);
+}
 
 static IReadOnlyList<string> VisualIdsAt(
     VisualRenderPlan plan,

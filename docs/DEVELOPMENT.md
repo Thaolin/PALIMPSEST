@@ -4,11 +4,12 @@ The game project lives at `src/Chronicle.Godot`; its deterministic rules live
 at `src/Chronicle.Core`. Local tool installations and generated state are
 ignored under `.tools/` and `.godot/`.
 
-This guide describes the accepted v5 predecessor runtime, including its
-`Fly[Stone]`/`Fly[Bell]` Noun journeys and eight-slot Loadout. The successor
-Verb + linked Modifier + contextual Target direction is documented but not
-implemented; follow the [active Handoff](HANDOFF.md) rather than treating this
-operational guide as authorization to migrate it.
+This guide describes the strict v6 Goal 6A runtime: one active Verb, linked
+Modifier knowledge, contextual Chronicle Targets, and the generated Mire Brute
+encounter. Literal v5 and older shapes remain migration inputs only; their
+`Fly[Stone]`/`Fly[Bell]` journeys are retained historical proof rather than a
+parallel gameplay path. Follow the [active Handoff](HANDOFF.md) for the current
+authorization boundary.
 
 ## Local tools
 
@@ -62,7 +63,7 @@ Use a named profile to keep a custom Chronicle isolated under
 `.tools/play-profiles/<name>/`:
 
 ```powershell
-& .\play.ps1 -Profile goal4b-uat
+& .\play.ps1 -Profile goal6a-quickly-uat
 ```
 
 The first launch of a profile starts without a save. Later launches with the
@@ -102,23 +103,16 @@ Run the complete fail-fast gate from the repository root:
 & .\checks\verify.ps1
 ```
 
-It restores and builds Core, VisualPack, Visuals, and Godot, then runs the
-dependency-free Core and Visuals checks. It starts the developer World Atlas
-Inspector in isolated application-data directories at both 20 px and 16 px,
-proving the semantic and shared Visual Grammar paths, deterministic captures,
-and player-save non-mutation beside both an absent save and a sentinel save.
-It then runs the player acceptance at the current native densities `20 px /
-51 × 37` and `16 px / 63 × 45`. Each player launch drives the real Godot buttons through the
-complete `UP` → Fly → Bell → Study → pause → partial save/load → learn `Stone`
-→ configure/clear the Loadout → move and return the loose Stone with
-`Fly[Stone]` → confirm Bell death → save/load while awaiting replacement →
-create Incarnation `2` with an empty Loadout → re-equip Fly → observe the moved
-Stone journey. The Visual Grammar assertions cover exact pack identity,
-native density, Bell/actor/Stone layers, target emphasis, stable save/load
-plan digests, and review-capture bytes. Godot's editor callback, clean startup,
-save creation, and next-launch restore remain in the gate. All launches use
-temporary isolated application-data directories, so verification neither
-opens a window nor touches the interactive save.
+It verifies P-GEN first, then restores and builds Core, VisualPack, Visuals,
+and Godot. Core checks cover the deterministic Goal 6A encounter, strict v6
+round trip, and literal predecessor migration. Visual checks cover the v2
+combat vocabulary and retained composition proof. The gate then validates the
+exact four-file packaged artifact, World Grammar v4 through the developer
+Inspector, clean startup/restart, and both scripted Goal 6A HUD journeys:
+Quickly through victory/reload and Lasting through interruption, death,
+replacement, victory, and reload. All Godot launches use temporary isolated
+application-data directories, so verification neither opens a window nor
+touches an interactive save.
 
 E5 also exercises the explicit manual 20-pixel golden comparison in both
 player and Inspector. To launch that comparison interactively without changing
@@ -132,13 +126,8 @@ The build output must contain only the canonical four-file P-GEN bundle under
 `visual-packs/palimpsest20`; compiler assemblies, catalogues, fixtures, and
 review evidence are forbidden from the shipped dependency graph.
 
-Goal 4A adds an isolated current-grammar journey after those retained
-regressions. One launch uses the real controls to save active `Stone` Study at
-`5/16`; a separate application launch restores that exact source/word pursuit.
-The next launch carries it through death, an empty replacement Loadout,
-deliberate return and completion, then runs an independent `Bell` choice through
-partial save/load and `16/16` completion without advancing `Stone`. A final
-application launch restores the completed Bell-only Chronicle.
+For player Goal 6A review, use the isolated profiles named in the active
+contract: `goal6a-quickly-uat` and `goal6a-lasting-return-uat`.
 
 The earlier standalone 4A automated gate ended with:
 
@@ -186,7 +175,7 @@ the matching surface address, and writes strict save v5. The second restores
 that exact branch, proves the old sky address is empty, and confirms the moved
 Bell retains its consequential death affordance.
 
-The current full automated gate ends with:
+The retained predecessor gate ended with:
 
 ```text
 SLICE5 CORE ACCEPTANCE PASS expression=Fly[Bell] durable=Bell+source save=5 migration=4
@@ -195,11 +184,17 @@ SLICE5 RESTART ACCEPTANCE PASS bell=surface:0,-4 source=attached death=confirmed
 PASS: Slice 5 Fly[Bell] composition and restart, Goal 4C conflict, Goal 4B Home, Goal 4A Study choice, Goal 2, Gate 3A, and Gate 3B verified.
 ```
 
-That gate passed on 2026-07-20 with zero build warnings or errors. The player
+That predecessor gate passed on 2026-07-20 with zero build warnings or errors. The player
 then reported “Full UAT accept”; the
 [accepted Slice 5 UAT](archive/uat/SLICE-5-UAT.md) is archived. Goal 4C player
 UAT had already passed; its archived sheet retains the closer-zoom and
 Cairn-legibility notes.
+
+The current Goal 6A gate ends with:
+
+```text
+PASS: Goal 6A real fight, strict v6 migration, rendered map-first HUD, P-GEN v2 packaging, Inspector, and retained migration/generation/composer proof verified.
+```
 
 To run the individual proof steps instead, restore once, then build and run the
 engine-independent check:
@@ -213,22 +208,17 @@ engine-independent check:
 & $dotnet run --no-build --no-restore --project checks\Chronicle.Visuals.Checks\Chronicle.Visuals.Checks.csproj
 ```
 
-The dependency-free executable retains every Slice 0 and Slice 1 proof and adds
-literal Slice 1 migration to Codex `Fly`, deterministic Bell Study, pause and
-source rules, partial save/load, idempotent `Stone` completion, and inspectable
-Codex/Study serialization without generated tiles. Slice 2B adds predecessor
-migration to eight ordered Loadout slots, Codex-only configuration, duplicate
-prevention, intrinsic Fly, fitted `Fly[Stone]`, Core-owned adjacent targeting,
-the durable loose Stone delta, rejection messages, replay, and save/load. Its
-project references Core but does not reference Godot. Slice 2C adds Bell-only
-death, complete awaiting-replacement command and tick freeze, deterministic
-replacement identity, an empty replacement Loadout, versioned save-envelope
-migration, save/load on both sides of replacement, and lifecycle replay.
-Gate 3A adds World Grammar version migration, deterministic ordered bounded
-Surface/Sky snapshots, fixture-seed composition, whole-versus-tiled and overlap
-agreement, query-order independence, adjacency context, named long forms,
-durable Bell and moved-Stone overlays, read-only generation, save omission, and
-render-independent replay.
+The dependency-free executable proves the strict v6 successor: generated Mire
+Brute and basalt subjects, one bounded Burn Expression, shared Load, Engagement
+Plan, pending commands, deterministic pursuit and Heartbeat order, HP and
+equipment, Preparation/interruption/Recovery, contextual Target revalidation,
+scorch, death/replacement, save/load, and deterministic replay. Literal v5
+through v1 and pre-envelope fixtures prove migration into neutral retained
+durables while Noun knowledge and predecessor gameplay state retire. Separate
+root-gate generation and Inspector checks retain World Grammar version pins,
+deterministic ordered bounded snapshots, fixture-seed composition, overlap and
+adjacency context, durable overlays, read-only generation, and shared-composer
+replay; those are not additional Goal 6A Core-check groups.
 
 Goal 4A adds stable catalogue `WordId` values shared by the Catalogue, Codex,
 word-specific Understanding, Study offers, and Loadout. Its Core proof covers
@@ -387,25 +377,22 @@ comparison explicitly with:
 & .\play.ps1 -CellSize 16
 ```
 
-The current runtime canvas is `1600 × 900` with a `1020 × 740` map. Its native
-20-pixel view presents `51 × 37` cells; retained 16-pixel presentation presents
-`63 × 45`. Goal 4B's automated marker deliberately keeps the lower
-`view=50x36` acceptance minimum. The Chronicle, Codex, Loadout, commands, and
-status occupy the right-hand panel without overlapping. The accepted 20-pixel
-baseline and retained visual comparison remain documented in
+The corrected Goal 6A canvas is `1600 × 900`. Its map owns the complete
+`1280 × 900` left surface and presents the native 20-pixel pack at crisp `2×`
+scale through a centered `32 × 23` query. A 64-pixel status/pause treatment
+and compact six-action plus WASD palette overlay that map; they do not remove a
+permanent bottom strip. The 320-pixel right rail gives the non-overlapping
+Target/HP and decision block, four-event forecast, and enlarged Message Log
+their own hierarchy. The retained visual comparison remains documented in
 [Gate 3B Visual UAT](GATE-3B-VISUAL-UAT.md).
 
-The compact Chronicle header uses four lines. Tick and speed share
-`Tick: … · Clock: …` so the Clock value remains fully above the Codex panel.
-
-Use arrow keys or WASD to move, Space to pause, `1`/`2`/`3` for slow/normal/fast,
-F5 to save, and F9 to load. Fly occupies the first slot in the eight-slot
-on-screen hotbar. At the Bell, the Study button opens the generated sky-stone
-source: its Core-owned situation, qualities, contribution, and ordered
-`Stone`/`Bell` offers replace the old hidden-Stone action. The direction,
-clock, hotbar, Study choice, save, and load controls invoke Core commands.
-Pause stops Chronicle ticks and Study; deliberate commands remain available
-while paused.
+Choose a Starting Vector with `1`/`2`/`3`. Use WASD to move, `T` to cycle
+contextual Targets, `Q`/`L` to attune the two Burn plans, `B` to prepare Burn,
+`V` for the Cleaver stance or strike, Space or `1` to pause/resume Slow
+Heartbeats, `C` to cancel or safely skip Recovery, F5/F9 to save/load, and `R`
+for a replacement Incarnation after death. Mouse buttons issue the same Core
+commands. The rails expose the next four events, timing, interruption risk,
+prevented actions, Target facts, HP, equipment, Load, Links, and recent results.
 
 Completed player journeys are historical evidence, not launch instructions.
 They are preserved in the archived
@@ -415,18 +402,14 @@ They are preserved in the archived
 [Goal 4C UAT sheet](archive/uat/GOAL-4C-UAT.md), and
 [Slice 5 UAT](archive/uat/SLICE-5-UAT.md).
 
-Godot keeps the compatible file at `user://slice0_chronicle.json`. A Slice 0
-file without Intent opens as `Unchosen`; a Slice 1 file with `UP` migrates to
-an explicit Codex containing `Fly`; a Slice 2A file gains intrinsic Fly in
-slot one and the loose Stone at `surface (1, 0)`; a Slice 2B file gains living
-Incarnation identity `1` without changing its Loadout or Stone delta. Literal
-v4, v3, v2, v1, and pre-envelope saves are decoded through predecessor shapes
-before constructing the strict current v5 canonical Chronicle. Current v5
-saves use stable string Word identities and contain only canonical Chronicle
-state, including the Bell Address, optional singular Home, first-conflict state,
-and durable deltas. Surface, sky, Study Source, Hearthstone, Cairn, and route
-snapshots are regenerated from the seed, pinned grammar, durable identity, and
-World Address.
+Godot keeps the compatible file at `user://slice0_chronicle.json`. Strict v6
+saves use stable successor Word identities and contain the current body,
+Codex/Loadout, generated encounter state, Engagement Plan, active action state,
+scorch, and neutral retained durables. Literal v5, v4, v3, v2, v1, and
+pre-envelope files decode through predecessor shapes before constructing v6;
+their fitted Nouns, Study/Understanding, and predecessor conflict state do not
+survive as a parallel gameplay system. Generated snapshots are reconstructed
+from seed, pinned World Grammar, durable identity, and World Address.
 
 To open the editor instead:
 
@@ -437,21 +420,19 @@ To open the editor instead:
 ## Project boundary
 
 - `Chronicle.Core` owns generation, commands, movement, clock semantics, the
-  authored Word Catalogue, generated Study Sources, canonical Codex and
-  word-specific Understanding, the eight-slot Loadout, Expression
-  compatibility, target validity, Fly effects, Incarnation death and
-  replacement, singular Home and its physical Return Route, the loose Stone
-  delta, Landmark identity, and strict canonical persistence without referencing
-  Godot.
+  authored Word Catalogue, canonical Codex, bounded Verb/Modifier Loadout,
+  contextual Target validity, the Goal 6A encounter and forecasts, Incarnation
+  death and replacement, retained material durables, Landmark identity, and
+  strict canonical persistence and migration without referencing Godot.
 - `Chronicle.VisualPack` owns immutable compiled-pack values and the compact
   manually authored 16 px/20 px reference pack without referencing Core or
   Godot.
 - `Chronicle.Visuals` maps read-only Core snapshots plus pack/style inputs to
   deterministic transient render plans without referencing Godot.
 - `Chronicle.Godot` translates input and wall-clock pulses, renders Core
-  snapshots through those plans, expands atlas textures, renders Core-valid
-  target highlights and UI glyphs, presents death confirmation and replacement
-  controls, presents nonbinding Starting Vector and mixed-Codex Loadout controls,
-  and owns the `user://` file lifecycle.
+  snapshots through those plans, expands atlas textures, presents the map-first
+  status/Target/action rails, Target highlights, death and replacement controls,
+  Starting Vector and bounded Loadout controls, and owns the `user://` file
+  lifecycle.
 - Godot is an inspection and presentation surface for generated worlds, not a
   hand-authored level source.

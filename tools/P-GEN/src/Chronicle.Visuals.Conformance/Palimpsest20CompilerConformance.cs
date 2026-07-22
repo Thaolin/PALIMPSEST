@@ -86,7 +86,8 @@ static class Palimpsest20CompilerConformance
         }
 
         if (!MaterialGrammarIsSubstanceSpecific(catalogue, pack) ||
-            !PrincipalSilhouettesOccupyTheirCells(pack))
+            !PrincipalSilhouettesOccupyTheirCells(pack) ||
+            !Goal6AVisualVocabularyIsComplete(pack))
         {
             return false;
         }
@@ -232,7 +233,10 @@ static class Palimpsest20CompilerConformance
             ["subject.home-hearthstone"] = 17,
             ["subject.riven-cairn-river-ward"] = 17,
             ["subject.shattered-cairn"] = 11,
-            ["subject.loose-stone"] = 10
+            ["subject.loose-stone"] = 10,
+            ["subject.mire-brute.living"] = 18,
+            ["subject.mire-brute.dead"] = 10,
+            ["effect.mire-brute.burning"] = 18
         };
 
         foreach (var requirement in requiredHeights)
@@ -244,6 +248,65 @@ static class Palimpsest20CompilerConformance
             {
                 Console.Error.WriteLine(
                     $"PAL20-OCCUPANCY: '{requirement.Key}' occupies {occupiedRows} rows; expected at least {requirement.Value}.");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool Goal6AVisualVocabularyIsComplete(Palimpsest20Pack pack)
+    {
+        var required = new Dictionary<string, Palimpsest20LayerClass>(StringComparer.Ordinal)
+        {
+            ["terrain.surface.scorched-ground"] = Palimpsest20LayerClass.GroundField,
+            ["subject.mire-brute.living"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["subject.mire-brute.dead"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["emphasis.mire-brute.wounded"] = Palimpsest20LayerClass.TemporaryAction,
+            ["effect.mire-brute.burning"] = Palimpsest20LayerClass.TemporaryAction,
+            ["emphasis.target.selected"] = Palimpsest20LayerClass.TargetOrSelection,
+            ["emphasis.danger.mire-brute"] = Palimpsest20LayerClass.TemporaryAction,
+            ["emphasis.action.pending"] = Palimpsest20LayerClass.TemporaryAction,
+            ["emphasis.action.preparation"] = Palimpsest20LayerClass.TemporaryAction,
+            ["emphasis.action.recovery"] = Palimpsest20LayerClass.TemporaryAction,
+            ["glyph.equipment.iron-cleaver"] = Palimpsest20LayerClass.UiGlyph,
+            ["glyph.equipment.quilted-jack"] = Palimpsest20LayerClass.UiGlyph,
+            ["glyph.equipment.copper-ward"] = Palimpsest20LayerClass.UiGlyph,
+            ["glyph.word.burn"] = Palimpsest20LayerClass.UiGlyph,
+            ["glyph.modifier.quickly"] = Palimpsest20LayerClass.UiGlyph,
+            ["glyph.modifier.lasting"] = Palimpsest20LayerClass.UiGlyph,
+            ["emphasis.home-source-site"] = Palimpsest20LayerClass.TargetOrSelection,
+            ["place.singing-seam.embedded"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["place.singing-seam.empty"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["resource.resonant-lode.embedded"] = Palimpsest20LayerClass.TemporaryAction,
+            ["resource.resonant-lode.loose"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["resource.resonant-lode.carried"] = Palimpsest20LayerClass.Actor,
+            ["source.hearth-resonator.construction"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["source.hearth-resonator.intact"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["source.hearth-resonator.damaged"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["source.hearth-resonator.destroyed"] = Palimpsest20LayerClass.LandmarkOrSubject,
+            ["source.hearth-resonator.rebuilding"] = Palimpsest20LayerClass.LandmarkOrSubject,
+        };
+
+        foreach (var requirement in required)
+        {
+            Palimpsest20Definition definition;
+            try
+            {
+                definition = pack.Resolve(requirement.Key);
+            }
+            catch (KeyNotFoundException)
+            {
+                Console.Error.WriteLine(
+                    $"PAL20-GOAL6A-VOCABULARY: missing '{requirement.Key}'.");
+                return false;
+            }
+
+            if (definition.LayerClass != requirement.Value ||
+                !Cell(pack, requirement.Key).AsSpan().ContainsAnyExcept((byte)0))
+            {
+                Console.Error.WriteLine(
+                    $"PAL20-GOAL6A-VOCABULARY: '{requirement.Key}' has an invalid layer or empty raster.");
                 return false;
             }
         }

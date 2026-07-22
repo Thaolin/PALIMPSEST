@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "packId": "chronicle.palimpsest20",
-  "visualStyleVersion": 1,
+  "visualStyleVersion": 2,
   "palettes": [
     {
       "id": "chronicle.palimpsest20.palette",
@@ -39,6 +39,11 @@
         "actor.dark": 22,
         "actor.primary": 23,
         "actor.read": 24,
+        "combat.pending": 25,
+        "combat.preparation": 20,
+        "combat.recovery": 17,
+        "combat.scorch.dark": 4,
+        "combat.scorch.primary": 12,
         "authoring.grove.dark": 9,
         "authoring.grove.light": 11,
         "authoring.grove.primary": 10,
@@ -49,7 +54,12 @@
         "authoring.ui.dark": 26,
         "cloud.primary": 18,
         "cloud.shadow": 17,
+        "danger.primary": 23,
+        "danger.read": 24,
         "emphasis.active": 25,
+        "fire.bright": 21,
+        "fire.dark": 19,
+        "fire.primary": 20,
         "landmark.bright": 21,
         "landmark.gold": 20,
         "sky.deep": 15,
@@ -59,6 +69,7 @@
         "surface.dark": 1,
         "surface.grass": 2,
         "surface.soil": 5,
+        "target.selected": 21,
         "ui.light": 27,
         "water.deep": 6,
         "water.primary": 7,
@@ -625,6 +636,662 @@
           "overviewPaletteRole": "authoring.stone.light"
         }
       ]
+    },
+    {
+      "id": "terrain.surface.scorched-ground",
+      "seed": 1601,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111121111111111",
+            "11111111111111111111",
+            "11111222111111111111",
+            "11111111111111111111",
+            "11111111111122111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111121111111111111",
+            "11111111111111111111",
+            "11111111111111221111",
+            "11111111111111111111",
+            "11111111122111111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111112111111",
+            "11111111111111111111",
+            "11111111111111111111",
+            "11111111111111111111"
+          ],
+          "anchor": [10, 10],
+          "layer": "ground",
+          "paletteRoles": [
+            "combat.scorch.primary",
+            "combat.scorch.dark",
+            "fire.dark"
+          ],
+          "overviewPaletteRole": "combat.scorch.primary"
+        }
+      ]
+    },
+    {
+      "id": "subject.mire-brute.living",
+      "seed": 1603,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000000111000000",
+            "000001111110000",
+            "000011222211000",
+            "000112222221000",
+            "000122222222100",
+            "000122232222100",
+            "000122222222100",
+            "000112222221000",
+            "000011222211000",
+            "000012222210000",
+            "000122222222100",
+            "001122222222110",
+            "011222222222211",
+            "112222222222221",
+            "011222222222210",
+            "001122211222100",
+            "000112200221000",
+            "000110000011000"
+          ],
+          "anchor": [7, 10],
+          "layer": "landmark",
+          "paletteRoles": ["actor.dark", "actor.primary", "actor.read"],
+          "overviewPaletteRole": "actor.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.mire-brute.wounded",
+      "seed": 1607,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "100000001",
+            "010000010",
+            "001000100",
+            "000101000",
+            "000010000",
+            "000101000",
+            "001000100",
+            "010000010",
+            "100000001"
+          ],
+          "anchor": [4, 4],
+          "layer": "effect",
+          "paletteRoles": ["danger.primary", "danger.read"],
+          "overviewPaletteRole": "danger.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "effect.mire-brute.burning",
+      "seed": 1609,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000000030000000",
+            "000000323000000",
+            "000003232300000",
+            "000003222300000",
+            "000032232230000",
+            "000032222230000",
+            "000003222300000",
+            "000023222320000",
+            "000232222232000",
+            "002322222223200",
+            "023222222222320",
+            "232222222222232",
+            "023222222222320",
+            "002322222223200",
+            "000232222232000",
+            "000023222320000",
+            "000002222300000",
+            "000000220000000"
+          ],
+          "anchor": [7, 10],
+          "layer": "effect",
+          "paletteRoles": ["fire.dark", "fire.primary", "fire.bright"],
+          "overviewPaletteRole": "fire.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "subject.mire-brute.dead",
+      "seed": 1613,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000000111000000",
+            "000001111100000",
+            "000112222211000",
+            "001122222222110",
+            "011222222222211",
+            "112222222222221",
+            "011222222222210",
+            "001122222222100",
+            "000011222211000",
+            "000000111100000"
+          ],
+          "anchor": [7, 5],
+          "layer": "landmark",
+          "paletteRoles": ["actor.dark", "actor.primary", "actor.read"],
+          "overviewPaletteRole": "actor.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.target.selected",
+      "seed": 1617,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "111000111",
+            "100000001",
+            "100000001",
+            "000000000",
+            "000000000",
+            "100000001",
+            "100000001",
+            "111000111"
+          ],
+          "anchor": [4, 4],
+          "layer": "emphasis",
+          "paletteRoles": ["target.selected"],
+          "overviewPaletteRole": "target.selected",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.danger.mire-brute",
+      "seed": 1619,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "111000111",
+            "100000001",
+            "100020001",
+            "000000000",
+            "000000000",
+            "100020001",
+            "100000001",
+            "111000111"
+          ],
+          "anchor": [4, 4],
+          "layer": "effect",
+          "paletteRoles": ["danger.primary", "danger.read"],
+          "overviewPaletteRole": "danger.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.action.pending",
+      "seed": 1621,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000010000",
+            "000111000",
+            "001111100",
+            "011101110",
+            "111000111",
+            "011101110",
+            "001111100",
+            "000111000",
+            "000010000"
+          ],
+          "anchor": [4, 4],
+          "layer": "effect",
+          "paletteRoles": ["combat.pending"],
+          "overviewPaletteRole": "combat.pending",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.action.preparation",
+      "seed": 1623,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "110000011",
+            "100000001",
+            "000000000",
+            "000222000",
+            "000202000",
+            "000222000",
+            "000000000",
+            "100000001",
+            "110000011"
+          ],
+          "anchor": [4, 4],
+          "layer": "effect",
+          "paletteRoles": ["combat.preparation", "fire.bright"],
+          "overviewPaletteRole": "combat.preparation",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.action.recovery",
+      "seed": 1627,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "111111111",
+            "100000001",
+            "100000001",
+            "100001111",
+            "100001001",
+            "111101001",
+            "000001001",
+            "000001001",
+            "111111111"
+          ],
+          "anchor": [4, 4],
+          "layer": "effect",
+          "paletteRoles": ["combat.recovery"],
+          "overviewPaletteRole": "combat.recovery",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "glyph.equipment.iron-cleaver",
+      "seed": 1631,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000020000",
+            "000222000",
+            "002222200",
+            "022222220",
+            "002222200",
+            "000222000",
+            "000020000",
+            "000010000",
+            "000010000",
+            "000010000"
+          ],
+          "anchor": [4, 5],
+          "layer": "overlay",
+          "paletteRoles": ["ui.light", "stone.primary"],
+          "overviewPaletteRole": "ui.light",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "glyph.equipment.quilted-jack",
+      "seed": 1633,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000011000",
+            "000122100",
+            "001222210",
+            "012122121",
+            "122222222",
+            "122122222",
+            "122222222",
+            "012222210",
+            "001111100"
+          ],
+          "anchor": [4, 4],
+          "layer": "overlay",
+          "paletteRoles": ["actor.dark", "ui.light"],
+          "overviewPaletteRole": "ui.light",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "glyph.equipment.copper-ward",
+      "seed": 1637,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000010000",
+            "000121000",
+            "001222100",
+            "012222210",
+            "122232221",
+            "012222210",
+            "001222100",
+            "000121000",
+            "000010000"
+          ],
+          "anchor": [4, 4],
+          "layer": "overlay",
+          "paletteRoles": ["fire.dark", "fire.primary", "fire.bright"],
+          "overviewPaletteRole": "fire.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "glyph.word.burn",
+      "seed": 1641,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000030000",
+            "000323000",
+            "003232300",
+            "003222300",
+            "032222230",
+            "022222220",
+            "002222200",
+            "000222000",
+            "000020000"
+          ],
+          "anchor": [4, 4],
+          "layer": "overlay",
+          "paletteRoles": ["fire.dark", "fire.primary", "fire.bright"],
+          "overviewPaletteRole": "fire.primary",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "glyph.modifier.quickly",
+      "seed": 1643,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "000010000",
+            "000111000",
+            "001111100",
+            "011121110",
+            "111222211",
+            "011121110",
+            "001111100",
+            "000111000",
+            "000010000"
+          ],
+          "anchor": [4, 4],
+          "layer": "overlay",
+          "paletteRoles": ["combat.pending", "ui.light"],
+          "overviewPaletteRole": "combat.pending",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "glyph.modifier.lasting",
+      "seed": 1647,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [
+        {
+          "nativeSize": 20,
+          "rows": [
+            "111111111",
+            "100000001",
+            "101111101",
+            "101000101",
+            "101010101",
+            "101000101",
+            "101111101",
+            "100000001",
+            "111111111"
+          ],
+          "anchor": [4, 4],
+          "layer": "overlay",
+          "paletteRoles": ["combat.recovery"],
+          "overviewPaletteRole": "combat.recovery",
+          "requireConnected": false
+        }
+      ]
+    },
+    {
+      "id": "emphasis.home-source-site",
+      "seed": 1701,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["1111100000000011111", "1000000000000000001", "1000000000000000001", "1000000000000000001", "1000000000000000001", "0000000000000000000", "0000000000000000000", "0000000000000000000", "0000000000000000000", "0000000000000000000", "0000000000000000000", "0000000000000000000", "0000000000000000000", "0000000000000000000", "1000000000000000001", "1000000000000000001", "1000000000000000001", "1000000000000000001", "1111100000000011111"],
+        "anchor": [9, 9],
+        "layer": "emphasis",
+        "paletteRoles": ["combat.pending"],
+        "overviewPaletteRole": "combat.pending",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "place.singing-seam.embedded",
+      "seed": 1703,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["000001111100000", "000112222211000", "001122222221100", "011220000022110", "012200000002210", "112000333000211", "122003333300221", "122033333330221", "122003333300221", "112000333000211", "012200000002210", "011220000022110", "001122222221100", "000112222211000", "000001111100000"],
+        "anchor": [7, 7],
+        "layer": "landmark",
+        "paletteRoles": ["stone.dark", "stone.primary", "landmark.gold"],
+        "overviewPaletteRole": "landmark.gold",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "place.singing-seam.empty",
+      "seed": 1709,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["000001111100000", "000112222211000", "001122222221100", "011220000022110", "012200000002210", "112000000000211", "122000000000221", "122000010000221", "122000001000221", "112000010000211", "012200000002210", "011220000022110", "001122222221100", "000112222211000", "000001111100000"],
+        "anchor": [7, 7],
+        "layer": "landmark",
+        "paletteRoles": ["stone.dark", "stone.primary"],
+        "overviewPaletteRole": "stone.primary",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "resource.resonant-lode.embedded",
+      "seed": 1711,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["00000300000", "00003230000", "00032223000", "00322222300", "03223332230", "32233333223", "03223332230", "00322222300", "00032223000", "00003230000", "00000300000"],
+        "anchor": [5, 5],
+        "layer": "effect",
+        "paletteRoles": ["landmark.gold", "landmark.bright", "ui.light"],
+        "overviewPaletteRole": "landmark.bright",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "resource.resonant-lode.loose",
+      "seed": 1721,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["0000001000000", "0000012100000", "0000123210000", "0001232321000", "0012322232100", "0123222223210", "1233333333321", "0123222223210", "0012322232100", "0001232321000", "0000123210000", "0000012100000", "0000001000000"],
+        "anchor": [6, 6],
+        "layer": "landmark",
+        "paletteRoles": ["landmark.gold", "landmark.bright", "ui.light"],
+        "overviewPaletteRole": "landmark.bright",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "resource.resonant-lode.carried",
+      "seed": 1723,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["100000333000001", "120003222300021", "123032333230321", "123300333003321", "123000000000321", "123000000000321", "123000000000321", "123000000000321", "120000000000021", "100000000000001", "111000000000111"],
+        "anchor": [7, 5],
+        "layer": "actor",
+        "paletteRoles": ["landmark.gold", "landmark.bright", "ui.light"],
+        "overviewPaletteRole": "landmark.bright",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "source.hearth-resonator.construction",
+      "seed": 1733,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["10000000000000001", "11000000000000011", "10100000000000101", "10010000000001001", "10001000000010001", "10000100000100001", "10000010001000001", "11111111111111111", "10000022222000001", "10000223332200001", "10002233333220001", "10000223332200001", "10000022222000001", "10101011111010101", "10010010001001001", "11000010001000011", "11111111111111111"],
+        "anchor": [8, 8],
+        "layer": "landmark",
+        "paletteRoles": ["stone.dark", "combat.pending", "landmark.gold"],
+        "overviewPaletteRole": "combat.pending",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "source.hearth-resonator.intact",
+      "seed": 1741,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["00000003330000000", "00000333233300000", "00003322222330000", "00033222222233000", "00332233333223300", "03322233333222330", "13322223332222331", "12322223332222321", "12322223332222321", "12322223332222321", "13322223332222331", "03322233333222330", "00332233333223300", "00033222222233000", "00003322222330000", "00000333233300000", "11111111111111111"],
+        "anchor": [8, 8],
+        "layer": "landmark",
+        "paletteRoles": ["stone.dark", "landmark.gold", "landmark.bright"],
+        "overviewPaletteRole": "landmark.bright",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "source.hearth-resonator.damaged",
+      "seed": 1747,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["00000003330000000", "00000333203300000", "00003322002330000", "00033220022233000", "00332200333223300", "03322203333222330", "13322220332222331", "12322203032222321", "12322230032222321", "12322300032222321", "13322223332222331", "03322233333222330", "00332233333223300", "00033222222233000", "00003322222330000", "00000333233300000", "11111111111111111"],
+        "anchor": [8, 8],
+        "layer": "landmark",
+        "paletteRoles": ["stone.dark", "landmark.gold", "danger.primary"],
+        "overviewPaletteRole": "danger.primary",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "source.hearth-resonator.destroyed",
+      "seed": 1753,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["10000000000000001", "11000000100000011", "01100011111000110", "00011122222111000", "00112222222221100", "01122211111222110", "11111111111111111", "10002222222220001", "11000222222000111", "11100011111000111", "11111111111111111"],
+        "anchor": [8, 5],
+        "layer": "landmark",
+        "paletteRoles": ["stone.dark", "stone.primary"],
+        "overviewPaletteRole": "stone.primary",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "source.hearth-resonator.rebuilding",
+      "seed": 1759,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["10000003000000001", "11000003000000011", "10100033300000101", "10010033300001001", "10001033300010001", "10000133300100001", "10000033301000001", "11111133311111111", "10000022222000001", "10000223332200001", "10002233333220001", "10000223332200001", "10000022222000001", "10101011111010101", "10010010001001001", "11000010001000011", "11111111111111111"],
+        "anchor": [8, 8],
+        "layer": "landmark",
+        "paletteRoles": ["stone.dark", "landmark.gold", "combat.preparation"],
+        "overviewPaletteRole": "combat.preparation",
+        "requireConnected": false
+      }]
     }
   ],
   "connectedFamilies": [

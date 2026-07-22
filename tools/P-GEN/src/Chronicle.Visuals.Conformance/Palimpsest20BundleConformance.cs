@@ -189,8 +189,8 @@ static class Palimpsest20BundleConformance
         var pack = new Palimpsest20Pack(
             packId: "palimpsest20.bundle-tracer",
             formatVersion: 1,
-            styleVersion: 1,
-            composerVersion: 1,
+            styleVersion: Palimpsest20Pack.SupportedStyleVersion,
+            composerVersion: Palimpsest20Pack.SupportedComposerVersion,
             cellSize: 20,
             atlasId: "palimpsest20",
             paletteId: "surface",
@@ -221,9 +221,9 @@ static class Palimpsest20BundleConformance
             ]);
         return Palimpsest20Codec.WriteCanonical(pack, new Palimpsest20Validation(
             PackFormatVersion: 1,
-            ComposerContractVersion: 1,
-            VisualStyleVersion: 1,
-            MinimumReaderVersion: "1.0.0"));
+            ComposerContractVersion: Palimpsest20Pack.SupportedComposerVersion,
+            VisualStyleVersion: Palimpsest20Pack.SupportedStyleVersion,
+            MinimumReaderVersion: Palimpsest20Codec.ReaderVersion));
     }
 
     private static ImmutableArray<PackFile> Mutate(
@@ -426,13 +426,13 @@ static class Palimpsest20BundleConformance
             static validation => validation["packFormatVersion"] = 2),
         "composer-boundary" => RewriteValidation(
             canonical,
-            static validation => validation["composerContractVersion"] = 2),
+            static validation => validation["composerContractVersion"] = 3),
         "style-boundary" => RewriteValidation(
             canonical,
-            static validation => validation["visualStyleVersion"] = 2),
+            static validation => validation["visualStyleVersion"] = 3),
         "minimum-reader-boundary" => RewriteValidation(
             canonical,
-            static validation => validation["minimumReaderVersion"] = "1.0.1"),
+            static validation => validation["minimumReaderVersion"] = "2.0.1"),
         _ => throw new InvalidOperationException(
             $"PAL20-BUNDLE-FIXTURE: unknown mutation '{mutation}'.")
     };

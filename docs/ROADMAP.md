@@ -304,8 +304,32 @@ or rectangular-runtime-cell decision requires a later gate.
 
 ## Goal 6 — A Real RPG Loop
 
-**Status:** Direction settled; production not authorized. Begin only after the
-required P-GEN E5 integration passes. Retain the accepted
+**Status:** Complete and player-accepted on 2026-07-22. Goal 6A was accepted and
+closed on 2026-07-21 as a prototype-quality
+vertical slice after its initial HUD rejection, bounded legibility corrections,
+forecast/log overflow remediation, revised presentation pass, and complete
+automated gate. The qualified player pass retains explicit debt around paused
+movement legibility, pause/location clipping, safe-only Attunement affordance,
+melee feedback, damage provenance, and graphics 1.0 actor treatment. This is
+not acceptance of final combat UX or a general equipment model. Goal 6B's first
+player UAT was rejected on 2026-07-21 for a post-combat queued-movement defect
+and an interface that did not make the resource-to-capacity loop understandable.
+The first bounded correction passed its complete gate, but re-UAT on 2026-07-22
+exposed a second movement latch after extraction: Slow movement treated a
+distant living Brute as tactical danger. After that rule was corrected, the
+player requested a simpler instruction popup before re-UAT. The third bounded
+correction replaces stacked prose with state-specific five-line-or-shorter
+checklists and one compact current/next Load line. The following attempt exposed
+that the automated fixture had silently chosen Combat and learned the three test
+Words while the player's Build opening had not. The fourth bounded correction
+removes the opening chooser from fresh WG5 testing profiles and places one
+visible Burn Primer north of Home to acquire `Burn`, `Quickly`, and `Lasting`.
+The complete retained automated gate passes with zero build warnings or errors.
+The player then passed Goal 6B, explicitly accepting that the Primer's Words
+must be equipped through the three-Word Attunement before that Burn Expression
+can be used in combat. Word acquisition and equipping UX remains separately
+scoped future work. The required P-GEN E5 integration has passed. Retain
+the accepted
 Slice 0–3 Chronicle, World Grammar, map, 20-pixel palette and Visual Grammar,
 then replace predecessor gameplay incrementally through two separately gated
 vertical slices. See the
@@ -329,7 +353,31 @@ can defend at least two Loadouts; sees one material consequence persist through
 save, death, and restart; and reports that the production interaction retains
 the pressure test's deliberate real-time-with-pause feel.
 
+Completed implementation contract:
+[Goal 6A — A Real Fight](GOAL-6A-A-REAL-FIGHT.md). Production was explicitly
+authorized on 2026-07-21 and accepted as a prototype-quality vertical slice on
+2026-07-21 after the player reported: “Overall, it's a pass but only as a
+prototype.” The full strict-v6, rendered-HUD, migration, Inspector,
+deterministic-replay, and P-GEN packaging gate passed. The recorded player debt
+does not extend authorization to fixes, a general combat framework, or Goal 6B.
+
 ### 6B — Power Comes Home
+
+**Contract state:** production authorized on 2026-07-21 with all five bounded
+fixture decisions approved as written. The first player UAT rejected the
+candidate because safe movement after combat paused and overran, while the map
+and action language did not communicate the Seam, damage action, Source state,
+or next-Attunement benefit. Re-UAT then rejected the first correction because
+finishing extraction left every safe Slow movement in a new pause queue. Core
+now pauses Slow movement only in, or while crossing into, immediate danger.
+The third bounded correction also replaces the verbose stacked instruction
+surface with one Core-owned checklist that changes at every meaningful material
+state plus one compact current/next-Attunement Load line. The fourth correction
+aligns automated and player setup: fresh WG5 profiles start directly at Home,
+and a visible nearby Burn Primer supplies the exact test Words through a
+physical `P` interaction rather than an opening-path reward. The complete
+retained automated gate is green, and player UAT passed on 2026-07-22 under
+[Goal 6B — Power Comes Home](GOAL-6B-POWER-COMES-HOME.md).
 
 Add one generated expedition resource, physical return to Home, and one
 buildable vulnerable Load Source. Its capacity applies at the next Attunement
@@ -337,10 +385,42 @@ and enables one previously impossible Loadout. Destruction removes future
 Attunement capacity without disabling the current expedition; rebuilding
 restores it.
 
+The 6B implementation makes player feedback paramount. Before acquisition,
+carrying, building, Attunement, destruction, or rebuilding commits, the map and
+supporting text must answer:
+
+- what will change, where, and when;
+- what the action costs or prevents;
+- why a choice is unavailable and how to make it available;
+- whether capacity applies now or at the next Attunement; and
+- which material consequence persists through departure, death, and reload.
+
+Resource, carrier, Home, Source, and damage state must be visually identifiable
+in the play space. Messages must name causes and state transitions rather than
+exposing unexplained fixture names or raw values. Goal 6A's queued-action,
+disabled-Attunement, mitigation-provenance, and map/log disconnects are explicit
+negative examples for 6B acceptance, not deferred polish.
+
 **Accept when:** the player completes the full expedition-to-Home power loop,
 uses the resulting Load to confront a new possibility, and understands the
 consequence of losing and rebuilding the Source without encountering a generic
-crafting or base-management mode.
+crafting or base-management mode. The player must be able to explain the full
+loop and its timing from the interface without consulting documentation.
+
+Completed and player-accepted contract:
+[Goal 6B — Power Comes Home](GOAL-6B-POWER-COMES-HOME.md). Its strict v7/WG5
+Core fixtures, eight rendered HUD states, eight-state packaged/manual Inspector
+parity, deterministic replay/migration, and exact four-file packaging gate all
+pass, including regressions for exact-once safe movement after combat and after
+physical work, clear Source foundation, visual occupancy, the neutral no-path
+start, unread/read Burn Primer acquisition, state-specific five-line-or-shorter
+checklists, compact capacity timing, and no duplicate decision paragraph. The
+actual Godot keyboard journey also proves that post-extraction safe movement
+neither pauses nor queues.
+The player accepted the full slice while noting that Primer acquisition alone
+does not make Burn combat-usable until the three-Word Attunement. That accepted
+boundary defers broader Word acquisition and equipping work. Completion does
+not authorize Goal 7.
 
 Goal 6 deliberately does not add a broad bestiary, inventory, loot economy,
 crafting framework, production chain, anonymous workers, or raid simulation.

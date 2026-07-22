@@ -15,7 +15,24 @@ public sealed record VisualCompositionInput(
     WorldAddress? IncarnationAddress,
     IReadOnlyList<WorldAddress> TargetAddresses,
     IReadOnlyList<WorldAddress> SelectedAddresses,
-    IReadOnlyList<WorldAddress>? DangerAddresses = null);
+    IReadOnlyList<WorldAddress>? DangerAddresses = null,
+    IReadOnlyList<VisualPresentationEmphasis>? ActionEmphases = null);
+
+/// <summary>
+/// Presentation-only emphasis supplied from a Core-owned action snapshot.
+/// It names a visible state but never decides whether an action is legal or
+/// changes the Chronicle.
+/// </summary>
+public readonly record struct VisualPresentationEmphasis(
+    WorldAddress Address,
+    VisualPresentationEmphasisKind Kind);
+
+public enum VisualPresentationEmphasisKind
+{
+    PendingAction,
+    Preparation,
+    Recovery,
+}
 
 public readonly record struct VisualRenderMark(
     WorldAddress Address,
@@ -44,7 +61,7 @@ public sealed record VisualRenderPlan(
 public static class VisualGrammar
 {
     private const int SupportedPackFormatVersion = 1;
-    private const int SupportedComposerVersion = 1;
+    private const int SupportedComposerVersion = 2;
 
     public static VisualRenderPlan Compose(VisualCompositionInput input)
     {
@@ -62,6 +79,8 @@ public static class VisualGrammar
         // state. It deliberately contains no wall-clock phase: static emphasis
         // stays identical while Core has paused the Chronicle Clock.
         var dangers = input.DangerAddresses?.ToHashSet() ?? new HashSet<WorldAddress>();
+        var actionEmphases = input.ActionEmphases?.ToHashSet() ??
+            new HashSet<VisualPresentationEmphasis>();
         var layers = Enumerable.Range(0, Enum.GetValues<VisualLayerClass>().Length)
             .Select(_ => new List<VisualRenderMark>())
             .ToArray();
@@ -72,13 +91,25 @@ public static class VisualGrammar
                      .ThenBy(cell => cell.Address.X))
         {
             AddGround(input, cell, layers);
+            if (cell.IsScorched)
+            {
+                Add(input, cell.Address, "terrain.surface.scorched-ground", layers);
+            }
             AddAdjacency(input, cell, cells, layers);
             AddFeature(input, cell, cells, layers);
             AddDurableSubject(input, cell, layers);
+            AddMireBrute(input, cell, layers);
+            AddPowerComesHome(input, cell, layers);
 
             if (dangers.Contains(cell.Address))
             {
-                Add(input, cell.Address, "emphasis.danger.river-ward", layers);
+                Add(
+                    input,
+                    cell.Address,
+                    cell.MireBrute is null
+                        ? "emphasis.danger.river-ward"
+                        : "emphasis.danger.mire-brute",
+                    layers);
             }
 
             if (input.IncarnationAddress == cell.Address)
@@ -93,7 +124,20 @@ public static class VisualGrammar
 
             if (selections.Contains(cell.Address))
             {
-                Add(input, cell.Address, "emphasis.selection", layers);
+                Add(
+                    input,
+                    cell.Address,
+                    cell.MireBrute is null && cell.Target is null
+                        ? "emphasis.selection"
+                        : "emphasis.target.selected",
+                    layers);
+            }
+
+            foreach (var emphasis in actionEmphases
+                         .Where(emphasis => emphasis.Address == cell.Address)
+                         .OrderBy(static emphasis => emphasis.Kind))
+            {
+                Add(input, cell.Address, ActionEmphasisVisualId(emphasis.Kind), layers);
             }
         }
 
@@ -282,6 +326,105 @@ public static class VisualGrammar
             Add(input, cell.Address, "landmark.bell-that-fell-up", layers);
         }
     }
+
+    private static void AddMireBrute(
+        VisualCompositionInput input,
+        WorldCell cell,
+        IReadOnlyList<List<VisualRenderMark>> layers)
+    {
+        var brute = cell.MireBrute;
+        if (brute is null)
+        {
+            return;
+        }
+
+        if (!brute.IsLiving)
+        {
+            Add(input, cell.Address, "subject.mire-brute.dead", layers);
+            return;
+        }
+
+        Add(input, cell.Address, "subject.mire-brute.living", layers);
+        if (brute.HitPoints < brute.MaximumHitPoints)
+        {
+            Add(input, cell.Address, "emphasis.mire-brute.wounded", layers);
+        }
+
+        if (brute.IsBurning)
+        {
+            Add(input, cell.Address, "effect.mire-brute.burning", layers);
+        }
+    }
+
+    private static void AddPowerComesHome(
+        VisualCompositionInput input,
+        WorldCell cell,
+        IReadOnlyList<List<VisualRenderMark>> layers)
+    {
+        if (cell.BurnPrimer is { } primer)
+        {
+            Add(input, cell.Address, "glyph.codex", layers);
+            if (!primer.IsRead)
+            {
+                Add(input, cell.Address, "emphasis.target.selected", layers);
+            }
+        }
+
+        if (cell.IsHearthResonatorSite && cell.HearthResonator is null)
+        {
+            Add(input, cell.Address, "emphasis.home-source-site", layers);
+        }
+
+        if (cell.SingingSeam is { } seam)
+        {
+            Add(
+                input,
+                cell.Address,
+                seam.State == SingingSeamVisualState.Embedded
+                    ? "place.singing-seam.embedded"
+                    : "place.singing-seam.empty",
+                layers);
+        }
+
+        if (cell.HearthResonator is { } source)
+        {
+            var visualId = source.Phase switch
+            {
+                HearthResonatorPhase.UnderConstruction => "source.hearth-resonator.construction",
+                HearthResonatorPhase.Intact => "source.hearth-resonator.intact",
+                HearthResonatorPhase.Damaged => "source.hearth-resonator.damaged",
+                HearthResonatorPhase.Destroyed => "source.hearth-resonator.destroyed",
+                HearthResonatorPhase.Rebuilding => "source.hearth-resonator.rebuilding",
+                _ => throw new InvalidOperationException($"Unknown Source phase '{source.Phase}'."),
+            };
+            Add(input, cell.Address, visualId, layers);
+        }
+
+        if (cell.ResonantLode is { } lode)
+        {
+            var visualId = lode.Disposition switch
+            {
+                ResonantLodeDisposition.Embedded => "resource.resonant-lode.embedded",
+                ResonantLodeDisposition.Loose => "resource.resonant-lode.loose",
+                ResonantLodeDisposition.Carried => "resource.resonant-lode.carried",
+                ResonantLodeDisposition.Committed or ResonantLodeDisposition.Installed => null,
+                _ => throw new InvalidOperationException($"Unknown Lode disposition '{lode.Disposition}'."),
+            };
+            if (visualId is not null)
+            {
+                Add(input, cell.Address, visualId, layers);
+            }
+        }
+    }
+
+    private static string ActionEmphasisVisualId(VisualPresentationEmphasisKind kind) =>
+        kind switch
+        {
+            VisualPresentationEmphasisKind.PendingAction => "emphasis.action.pending",
+            VisualPresentationEmphasisKind.Preparation => "emphasis.action.preparation",
+            VisualPresentationEmphasisKind.Recovery => "emphasis.action.recovery",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+        };
 
     private static void Add(
         VisualCompositionInput input,

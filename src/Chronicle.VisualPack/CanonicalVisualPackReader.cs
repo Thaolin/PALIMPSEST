@@ -19,7 +19,7 @@ public sealed record CanonicalVisualPackFile(string RelativePath, ReadOnlyMemory
 public static class CanonicalVisualPackReader
 {
     public const string AtlasPath = "atlases/palimpsest20.indices";
-    public const string ReaderVersion = "1.0.0";
+    public const string ReaderVersion = "2.0.0";
     public const string RequiredPackId = "chronicle.palimpsest20";
     public const int RequiredCellSize = 20;
 
@@ -287,8 +287,8 @@ public static class CanonicalVisualPackReader
         if (!StringComparer.Ordinal.Equals(pack.PackId, RequiredPackId) ||
             pack.CellSize != RequiredCellSize ||
             validation.PackFormatVersion != 1 ||
-            validation.ComposerContractVersion != 1 ||
-            validation.VisualStyleVersion != 1 ||
+            validation.ComposerContractVersion != 2 ||
+            validation.VisualStyleVersion != 2 ||
             validation.PackFormatVersion != pack.FormatVersion ||
             validation.ComposerContractVersion != pack.ComposerVersion ||
             validation.VisualStyleVersion != pack.StyleVersion)

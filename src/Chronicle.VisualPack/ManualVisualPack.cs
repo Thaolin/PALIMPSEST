@@ -55,6 +55,8 @@ public static class ManualVisualPack
         AddGlyphs(builder);
         AddHearthstone(builder);
         AddGoal4CSubjectsAndEmphasis(builder);
+        AddGoal6AVisuals(builder);
+        AddGoal6BVisuals(builder);
 
         return builder.Build(
             packId: "chronicle.gate3b.manual",
@@ -103,9 +105,19 @@ public static class ManualVisualPack
             ["actor.dark"] = ActorDark,
             ["actor.primary"] = Actor,
             ["actor.read"] = ActorLight,
+            ["combat.pending"] = Cyan,
+            ["combat.preparation"] = Gold,
+            ["combat.recovery"] = CloudShadow,
+            ["combat.scorch.dark"] = SoilDark,
+            ["combat.scorch.primary"] = StoneDark,
             ["cloud.primary"] = Cloud,
             ["cloud.shadow"] = CloudShadow,
+            ["danger.primary"] = Actor,
+            ["danger.read"] = ActorLight,
             ["emphasis.active"] = Cyan,
+            ["fire.bright"] = GoldBright,
+            ["fire.dark"] = GoldDark,
+            ["fire.primary"] = Gold,
             ["landmark.bright"] = GoldBright,
             ["landmark.gold"] = Gold,
             ["sky.deep"] = SkyDeep,
@@ -115,6 +127,7 @@ public static class ManualVisualPack
             ["surface.dark"] = SurfaceDark,
             ["surface.grass"] = Grass,
             ["surface.soil"] = Soil,
+            ["target.selected"] = GoldBright,
             ["ui.light"] = UiLight,
             ["water.deep"] = WaterDeep,
             ["water.primary"] = Water,
@@ -320,6 +333,267 @@ public static class ManualVisualPack
             Actor,
             [ActorDark, Actor, ActorLight],
             PaintRiverWardDanger);
+    }
+
+    private static void AddGoal6AVisuals(AtlasBuilder builder)
+    {
+        builder.Add(
+            "terrain.surface.scorched-ground",
+            "terrain.surface.scorched-ground",
+            0,
+            VisualLayerClass.GroundField,
+            StoneDark,
+            [StoneDark, SoilDark, GoldDark],
+            PaintScorchedGround);
+        builder.Add(
+            "subject.mire-brute.living",
+            "subject.mire-brute.living",
+            0,
+            VisualLayerClass.LandmarkOrSubject,
+            Actor,
+            [ActorDark, Actor, ActorLight],
+            PaintMireBruteLiving);
+        builder.Add(
+            "emphasis.mire-brute.wounded",
+            "emphasis.mire-brute.wounded",
+            0,
+            VisualLayerClass.TemporaryAction,
+            Actor,
+            [Actor, ActorLight],
+            PaintMireBruteWounded);
+        builder.Add(
+            "effect.mire-brute.burning",
+            "effect.mire-brute.burning",
+            0,
+            VisualLayerClass.TemporaryAction,
+            Gold,
+            [GoldDark, Gold, GoldBright],
+            PaintMireBruteBurning);
+        builder.Add(
+            "subject.mire-brute.dead",
+            "subject.mire-brute.dead",
+            0,
+            VisualLayerClass.LandmarkOrSubject,
+            Actor,
+            [ActorDark, Actor, ActorLight],
+            PaintMireBruteDead);
+        builder.Add(
+            "emphasis.target.selected",
+            "emphasis.target.selected",
+            0,
+            VisualLayerClass.TargetOrSelection,
+            GoldBright,
+            [GoldBright],
+            canvas => PaintCorners(canvas, GoldBright, inset: 0, arm: Math.Max(4, canvas.Size / 3)));
+        builder.Add(
+            "emphasis.danger.mire-brute",
+            "emphasis.danger.mire-brute",
+            0,
+            VisualLayerClass.TemporaryAction,
+            Actor,
+            [Actor, ActorLight],
+            PaintMireBruteDanger);
+        builder.Add(
+            "emphasis.action.pending",
+            "emphasis.action.pending",
+            0,
+            VisualLayerClass.TemporaryAction,
+            Cyan,
+            [Cyan],
+            PaintPendingAction);
+        builder.Add(
+            "emphasis.action.preparation",
+            "emphasis.action.preparation",
+            0,
+            VisualLayerClass.TemporaryAction,
+            Gold,
+            [Gold, GoldBright],
+            PaintPreparation);
+        builder.Add(
+            "emphasis.action.recovery",
+            "emphasis.action.recovery",
+            0,
+            VisualLayerClass.TemporaryAction,
+            CloudShadow,
+            [CloudShadow],
+            PaintRecovery);
+        builder.Add(
+            "glyph.equipment.iron-cleaver",
+            "glyph.equipment.iron-cleaver",
+            0,
+            VisualLayerClass.UiGlyph,
+            UiLight,
+            [UiLight, Stone],
+            PaintIronCleaver);
+        builder.Add(
+            "glyph.equipment.quilted-jack",
+            "glyph.equipment.quilted-jack",
+            0,
+            VisualLayerClass.UiGlyph,
+            UiLight,
+            [ActorDark, UiLight],
+            PaintQuiltedJack);
+        builder.Add(
+            "glyph.equipment.copper-ward",
+            "glyph.equipment.copper-ward",
+            0,
+            VisualLayerClass.UiGlyph,
+            Gold,
+            [GoldDark, Gold, GoldBright],
+            PaintCopperWard);
+        builder.Add(
+            "glyph.word.burn",
+            "glyph.word.burn",
+            0,
+            VisualLayerClass.UiGlyph,
+            Gold,
+            [GoldDark, Gold, GoldBright],
+            PaintBurnGlyph);
+        builder.Add(
+            "glyph.modifier.quickly",
+            "glyph.modifier.quickly",
+            0,
+            VisualLayerClass.UiGlyph,
+            Cyan,
+            [Cyan, UiLight],
+            PaintQuicklyGlyph);
+        builder.Add(
+            "glyph.modifier.lasting",
+            "glyph.modifier.lasting",
+            0,
+            VisualLayerClass.UiGlyph,
+            CloudShadow,
+            [CloudShadow],
+            PaintLastingGlyph);
+    }
+
+    private static void AddGoal6BVisuals(AtlasBuilder builder)
+    {
+        AddPowerVisual(
+            builder,
+            "emphasis.home-source-site",
+            VisualLayerClass.TargetOrSelection,
+            Cyan,
+            [Cyan],
+            canvas => PaintCorners(canvas, Cyan, inset: 1, arm: Math.Max(3, canvas.Size / 4)));
+        AddPowerVisual(
+            builder,
+            "place.singing-seam.embedded",
+            VisualLayerClass.LandmarkOrSubject,
+            Gold,
+            [StoneDark, Stone, Gold, GoldBright],
+            canvas => PaintSeam(canvas, filled: true));
+        AddPowerVisual(
+            builder,
+            "place.singing-seam.empty",
+            VisualLayerClass.LandmarkOrSubject,
+            Stone,
+            [StoneDark, Stone, StoneLight],
+            canvas => PaintSeam(canvas, filled: false));
+        AddPowerVisual(
+            builder,
+            "resource.resonant-lode.embedded",
+            VisualLayerClass.TemporaryAction,
+            GoldBright,
+            [GoldDark, Gold, GoldBright],
+            canvas => PaintPowerLode(canvas, GoldBright));
+        AddPowerVisual(
+            builder,
+            "resource.resonant-lode.loose",
+            VisualLayerClass.LandmarkOrSubject,
+            Gold,
+            [GoldDark, Gold, GoldBright],
+            canvas => PaintPowerLode(canvas, Gold));
+        AddPowerVisual(
+            builder,
+            "resource.resonant-lode.carried",
+            VisualLayerClass.TemporaryAction,
+            Cyan,
+            [Gold, GoldBright, Cyan],
+            canvas => PaintPowerLode(canvas, Cyan));
+        AddPowerVisual(
+            builder,
+            "source.hearth-resonator.construction",
+            VisualLayerClass.LandmarkOrSubject,
+            Stone,
+            [StoneDark, Stone, Gold],
+            canvas => PaintPowerSource(canvas, Stone, 1));
+        AddPowerVisual(
+            builder,
+            "source.hearth-resonator.intact",
+            VisualLayerClass.LandmarkOrSubject,
+            Gold,
+            [StoneDark, Stone, Gold, GoldBright],
+            canvas => PaintPowerSource(canvas, Gold, 3));
+        AddPowerVisual(
+            builder,
+            "source.hearth-resonator.damaged",
+            VisualLayerClass.LandmarkOrSubject,
+            Actor,
+            [StoneDark, Actor, Gold],
+            canvas => PaintPowerSource(canvas, Actor, 2));
+        AddPowerVisual(
+            builder,
+            "source.hearth-resonator.destroyed",
+            VisualLayerClass.LandmarkOrSubject,
+            StoneDark,
+            [SoilDark, StoneDark, Stone],
+            canvas => PaintPowerSource(canvas, StoneDark, 0));
+        AddPowerVisual(
+            builder,
+            "source.hearth-resonator.rebuilding",
+            VisualLayerClass.LandmarkOrSubject,
+            Cyan,
+            [StoneDark, Stone, Cyan, Gold],
+            canvas => PaintPowerSource(canvas, Cyan, 1));
+    }
+
+    private static void AddPowerVisual(
+        AtlasBuilder builder,
+        string visualId,
+        VisualLayerClass layer,
+        byte primary,
+        IReadOnlyList<int> colors,
+        Action<PixelCanvas> paint) => builder.Add(
+            visualId,
+            visualId,
+            0,
+            layer,
+            primary,
+            colors,
+            paint);
+
+    private static void PaintSeam(PixelCanvas canvas, bool filled)
+    {
+        var center = canvas.Size / 2;
+        canvas.Line(2, canvas.Size - 3, center - 2, center + 1, StoneDark);
+        canvas.Line(center + 2, center - 1, canvas.Size - 3, 2, StoneLight);
+        canvas.Diamond(center, center, Math.Max(3, canvas.Size / 4), StoneDark);
+        if (filled)
+        {
+            canvas.Diamond(center, center, Math.Max(1, canvas.Size / 6), Gold);
+            canvas.Pixel(center, center - 1, GoldBright);
+        }
+    }
+
+    private static void PaintPowerLode(PixelCanvas canvas, byte readColor)
+    {
+        var center = canvas.Size / 2;
+        canvas.Diamond(center, center, Math.Max(3, canvas.Size / 4), GoldDark);
+        canvas.Diamond(center, center, Math.Max(2, canvas.Size / 6), Gold);
+        canvas.Vertical(center, center - 2, center + 2, readColor);
+    }
+
+    private static void PaintPowerSource(PixelCanvas canvas, byte stateColor, int bars)
+    {
+        var center = canvas.Size / 2;
+        var inset = canvas.Size == 20 ? 4 : 3;
+        canvas.Rect(inset, inset, canvas.Size - inset * 2, canvas.Size - inset * 2, StoneDark);
+        canvas.Rect(inset + 2, inset + 2, canvas.Size - (inset + 2) * 2, canvas.Size - (inset + 2) * 2, stateColor);
+        for (var index = 0; index < bars; index++)
+        {
+            canvas.Horizontal(inset + 2, canvas.Size - inset - 3, center - 3 + index * 3, GoldBright);
+        }
     }
 
     private static void AddEmphasis(AtlasBuilder builder)
@@ -825,6 +1099,163 @@ public static class ManualVisualPack
         canvas.Pixel(s - 2, s / 2, ActorLight);
     }
 
+    private static void PaintScorchedGround(PixelCanvas canvas)
+    {
+        canvas.Fill(StoneDark);
+        var s = canvas.Size;
+        for (var y = 2; y < s; y += 4)
+        {
+            var start = (y * 3) % Math.Max(1, s - 5);
+            canvas.Horizontal(start, Math.Min(s - 1, start + 4), y, SoilDark);
+            canvas.Pixel(Math.Min(s - 1, start + 2), Math.Min(s - 1, y + 1), GoldDark);
+        }
+    }
+
+    private static void PaintMireBruteLiving(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        canvas.Diamond(center, center - 4, Math.Max(3, s / 4), ActorDark);
+        canvas.Diamond(center, center - 4, Math.Max(2, s / 4 - 1), Actor);
+        canvas.Diamond(center, center + 4, Math.Max(4, s / 3), ActorDark);
+        canvas.Diamond(center, center + 4, Math.Max(3, s / 3 - 1), Actor);
+        canvas.Pixel(center - 2, center - 5, ActorLight);
+        canvas.Pixel(center + 2, center - 5, ActorLight);
+        canvas.Vertical(center - 4, center + 4, s - 3, ActorDark);
+        canvas.Vertical(center + 4, center + 4, s - 3, ActorDark);
+        canvas.Vertical(center - 3, center + 5, s - 3, Actor);
+        canvas.Vertical(center + 3, center + 5, s - 3, Actor);
+    }
+
+    private static void PaintMireBruteWounded(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        canvas.Line(2, 2, s - 3, s - 3, Actor);
+        canvas.Line(s - 3, 2, 2, s - 3, Actor);
+        canvas.Pixel(s / 2, s / 2, ActorLight);
+    }
+
+    private static void PaintMireBruteBurning(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        for (var offset = -3; offset <= 3; offset += 3)
+        {
+            var baseY = center + 5 + Math.Abs(offset) / 2;
+            canvas.Triangle(
+                center + offset - 3,
+                baseY,
+                center + offset,
+                Math.Max(1, center - 6 - Math.Abs(offset)),
+                center + offset + 3,
+                baseY,
+                GoldDark);
+            canvas.Triangle(
+                center + offset - 1,
+                baseY - 1,
+                center + offset,
+                Math.Max(2, center - 3 - Math.Abs(offset)),
+                center + offset + 1,
+                baseY - 1,
+                Gold);
+        }
+        canvas.Pixel(center, center, GoldBright);
+    }
+
+    private static void PaintMireBruteDead(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        canvas.Diamond(center, center + 3, Math.Max(4, s / 3), ActorDark);
+        canvas.Diamond(center, center + 3, Math.Max(3, s / 3 - 1), Actor);
+        canvas.Horizontal(center - 4, center + 4, center + 1, ActorLight);
+        canvas.Pixel(center - 2, center - 1, ActorDark);
+        canvas.Pixel(center + 2, center - 1, ActorDark);
+    }
+
+    private static void PaintMireBruteDanger(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        PaintCorners(canvas, Actor, inset: 1, arm: Math.Max(3, s / 4));
+        canvas.Pixel(s / 2, 1, ActorLight);
+        canvas.Pixel(s / 2, s - 2, ActorLight);
+    }
+
+    private static void PaintPendingAction(PixelCanvas canvas)
+    {
+        var center = canvas.Size / 2;
+        canvas.Diamond(center, center, Math.Max(3, canvas.Size / 4), Cyan);
+        canvas.Diamond(center, center, Math.Max(1, canvas.Size / 4 - 2), Transparent);
+    }
+
+    private static void PaintPreparation(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        PaintCorners(canvas, Gold, inset: 1, arm: Math.Max(3, s / 4));
+        canvas.Diamond(s / 2, s / 2, Math.Max(2, s / 6), GoldBright);
+    }
+
+    private static void PaintRecovery(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        canvas.Rect(1, 1, s - 2, s - 2, CloudShadow);
+        canvas.Rect(3, 3, s - 6, s - 6, Transparent);
+        canvas.Line(center - 3, center + 2, center + 3, center + 2, CloudShadow);
+        canvas.Line(center + 3, center + 2, center + 1, center, CloudShadow);
+    }
+
+    private static void PaintIronCleaver(PixelCanvas canvas)
+    {
+        var center = canvas.Size / 2;
+        canvas.Triangle(center - 1, 2, center + 4, center, center - 1, center + 3, Stone);
+        canvas.Line(center - 1, center + 3, center - 4, canvas.Size - 3, UiLight);
+        canvas.Line(center, center + 4, center - 3, canvas.Size - 2, UiLight);
+    }
+
+    private static void PaintQuiltedJack(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        canvas.Triangle(center - 5, s - 3, center, 3, center + 5, s - 3, ActorDark);
+        canvas.Triangle(center - 3, s - 4, center, 5, center + 3, s - 4, UiLight);
+        canvas.Line(center - 3, center, center + 3, center, ActorDark);
+        canvas.Line(center - 2, center - 2, center + 2, center + 2, ActorDark);
+    }
+
+    private static void PaintCopperWard(PixelCanvas canvas)
+    {
+        var center = canvas.Size / 2;
+        canvas.Diamond(center, center, Math.Max(4, canvas.Size / 3), GoldDark);
+        canvas.Diamond(center, center, Math.Max(3, canvas.Size / 3 - 1), Gold);
+        canvas.Diamond(center, center, Math.Max(1, canvas.Size / 6), GoldBright);
+    }
+
+    private static void PaintBurnGlyph(PixelCanvas canvas)
+    {
+        var center = canvas.Size / 2;
+        canvas.Triangle(center - 4, canvas.Size - 3, center, 2, center + 4, canvas.Size - 3, GoldDark);
+        canvas.Triangle(center - 2, canvas.Size - 4, center, 5, center + 2, canvas.Size - 4, Gold);
+        canvas.Pixel(center, center + 3, GoldBright);
+    }
+
+    private static void PaintQuicklyGlyph(PixelCanvas canvas)
+    {
+        var center = canvas.Size / 2;
+        canvas.Line(2, center, canvas.Size - 4, center, Cyan);
+        canvas.Line(canvas.Size - 4, center, canvas.Size - 7, center - 3, UiLight);
+        canvas.Line(canvas.Size - 4, center, canvas.Size - 7, center + 3, UiLight);
+        canvas.Line(3, center - 4, center + 1, center - 4, Cyan);
+    }
+
+    private static void PaintLastingGlyph(PixelCanvas canvas)
+    {
+        var s = canvas.Size;
+        canvas.Rect(2, 2, s - 4, s - 4, CloudShadow);
+        canvas.Rect(4, 4, s - 8, s - 8, Transparent);
+        canvas.Pixel(s / 2, s / 2, CloudShadow);
+    }
+
     private static void PaintCorners(PixelCanvas canvas, byte color, int inset, int arm)
     {
         var last = canvas.Size - 1 - inset;
@@ -958,8 +1389,8 @@ public static class ManualVisualPack
             return new CompiledVisualPack(
                 packId,
                 formatVersion: 1,
-                styleVersion: 1,
-                composerVersion: 1,
+                styleVersion: 2,
+                composerVersion: 2,
                 cellSize,
                 atlasId,
                 paletteId,

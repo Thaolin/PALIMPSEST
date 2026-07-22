@@ -32,11 +32,13 @@ Godot drawing adapters. `ChronicleSimulation` remains the external rule seam
 used by Godot and Core checks, although its internal implementation may deepen
 around successor action planning.
 
-Collectible-Noun Loadout rules, fitted `Fly[Stone]` / `Fly[Bell]`, the Bell
-Study fixture, the one-exchange Cairn conflict, and their fixture-specific UI
-remain supported predecessor behavior until one authorized successor migration
-replaces them. Do not preserve them as parallel successor interfaces or delete
-their literal migration proof prematurely.
+Save v7 has replaced collectible-Noun Loadouts, fitted `Fly[Stone]` /
+`Fly[Bell]`, Bell Study pursuit, and the fixture-specific Cairn UI as current
+gameplay. Literal v6 preserves the bounded Goal 6A successor, while v5-and-
+earlier readers retire predecessor gameplay explicitly while
+preserving known successor Verbs and neutral material durables such as Home,
+the Bell Address, and a Riven Cairn. They must not return as parallel successor
+interfaces.
 
 P-GEN is the required authoring-time visual compiler, co-located at
 `tools/P-GEN` so compiler and consumer changes are atomic. Palimpsest consumes
@@ -94,38 +96,42 @@ explicit comparison fixture. See
   Chronicle history receive durable identity; inactive possibility is not
   eagerly simulated.
 
-### Accepted v5 language runtime
+## Presentation contract
 
-- The current Word Catalogue is authored domain data containing Verbs and
-  Nouns. Chronicle.Core deterministically generates Study Sources, contextual
-  word offers, and Understanding yield from Chronicle state; it never
-  synthesizes new word meanings at runtime.
-- One stable `WordId` is shared by catalogue definitions, Codex membership,
-  word-specific Understanding, Study offers, and Loadout slots. Godot receives
-  read-only definitions and generated snapshots; it never reconstructs word
-  kinds, compatibility, eligibility, or yield.
-- Starting Vectors grant authored first capabilities without choosing a class
-  or locking later play. A mixed canonical Codex may independently equip its
-  compatible predecessor Words through the bounded Loadout.
-- Study Source snapshots are regenerated from pinned World Grammar semantics,
-  durable identity, and World Address. Only canonical Codex membership,
-  word-specific Understanding, and the active source/word pursuit are saved.
-- Strict current save envelope v5 serializes canonical Chronicle state,
-  including the Bell's durable Address, optional singular Home, the narrow
-  first-conflict delta, and other durable deltas. Literal v4, v3, v2, v1, and
-  pre-envelope saves deserialize through private predecessor shapes before
-  constructing current state. Their exact supported World Grammar pins remain
-  unchanged, so older Chronicles do not gain later generated subjects
-  retroactively. Current `WordId` parsing remains string-only, so colliding old
-  numeric values never cross into the unified identity model.
-- Fitted `Fly` dispatches once by Verb and resolves the learned `Stone` or
-  `Bell` Noun to one authored durable subject. This behavior remains a strict
-  migration boundary; it does not define the successor grammar recorded by
+Core owns semantic causality; Godot owns making that causality unmistakable.
+Read-only snapshots for a player decision must expose enough structured state
+to present the current condition, the next event and its timing, interruption
+conditions, opportunity costs or locked alternatives, precise rejection or
+disabled reasons, resolution breakdown, and any durable state transition.
+Godot may summarize and visually prioritize those facts but may not infer them
+from labels, replay rules locally, or hide them exclusively in a debug view.
+
+Meaningful state changes require both spatial feedback in the play space and
+concise textual feedback tied to the same identity, address, action, and tick.
+Automated proof verifies the Core snapshot and rendered presentation paths;
+player UAT verifies that the result is actually understandable. A mechanically
+correct rule whose queue, pause, mitigation, availability, or persistence is
+not legible has not met the presentation contract.
+
+### Retained v6-and-earlier migration boundary
+
+- The v5 Word Catalogue contained authored Verbs and Nouns. Its Study Sources,
+  fitted-Noun Loadouts, Bell pursuit, and Cairn fixture remain private literal
+  migration inputs rather than current gameplay interfaces.
+- Stable string `WordId` values still bridge catalogue definitions, Codex
+  membership, Understanding, and successor Loadouts. Colliding predecessor
+  numeric values never enter the current identity model.
+- Literal v6, v5, v4, v3, v2, v1, and pre-envelope saves deserialize through
+  private predecessor shapes before constructing strict current v7 state.
+  Their supported World Grammar pins remain unchanged, so old Chronicles do
+  not gain later generated subjects retroactively.
+- Retired fitted `Fly[Stone]` and `Fly[Bell]` behavior defines only the strict
+  migration boundary, not the successor grammar recorded by
   [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md).
 
-### Unimplemented successor language direction
+### Current v7 successor language runtime
 
-- The target Word Catalogue contains authored Verbs and Modifiers. Targets
+- The current Word Catalogue contains authored Verbs and Modifiers. Targets
   retain World Addresses or durable subject identities and never become
   `WordId`s.
 - Expressions configure one Verb and its linked Modifiers in the Loadout. An
@@ -141,10 +147,10 @@ explicit comparison fixture. See
   rejection, preparation, revalidation, and resolution so Godot and checks
   cannot grow parallel rulebooks. An immutable action plan is the current
   candidate interface, not a settled implementation.
-- Exact Modifier applicability remains a pressure-test decision. It may use
-  capabilities and constraints such as range, scale, area, duration,
-  persistence, or notice; a broad operation-family label alone is not proof
-  that every Modifier has coherent semantics for every Verb.
+- Goal 6A fixes exact authored applicability for `Burn`, `Quickly`, and
+  `Lasting`. Broader Modifier applicability remains future contract work and
+  must use coherent capabilities and constraints such as range, scale, area,
+  duration, persistence, or notice rather than a loose operation-family label.
 - Verb slots, link capacity, and shared Load are distinct Loadout constraints.
   Link count alone does not impose additive delay: ordinary combat and
   exploration remain responsive, while scale, persistence, chosen Modifiers,
@@ -159,10 +165,15 @@ explicit comparison fixture. See
   Companions remain autonomous Agents whose response to Directives is decided
   in Core, and neither Companions nor equipment consume Load merely by being
   present.
-- Load is checked at Attunement, meaning any Loadout creation or change. For the
-  first pass, losing a persistent Load Source changes capacity at the next
+- Load is checked at Attunement, meaning any Loadout creation or change. Goal
+  6B owns the first Load Source: losing it changes capacity at the next
   Attunement, including one for a replacement Incarnation, and never invalidates
   the already-attuned Loadout remotely.
+- World Grammar v5 owns one generated Singing Seam and its one persistent-
+  origin Resonant Lode. `Goal6BPowerComesHome` owns the exclusive physical
+  Lode state, the sole Home-relative Hearth Resonator, bounded physical
+  commitments, Source vulnerability, and current-versus-next-Attunement facts
+  behind `ChronicleSimulation`; neither Godot nor P-GEN owns those rules.
 
 ### Other accepted simulation rules
 

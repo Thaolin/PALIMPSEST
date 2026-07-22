@@ -1,6 +1,6 @@
 # Active Handoff Contract
 
-Last reconciled: 2026-07-21
+Last reconciled: 2026-07-22
 
 This is the short-lived execution contract for the current gate. It may narrow
 the active slice but may never expand or contradict [AGENTS.md](../AGENTS.md),
@@ -10,7 +10,7 @@ authorized future slice contract.
 
 ## Current gate
 
-**P-GEN E5 and E5.1 accepted and closed; no production slice currently authorized**
+**Goal 6B and Goal 6 are complete and player-accepted; stop and await separate production authorization**
 
 - Goal 2, Slice 3, and Goal 4 are complete and accepted.
 - Slice 4C's implementation and complete retained automated gate passed on
@@ -58,13 +58,15 @@ authorized future slice contract.
   from that foundation rather than restart the project or preserve predecessor
   gameplay by inertia.
 - The [RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md)
-  sequences Goal 6 as `A Real Fight` followed by `Power Comes Home`; neither
-  child slice is authorized. `Home Has People` is now Goal 7 and the first Raid
+  sequences Goal 6 as `A Real Fight` followed by `Power Comes Home`. At that
+  checkpoint neither child slice was authorized; Goal 6A is now accepted and
+  Goal 6B remains unauthorized. `Home Has People` is Goal 7 and the first Raid
   is Slice 8.
 - The player corrected P-GEN's status: it is built, ready, and required, not an
   optional candidate. [ADR 0004](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md)
-  records P-GEN as the canonical authoring-time visual pipeline. The next gate
-  is Palimpsest-owned reader integration; Goal 6A follows only after it passes.
+  records P-GEN as the canonical authoring-time visual pipeline. At that
+  checkpoint the next gate was Palimpsest-owned reader integration, with Goal
+  6A following only after it passed.
 - On 2026-07-21 the player said “make it so,” authorizing the bounded
   [P-GEN E5 integration contract](P-GEN-E5-INTEGRATION.md). P-GEN's E4.5
   verifier passed and its clean authoring baseline is pinned at
@@ -121,6 +123,81 @@ authorized future slice contract.
   looks terrible but we can iterate later.” E5.1 and parent E5 are closed. The
   actor is explicit non-blocking visual debt for a later P-GEN asset pass; it
   does not reopen material grammar, workbench, reader, or packaging acceptance.
+- On 2026-07-21 the player requested a Qud-inspired interface direction and a
+  production specification for Goal 6A. The proposed
+  [Goal 6A contract](GOAL-6A-A-REAL-FIGHT.md) now fixes one generated Mire
+  Brute, two competing Burn builds, physical equipment, the paused/Slow HUD,
+  strict successor migration, persistent scorch, proof, UAT, exclusions, and
+  stop condition. Writing this contract did not authorize implementation.
+- On 2026-07-21 the player explicitly authorized complete Goal 6A production
+  under that contract on `codex/goal-6a-real-fight`. Work may implement only
+  that vertical slice, prepare its two isolated UAT journeys, and stop with
+  player acceptance still pending. Goal 6B and all later work remain forbidden.
+- On 2026-07-21 the player gave the final qualified verdict: “Overall, it's a
+  pass but only as a prototype.” Goal 6A is accepted and closed as bounded
+  production-slice proof, not as final combat UX, equipment taxonomy, balance,
+  or graphics 1.0 quality. Goal 6B remains unauthorized.
+- On 2026-07-21 the player authorized documentation and contract design only
+  for [Goal 6B — Power Comes Home](GOAL-6B-POWER-COMES-HOME.md). The proposed
+  contract fixes one generated Resonant Lode and persistent Singing Seam origin,
+  one visible carried-object state, one vulnerable Hearth Resonator, separate
+  current/next-Attunement capacity, strict v7/WG5 proof, two exact UAT journeys,
+  and five bounded fixture decisions for review. No production implementation,
+  check, P-GEN, save, package, UAT-profile, commit, push, merge, or Goal 7 work is
+  authorized.
+- On 2026-07-21 the player then approved all five fixture decisions and
+  explicitly authorized complete Goal 6B production on
+  `codex/goal-6b-power-comes-home`. Work may implement only the active contract,
+  preserve the retained gate, prepare its two isolated UAT journeys, and stop
+  with player acceptance pending. The contract's no-inventory boundary is
+  slice scope only: a robust future inventory remains intended product work,
+  but it is not part of Goal 6B.
+- Goal 6B implementation completed on 2026-07-21. The complete root gate passed
+  with zero build warnings or errors, including strict v7/WG5 Core proof,
+  literal v6-through-pre-envelope migration, deterministic replay, seven
+  rendered player states, eight-state packaged/manual Inspector parity, both
+  retained Goal 6A journeys, and exact four-file packaging isolation. Player
+  UAT Journeys A and B remained pending at that checkpoint.
+- The first Goal 6B player UAT on 2026-07-21 rejected the candidate. Safe
+  movement after combat entered the Slow queue and overran by one cell after
+  resume. The player also could not infer what the animated node did, how to
+  damage it, why its mountain-like site mattered, or when its Load bonus applied.
+- The contract-authorized bounded correction now resolves safe post-combat
+  movement exactly once, gives the Resonator a clear-soil foundation, enlarges
+  the existing Goal 6B map marks, and exposes plain wayfinding, `PRESS P`
+  actions, `[G] ATTUNE 12/12`, `+4 LOAD READY`, and current-versus-next
+  capacity text. Focused regressions and the complete retained root gate pass
+  with zero build warnings or errors. Player re-UAT remains pending; no further
+  production work is authorized.
+- The next player attempt on 2026-07-22 rejected that candidate: after `P`
+  began extraction and Space resumed it to completion, every safe movement
+  paused and queued again. Inspection proved that commitment, pending action,
+  and Engagement state had all cleared. The latch was the Slow movement rule
+  treating any living Mire Brute anywhere as tactical context.
+- The second bounded correction replaces that global-liveness proxy with the
+  actual threat boundary. Movement queues only while immediate danger is active
+  or when a Slow step would enter it; safe Slow travel after physical work
+  resolves once immediately. Core and actual Godot keyboard regressions pass,
+  as does the complete retained gate with zero warnings or errors and exit code
+  `0`. Player re-UAT remains pending; no further production work is authorized.
+- Before re-UAT, the player reported that the remaining instruction popup was
+  verbose and confusing and requested a simple checklist that changes with the
+  material state. The third bounded correction replaces the three stacked text
+  blocks with one Core-owned checklist of at most five lines plus one compact
+  current/next Load line. Seven rendered states, checklist transitions,
+  keyboard/mouse parity, clipping, migration/replay, Inspector parity, P-GEN
+  isolation, packaging, and the complete retained gate pass with zero warnings
+  or errors and exit code `0`. Player re-UAT remains pending.
+- The next attempt exposed a fixture mismatch before Attunement: the player had
+  chosen Build and owned only `Found`, while automated Goal 6B journeys had
+  silently selected Combat and received `Burn`, `Quickly`, and `Lasting`. The
+  player directed removal of opening-path choice from the current testing flow
+  and authorized one nearby book acquisition. Fresh WG5 player profiles now
+  begin directly at Home; one visible Burn Primer north of Home teaches the
+  exact three test Words through contextual `P` with no Heartbeat cost. Core,
+  map composition, save/replay, and an eighth native HUD capture prove unread,
+  read, and checklist-transition behavior. The complete retained gate passes
+  with zero warnings or errors and exit code `0`.
 
 ## Settled successor direction
 
@@ -287,11 +364,152 @@ reported.
 
 ## Current permitted scope
 
-E5 and E5.1 are complete and accepted. This reconciliation may update only
-their status and evidence. No gameplay, save, World Grammar, Area topology,
-camera-density, rectangular runtime cells, actor-art iteration, or successor
-grammar production is authorized. Goal 6A is the next permissible contract to
-discuss, but requires explicit authorization before implementation.
+E5, E5.1, Goal 6A, Goal 6B, and Goal 6 are complete and accepted. Goal 6A is
+closed with a qualified prototype verdict under
+[its contract](GOAL-6A-A-REAL-FIGHT.md). Goal 6B is closed under
+[Goal 6B — Power Comes Home](GOAL-6B-POWER-COMES-HOME.md) after its fourth
+bounded correction, green retained gate, and final player pass. There is no
+active production scope. Follow-up Goal 6A polish, Word acquisition/equipping
+UX, the future robust inventory, Area topology, camera-density or
+rectangular-cell changes, unrelated actor-art iteration, additional opponents,
+Goal 7, and broader gameplay frameworks require separate authorization.
+
+## Goal 6B player-UAT boundary
+
+- Visual and textual feedback is an acceptance surface, not cleanup after Core
+  proof. The interface must connect resource acquisition, physical carrying,
+  Home construction, Load capacity, Attunement timing, vulnerability,
+  destruction, and rebuilding as one causal loop.
+- Every commitment must expose what changes next, when it changes, what can
+  interrupt it, and what the choice prevents. Disabled actions must provide a
+  Core-owned reason and a route to availability.
+- The map must identify the relevant subject and persistent material state;
+  concise text must name the cause, cost, capacity transition, and persistence.
+  Neither a detached log entry nor an unexplained visual effect is sufficient.
+- The contract must carry Goal 6A's prototype debt forward as negative UAT
+  examples: invisible paused queues, unclear safe-only Attunement, opaque
+  mitigation values, ambiguous melee feedback, and map/text disconnects.
+- The implemented [Goal 6B contract](GOAL-6B-POWER-COMES-HOME.md) carries these
+  requirements into exact fixture, presentation, persistence, automated, and
+  UAT gates. Its five fixture decisions are approved and frozen. Player review
+  may pass the slice or identify a bounded UAT failure; it does not authorize a
+  general UI redesign, inventory, crafting, or an economy.
+
+## Goal 6B engineering proof
+
+- `checks/verify.ps1` passed on 2026-07-21 with zero build warnings or errors.
+- Core proved the stable Seam/Lode identities and origin, exclusive physical
+  carrying and death drop, bounded work/cancellation/hostile interruption,
+  current-versus-next Attunement, the twelve-Load combined Expression,
+  damage/destruction without remote shutoff, replacement limits, rebuilding,
+  strict v7 replay, malformed-state rejection, and literal
+  v6-through-pre-envelope migration.
+- Godot produced eight deterministic `1600 × 900` HUD captures with exact stage
+  assertions, including the neutral no-path start, visible unread Burn Primer,
+  contextual acquisition, keyboard/mouse command parity, a Core-owned checklist
+  of at most five lines, compact current/next capacity, no duplicate decision
+  paragraph, and clipping guards.
+- The developer Inspector proved the eight semantic states through both the
+  packaged P-GEN pack and explicit manual comparison pack. P-GEN authoring
+  verification, all retained Goal 6A journeys, and exact four-file package
+  isolation also passed.
+- Pre-player-UAT engineering marker:
+
+  ```text
+  PASS: Goal 6B Power Comes Home implementation, strict v7 migration, eight rendered HUD proofs, Inspector parity, exact four-file packaging, and the complete retained Goal 6A/predecessor gate verified; player UAT remains pending.
+  ```
+- The first run of both journeys was rejected for the post-combat movement defect
+  and unclear resource/Source/capacity loop. The bounded corrected candidate is
+  ready for the same journeys with fresh named profiles:
+  `.\play.ps1 -Profile goal6b-power-home-uat-r2` and
+  `.\play.ps1 -Profile goal6b-loss-rebuild-uat-r2`.
+- The corrected exact four-file visual pack aggregate is
+  `sha256:93ae41731f3f04a2824156752bf29fa7f0cbd4f5fff29b5a9185ca64dce88e68`.
+- Re-UAT on 2026-07-22 then exposed the post-extraction Slow-movement latch.
+  The corrected Core rule preserves pause-before-danger while making safe Slow
+  movement immediate. Both the deterministic Core sequence and actual Godot
+  keyboard journey prove no pause or queued action after extraction. The full
+  retained gate passed again with zero warnings or errors and exit code `0`.
+- Before the next UAT, the third bounded correction replaced the verbose stacked
+  instruction surface with state-specific checklists and one compact Load line.
+  Core checks cover every material state; all seven Godot captures prove the
+  checklist contract. The full retained gate passed again with zero warnings or
+  errors and exit code `0`.
+- The fourth bounded correction removes the opening chooser from fresh WG5
+  player profiles and adds the single visible Burn Primer at `surface:0,2`.
+  Reading it persists `Burn`, `Quickly`, and `Lasting` without spending a
+  Heartbeat. Core and visual checks now begin from this same player path, and
+  the full retained gate passes with eight HUD proofs and exit code `0`.
+- Final player UAT passed on 2026-07-22. The player accepted that acquiring the
+  Primer does not make Burn combat-usable until `Burn + Quickly + Lasting` is
+  equipped through the three-Word Attunement. Broader Word acquisition and
+  equipping UX remains separately scoped future work.
+
+## Goal 6A engineering proof
+
+- On 2026-07-21 the complete `checks/verify.ps1` gate passed with zero build
+  warnings or errors. Core proved the deterministic generated encounter,
+  preparation/interruption/recovery rules, persistent scorch, death and
+  replacement, strict save v6, literal v5 through v1 plus pre-envelope
+  migration, and old World Grammar pins.
+- The same gate proved the actual map-first Godot HUD at `1600 x 900`, both
+  keyboard and mouse paths, player/Inspector semantic and render parity, both
+  scripted journeys and restarts, deterministic P-GEN v2 composition, and the
+  exact four-file shipped pack with no compiler or catalogue leakage.
+- Its final marker was:
+
+  ```text
+  PASS: Goal 6A real fight, strict v6 migration, rendered map-first HUD, P-GEN v2 packaging, Inspector, and retained migration/generation/composer proof verified.
+  ```
+- Fresh isolated player profiles were prepared as `goal6a-quickly-uat` and
+  `goal6a-lasting-return-uat`; player acceptance was pending at that checkpoint.
+- The first player UAT on 2026-07-21 rejected the HUD: the map and targeting
+  were too small, the target HP treatment overlapped, pause feedback was weak,
+  Space did not toggle, the bottom action rail dominated the screen, and the
+  good Message Log was too small. The player authorized only the bounded Goal
+  6A HUD correction. The prior `51 x 37` visibility minimum may yield to a
+  closer crisp camera; the map must remain the dominant physical surface.
+- The correction passed the complete `checks/verify.ps1` gate with zero build
+  warnings or errors. Its rendered Quickly and Lasting captures prove a crisp
+  `2×` map, non-overlapping large Target/HP block, strong selected Target and
+  pause feedback, Space toggling, compact six-action plus WASD overlay, and a
+  `256 px` Message Log.
+- A subsequent hands-on fight exposed wrapped forecast rows spilling into the
+  Message Log during a busy melee. Forecast rows now use compact single-line
+  event summaries and the log retains the five newest full results. The
+  complete gate passed again with zero warnings or errors. The visible fresh
+  Quickly profile is `goal6a-quickly-uat-r6`; the untouched Lasting return
+  profile is `goal6a-lasting-return-uat-r2`. Player acceptance was still
+  pending at that checkpoint.
+- The player then supplied a revised contract-aware review and directed Codex
+  to act on it. The permitted second pass is presentation-only: non-occluding
+  pause feedback, compositor actor keylines/rings, restrained value-integrated
+  HP meters, stronger consequence hierarchy, semantic color roles, top-rail
+  rebalance, and a consistent square/chamfer-like framing vocabulary. Keep the
+  accepted `320 px` rail, `2×` map, fixed rail sections, six-action plus WASD
+  overlay, input behavior, simulation, and P-GEN assets. Collapsible cards,
+  paging, Companions, inspection lenses, log filters, tooltip frameworks, new
+  gameplay information, and new animation systems remain forbidden.
+- The revised pass is implemented. Pause now uses a lit top-rail plate, cooled
+  terrain, and a `2 px` map frame without covering cells. Living actors retain
+  full saturation with compositor keylines, shadows, semantic rings, and
+  selected-target brackets. The fixed rail now has visually distinct Target,
+  Consequence, Forecast, and Message Log sections; value-integrated HP meters;
+  a consequence-first hierarchy; and semantic player/hostile/time colors. The
+  complete `checks/verify.ps1` gate passed with zero warnings or errors. The
+  fresh visible Quickly profile is `goal6a-quickly-uat-r7`; the existing clean
+  Lasting profile remains `goal6a-lasting-return-uat-r2`.
+- Final player UAT passed only at prototype quality. The player observed that
+  movement queued around an engagement pause does not visibly catch up; the
+  pause plate clips the Surface/location text; safe-only `Quickly Burn` and
+  `Lasting Burn` Attunement reads as unusable; and the adjacent-only Iron
+  Cleaver lacks enough feedback to keep its strike from reading as ranged.
+  The player liked the prediction/ESP log but found armor provenance such as
+  Quilted Jack unclear. The Incarnation ring is accepted only as a placeholder
+  for a later, separately authorized graphics 1.0 overhaul. Core still gates
+  the Cleaver on cardinal adjacency, and Quilted Jack still reduces each
+  physical hit by the fixed fixture value of two; the player-facing failures
+  remain recorded debt rather than evidence that those rules are absent.
 
 ## Retained accepted baseline
 
@@ -332,28 +550,26 @@ discuss, but requires explicit authorization before implementation.
 ## Do not drift into
 
 - Goal 7 Agents, residents, relationships, Directives, Pressure, or off-camera
-  history before Goal 6 passes and a Goal 7 child-slice contract is approved;
+  history before a Goal 7 child-slice contract is approved;
 - Slice 8 raid work before Goal 7 provides its accepted Pressure;
-- successor grammar production code, save v6, old-save migration, a broad
-  EffectPlan framework, or a large Verb/Modifier catalogue before a Goal 6A
-  production contract is separately approved;
+- successor grammar, save, combat, Home-power, or catalogue expansion beyond
+  the bounded Goal 6B contract before a later contract is separately approved;
 - a universal tick surcharge per Link, a generic mana bar, or Home progression
   that makes ordinary combat and exploration wait for settlement development;
 - settled Palimpsest Awakening rules or a power-resource economy by inference;
 - camera zoom or rectangular runtime cells, water traversal, route arrows, or
   visual work outside the bounded P-GEN E5.1 contract;
-- health, damage, initiative, combat statistics, bestiary, loot, inventory, or
-  a generic production combat framework by extending the accepted 4C fixture;
-- moving prototype HP, equipment, tick attacks, `Burn`, Companion, Target, or
-  Recovery types directly into production, the solution, saves, Godot, or the
-  retained gate; Goal 6A must implement its own bounded Core rules through the
-  accepted simulation seam;
+- additional health, damage, initiative, combat statistics, bestiary, loot,
+  inventory, or a generic production combat framework beyond the fixed 6A
+  encounter;
+- moving prototype types directly into production or using Goal 6A's bounded
+  Core rules as permission for Companion, broad Target, or combat frameworks;
 - weakening strict saves, changing old grammar pins, or hiding Core decisions
   in Godot.
 
 ## Stop and hand off
 
-Stop after E5/E5.1 acceptance reconciliation. Goal 6A is next in the Roadmap
-but requires its own explicit contract and authorization. Same-scale Area
-production separately requires a later contract informed by the generation
-research; neither direction is authorized by this handoff.
+Goal 6B player UAT passed and the verdict is reconciled. Stop. Do not make
+further production changes or implement Goal 6A's recorded polish debt, broader
+Word acquisition/equipping UX, the future inventory, Goal 7, Slice 8, or
+same-scale Area production without separate authorization.

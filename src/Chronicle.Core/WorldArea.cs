@@ -24,13 +24,38 @@ public readonly record struct WorldCardinalAdjacency(
     bool South,
     bool West);
 
+/// <summary>
+/// A WorldCell carries the bounded Goal 6A subject state directly from Core.
+/// The scorch flag is intentionally independent so presentation can show a
+/// persistent material delta underneath a living or dead Mire Brute.
+/// </summary>
+public sealed record MireBruteCellState(
+    string Identity,
+    int HitPoints,
+    int MaximumHitPoints,
+    bool IsLiving,
+    bool IsBurning);
+
+public sealed record WorldTargetCellState(
+    string Identity,
+    CombatTargetKind Kind,
+    string DisplayName);
+
 public readonly record struct WorldCell(
     WorldAddress Address,
     WorldGround Ground,
     WorldFeature? Feature,
     string? DurableIdentity,
     string? MotifIdentity,
-    WorldCardinalAdjacency SameFormAdjacency);
+    WorldCardinalAdjacency SameFormAdjacency,
+    MireBruteCellState? MireBrute = null,
+    bool IsScorched = false,
+    WorldTargetCellState? Target = null,
+    SingingSeamCellState? SingingSeam = null,
+    ResonantLodeCellState? ResonantLode = null,
+    HearthResonatorCellState? HearthResonator = null,
+    bool IsHearthResonatorSite = false,
+    BurnPrimerCellState? BurnPrimer = null);
 
 public sealed class WorldArea
 {
@@ -93,17 +118,82 @@ public sealed class WorldArea
                     checked(bounds.MinX + x),
                     checked(bounds.MinY + y));
                 var semantics = SemanticsAt(state, address, cairnAddress);
+                var brute = state.WorldGrammarVersion is 4 or 5 &&
+                            state.Combat?.MireBrute.Address == address
+                    ? state.Combat.MireBrute
+                    : null;
+                var scorch = state.WorldGrammarVersion is 4 or 5 &&
+                             state.Combat?.Scorch?.Address == address;
+                var target = state.WorldGrammarVersion is 4 or 5 &&
+                             address == GeneratedBasaltAddress(state.Seed)
+                    ? new WorldTargetCellState(
+                        GeneratedBasaltIdentity(state.Seed),
+                        CombatTargetKind.Basalt,
+                        "Basalt")
+                    : null;
+                var power = state.WorldGrammarVersion == 5 ? state.PowerHome : null;
+                var seam = power is not null && address == Goal6BPowerComesHome.SingingSeamAddress
+                    ? new SingingSeamCellState(
+                        Goal6BPowerComesHome.SingingSeamIdentity(state.Seed),
+                        power.Lode.Disposition == ResonantLodeDisposition.Embedded
+                            ? SingingSeamVisualState.Embedded
+                            : SingingSeamVisualState.Empty,
+                        power.ExtractionProgress)
+                    : null;
+                var lode = power is not null && Goal6BPowerComesHome.LodeWorldAddress(state) == address
+                    ? new ResonantLodeCellState(
+                        power.Lode.Identity,
+                        power.Lode.Disposition,
+                        power.Lode.CarrierIncarnationId)
+                    : null;
+                var source = power?.Resonator is { } resonator && resonator.Address == address
+                    ? new HearthResonatorCellState(
+                        resonator.Identity,
+                        resonator.Phase,
+                        resonator.Progress,
+                        resonator.Phase switch
+                        {
+                            HearthResonatorPhase.UnderConstruction => Goal6BPowerComesHome.BuildTicks,
+                            HearthResonatorPhase.Rebuilding => Goal6BPowerComesHome.RebuildTicks,
+                            HearthResonatorPhase.Intact => Goal6BPowerComesHome.BuildTicks,
+                            _ => Goal6BPowerComesHome.DismantleTicks,
+                        },
+                        Goal6BPowerComesHome.SourceContributes(state)
+                            ? Goal6BPowerComesHome.SourceLoadContribution
+                            : 0)
+                    : null;
+                var burnPrimer = power is not null && address == Goal6BPowerComesHome.BurnPrimerAddress
+                    ? new BurnPrimerCellState(
+                        Goal6BPowerComesHome.BurnPrimerIdentity(state.Seed),
+                        Goal6BPowerComesHome.HasBurnPrimerKnowledge(state))
+                    : null;
                 cells[index++] = new WorldCell(
                     address,
                     semantics.Ground,
                     semantics.Feature,
-                    semantics.DurableIdentity,
+                    brute?.Identity ?? semantics.DurableIdentity,
                     semantics.MotifIdentity,
                     new WorldCardinalAdjacency(
                         North: SameForm(state, semantics, address, 0, -1, cairnAddress),
                         East: SameForm(state, semantics, address, 1, 0, cairnAddress),
                         South: SameForm(state, semantics, address, 0, 1, cairnAddress),
-                        West: SameForm(state, semantics, address, -1, 0, cairnAddress)));
+                        West: SameForm(state, semantics, address, -1, 0, cairnAddress)),
+                    brute is null
+                        ? null
+                        : new MireBruteCellState(
+                            brute.Identity,
+                            brute.HitPoints,
+                            CombatState.MireBruteMaximumHitPoints,
+                            brute.IsLiving,
+                            state.Combat?.OngoingBurn?.TargetIdentity == brute.Identity),
+                    IsScorched: scorch,
+                    Target: target,
+                    SingingSeam: seam,
+                    ResonantLode: lode,
+                    HearthResonator: source,
+                    IsHearthResonatorSite: power is not null &&
+                                           Goal6BPowerComesHome.ResonatorSite(state) == address,
+                    BurnPrimer: burnPrimer);
             }
         }
 
@@ -138,7 +228,7 @@ public sealed class WorldArea
         WorldAddress address,
         WorldAddress? cairnAddress)
     {
-        if (state.WorldGrammarVersion is not (0 or 1 or 2 or 3))
+        if (state.WorldGrammarVersion is not (0 or 1 or 2 or 3 or 4 or 5))
         {
             throw new InvalidOperationException(
                 $"Unsupported World Grammar version '{state.WorldGrammarVersion}'.");
@@ -146,6 +236,20 @@ public sealed class WorldArea
 
         if (string.Equals(address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal))
         {
+            if (state.WorldGrammarVersion == 5)
+            {
+                return OverlayDurableSubject(
+                    state,
+                    address,
+                    Version5SurfaceAt(state, address),
+                    cairnAddress);
+            }
+
+            if (state.WorldGrammarVersion == 4)
+            {
+                return Version4SurfaceAt(state.Seed, address);
+            }
+
             if (state.WorldGrammarVersion is 1 or 2 or 3)
             {
                 return OverlayDurableSubject(
@@ -177,7 +281,7 @@ public sealed class WorldArea
             return OverlayDurableSubject(state, address, legacySurface, cairnAddress);
         }
 
-        CellSemantics sky = state.WorldGrammarVersion is 1 or 2 or 3
+        CellSemantics sky = state.WorldGrammarVersion is 1 or 2 or 3 or 4 or 5
             ? Version1SkyAt(state.Seed, address)
             : SkyStratum.TerrainAt(state.Seed, address.X, address.Y) switch
             {
@@ -318,6 +422,18 @@ public sealed class WorldArea
             "World Grammar v3 could not find a dry Stone Cairn site within its bounded selector.");
     }
 
+    public static WorldAddress GeneratedMireBruteAddress(long seed) =>
+        new(SurfacePatch.SurfaceStratum, 5, 0);
+
+    public static string GeneratedMireBruteIdentity(long seed) =>
+        $"subject.mire-brute.{seed.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+
+    public static WorldAddress GeneratedBasaltAddress(long seed) =>
+        new(SurfacePatch.SurfaceStratum, 1, 1);
+
+    public static string GeneratedBasaltIdentity(long seed) =>
+        $"place.basalt.{seed.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+
     private static bool TryCairnCandidate(
         long seed,
         int x,
@@ -430,6 +546,58 @@ public sealed class WorldArea
             feature,
             DurableIdentity: null,
             motif);
+    }
+
+    private static CellSemantics Version4SurfaceAt(long seed, WorldAddress address)
+    {
+        // The authored acceptance clearing keeps the one bounded opponent in
+        // actual map space without introducing general collision or pathing.
+        if (address.Y == 0 && address.X is >= 0 and <= 5)
+        {
+            return new CellSemantics(
+                address.Stratum,
+                WorldGround.Grass,
+                Feature: null,
+                DurableIdentity: null,
+                MotifIdentity: "surface-combat-clearing");
+        }
+
+        if (address == GeneratedBasaltAddress(seed))
+        {
+            return new CellSemantics(
+                address.Stratum,
+                WorldGround.Soil,
+                WorldFeature.Stone,
+                DurableIdentity: null,
+                MotifIdentity: "surface-basalt-target");
+        }
+
+        return Version1SurfaceAt(seed, address);
+    }
+
+    private static CellSemantics Version5SurfaceAt(ChronicleState state, WorldAddress address)
+    {
+        if (address == Goal6BPowerComesHome.BurnPrimerAddress)
+        {
+            return new CellSemantics(
+                address.Stratum,
+                WorldGround.Soil,
+                Feature: null,
+                DurableIdentity: null,
+                MotifIdentity: "surface-burn-primer-clearing");
+        }
+
+        if (Goal6BPowerComesHome.ResonatorSite(state) == address)
+        {
+            return new CellSemantics(
+                address.Stratum,
+                WorldGround.Soil,
+                Feature: null,
+                DurableIdentity: null,
+                MotifIdentity: "surface-home-source-foundation");
+        }
+
+        return Version4SurfaceAt(state.Seed, address);
     }
 
     private static long Triangle(Int128 value, int period, int amplitude)

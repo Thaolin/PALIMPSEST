@@ -991,11 +991,23 @@ public partial class WorldAtlasInspector : Node
                 surface.Cells.Any(cell => cell.Feature == WorldFeature.Stone),
                 "Surface request must retain Core water, vegetation, and stone semantics.");
             Verify(
-                surface.Cells.Any(cell => string.Equals(
-                    cell.DurableIdentity,
-                    ChronicleState.LooseStoneIdentity,
-                    StringComparison.Ordinal)),
-                "Surface request must expose the loose Stone durable identity.");
+                surface.Cells.Any(cell =>
+                    cell.MireBrute is { Identity: var bruteIdentity } &&
+                    string.Equals(
+                        bruteIdentity,
+                        WorldArea.GeneratedMireBruteIdentity(_generationInput.Seed),
+                        StringComparison.Ordinal)) &&
+                surface.Cells.Any(cell =>
+                    cell.Target is
+                    {
+                        Kind: CombatTargetKind.Basalt,
+                        Identity: var basaltIdentity,
+                    } &&
+                    string.Equals(
+                        basaltIdentity,
+                        WorldArea.GeneratedBasaltIdentity(_generationInput.Seed),
+                        StringComparison.Ordinal)),
+                "World Grammar v4 Inspector requests must expose the generated Mire Brute and basalt Target identities.");
 
             var inputBeforeOverlays = _generationInput;
             Press(_semanticClassesToggle);
@@ -1021,7 +1033,9 @@ public partial class WorldAtlasInspector : Node
 
             Press(_incarnationButton);
             Verify(
-                _stratum == _generationInput.Address.Stratum && _centerX == 0 && _centerY == 0,
+                _stratum == _generationInput.Address.Stratum &&
+                _centerX == _generationInput.Address.X &&
+                _centerY == _generationInput.Address.Y,
                 "Incarnation recenter must remain an inspector-only query change.");
             Press(_skyButton);
             Press(_bellButton);
@@ -1112,11 +1126,140 @@ public partial class WorldAtlasInspector : Node
             "Visual preview actions must not mutate generation input or the player save.");
         Verify(_nodeCount <= 48, "Visual preview must remain a bounded raster, not Nodes per address.");
         CaptureGate3BSurfaceReviewSet();
+        VerifyGoal6BInspectorParity();
 
         GD.Print(
             $"GATE3B SHARED COMPOSER PLAN PASS pack={_visualPack.PackId} " +
             $"style={_visualPack.StyleVersion} size={_visualCellSize} digest={firstDigest}");
         GD.Print($"GATE3B ATLAS VISUAL PREVIEW PASS size={_visualCellSize}");
+    }
+
+    private void VerifyGoal6BInspectorParity()
+    {
+        var initial = ChronicleState.Begin(InitialSeed);
+        var initialPower = initial.PowerHome
+            ?? throw new InvalidOperationException("Current World Grammar must expose Power Comes Home state.");
+        var context = new ChronicleSimulation(initial).PowerComesHomeContext;
+        var site = context.ResonatorSite
+            ?? throw new InvalidOperationException("The accepted Home fixture must expose one Resonator site.");
+        var lode = initialPower.Lode;
+        var sourceIdentity = $"source.hearth-resonator.{InitialSeed.ToString(CultureInfo.InvariantCulture)}";
+        var extractedLode = lode with
+        {
+            Disposition = ResonantLodeDisposition.Loose,
+            Address = context.SeamAddress,
+            CarrierIncarnationId = null,
+        };
+        ChronicleState WithPower(
+            ResonantLodeState stagedLode,
+            HearthResonatorState? source = null) => initial with
+            {
+                PowerHome = initialPower with
+                {
+                    Lode = stagedLode,
+                    ExtractionProgress = stagedLode.Disposition == ResonantLodeDisposition.Embedded ? 0 : 2,
+                    Resonator = source,
+                    Commitment = null,
+                },
+            };
+
+        var stages = new (string Name, ChronicleState State, string[] VisualIds)[]
+        {
+            (
+                "embedded",
+                initial,
+                ["emphasis.home-source-site", "place.singing-seam.embedded", "resource.resonant-lode.embedded"]),
+            (
+                "loose",
+                WithPower(extractedLode),
+                ["emphasis.home-source-site", "place.singing-seam.empty", "resource.resonant-lode.loose"]),
+            (
+                "carried",
+                WithPower(extractedLode with
+                {
+                    Disposition = ResonantLodeDisposition.Carried,
+                    Address = null,
+                    CarrierIncarnationId = initial.IncarnationId,
+                }),
+                ["emphasis.home-source-site", "place.singing-seam.empty", "resource.resonant-lode.carried"]),
+            (
+                "construction",
+                WithPower(
+                    extractedLode with { Disposition = ResonantLodeDisposition.Committed, Address = site },
+                    new HearthResonatorState(sourceIdentity, site, HearthResonatorPhase.UnderConstruction, 1)),
+                ["place.singing-seam.empty", "source.hearth-resonator.construction"]),
+            (
+                "intact",
+                WithPower(
+                    extractedLode with { Disposition = ResonantLodeDisposition.Installed, Address = site },
+                    new HearthResonatorState(sourceIdentity, site, HearthResonatorPhase.Intact, 3)),
+                ["place.singing-seam.empty", "source.hearth-resonator.intact"]),
+            (
+                "damaged",
+                WithPower(
+                    extractedLode with { Disposition = ResonantLodeDisposition.Installed, Address = site },
+                    new HearthResonatorState(sourceIdentity, site, HearthResonatorPhase.Damaged, 1)),
+                ["place.singing-seam.empty", "source.hearth-resonator.damaged"]),
+            (
+                "destroyed",
+                WithPower(
+                    extractedLode with { Address = site },
+                    new HearthResonatorState(sourceIdentity, site, HearthResonatorPhase.Destroyed, 2)),
+                ["place.singing-seam.empty", "resource.resonant-lode.loose", "source.hearth-resonator.destroyed"]),
+            (
+                "rebuilding",
+                WithPower(
+                    extractedLode with { Disposition = ResonantLodeDisposition.Committed, Address = site },
+                    new HearthResonatorState(sourceIdentity, site, HearthResonatorPhase.Rebuilding, 1)),
+                ["place.singing-seam.empty", "source.hearth-resonator.rebuilding"]),
+        };
+        var visibleBounds = new WorldRectangle(-2, 0, 13, 8);
+
+        foreach (var stage in stages)
+        {
+            var semanticArea = WorldArea.Generate(
+                stage.State,
+                SurfacePatch.SurfaceStratum,
+                VisualViewportBounds.WithOneCellSemanticHalo(visibleBounds));
+            var seamCell = semanticArea.Cells.Single(cell => cell.Address == context.SeamAddress);
+            Verify(
+                seamCell.SingingSeam is { } &&
+                seamCell.SingingSeam.State ==
+                    (stage.Name == "embedded" ? SingingSeamVisualState.Embedded : SingingSeamVisualState.Empty),
+                $"Goal 6B Inspector '{stage.Name}' must expose the exact Singing Seam semantic state.");
+            if (stage.State.PowerHome!.Resonator is { } source)
+            {
+                var sourceCell = semanticArea.Cells.Single(cell => cell.Address == source.Address);
+                Verify(
+                    sourceCell.HearthResonator?.Phase == source.Phase,
+                    $"Goal 6B Inspector '{stage.Name}' must expose the exact Source semantic state.");
+            }
+
+            var plan = VisualGrammar.Compose(
+                new VisualCompositionInput(
+                    semanticArea,
+                    visibleBounds,
+                    InitialSeed,
+                    _visualPack,
+                    _visualPack.StyleVersion,
+                    stage.State.Address,
+                    TargetAddresses: [],
+                    SelectedAddresses: []));
+            foreach (var visualId in stage.VisualIds)
+            {
+                Verify(
+                    plan.Marks.Any(mark => string.Equals(mark.VisualId, visualId, StringComparison.Ordinal)),
+                    $"Goal 6B Inspector '{stage.Name}' is missing visual '{visualId}'.");
+            }
+
+            var raster = VisualPackGodotAdapter.RasterizeNative(_visualPack, plan);
+            Verify(
+                raster.GetWidth() == visibleBounds.Width * _visualCellSize &&
+                raster.GetHeight() == visibleBounds.Height * _visualCellSize,
+                $"Goal 6B Inspector '{stage.Name}' must rasterize through the selected runtime pack.");
+        }
+
+        GD.Print($"GOAL6B INSPECTOR PARITY PASS states={stages.Length} pack={_visualPack.PackId} size={_visualCellSize}");
     }
 
     private void CaptureGate3BSurfaceReviewSet()

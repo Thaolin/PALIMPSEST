@@ -144,6 +144,23 @@ interruptible Preparation, release a consequence that resolves later, impose
 Recovery while other actions remain available, or become a true ritual. Every
 delay must expose a choice, reaction, or danger rather than empty waiting.
 
+### The player must see cause and consequence
+
+Player-facing visual and textual feedback is part of the rule, not polish to
+add after the simulation works. Before a meaningful commitment, the play space
+must make four questions answerable: what happens next, when it happens, what
+can interrupt it, and what the choice prevents the player from doing. A paused
+or queued action must visibly remain pending and explain how time resumes.
+Disabled controls must say why they are unavailable and what state would make
+them available.
+
+When a rule resolves, the map should show where it happened and concise text
+should name the cause, modifiers, mitigation, cost, and durable result. Visual
+hierarchy and text reinforce one another: neither a decorative effect with no
+explanation nor a log entry detached from the play space is sufficient. If the
+player cannot understand a correct rule through play, the feature has not yet
+passed UAT.
+
 ### Power scales through consequence
 
 Early Expressions burn one obstacle, smash one resisting subject, or move one

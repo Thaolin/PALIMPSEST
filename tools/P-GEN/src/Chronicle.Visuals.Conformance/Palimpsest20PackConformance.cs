@@ -7,8 +7,8 @@ static class Palimpsest20PackConformance
         var pack = new Palimpsest20Pack(
             packId: "palimpsest20.tracer",
             formatVersion: 1,
-            styleVersion: 1,
-            composerVersion: 1,
+            styleVersion: Palimpsest20Pack.SupportedStyleVersion,
+            composerVersion: Palimpsest20Pack.SupportedComposerVersion,
             cellSize: 20,
             atlasId: "palimpsest20",
             paletteId: "surface",
@@ -39,9 +39,9 @@ static class Palimpsest20PackConformance
             ]);
         var validation = new Palimpsest20Validation(
             PackFormatVersion: 1,
-            ComposerContractVersion: 1,
-            VisualStyleVersion: 1,
-            MinimumReaderVersion: "1.0.0");
+            ComposerContractVersion: Palimpsest20Pack.SupportedComposerVersion,
+            VisualStyleVersion: Palimpsest20Pack.SupportedStyleVersion,
+            MinimumReaderVersion: Palimpsest20Codec.ReaderVersion);
 
         var first = Palimpsest20Codec.WriteCanonical(pack, validation);
         var expectedFiles = new[]
@@ -62,7 +62,7 @@ static class Palimpsest20PackConformance
         var loaded = Palimpsest20Codec.ReadCanonical(first.Files);
         var grass = loaded.Pack.Resolve("terrain.surface.grass");
         if (loaded.Pack.CellSize != 20 ||
-            loaded.Validation.MinimumReaderVersion != "1.0.0" ||
+            loaded.Validation.MinimumReaderVersion != Palimpsest20Codec.ReaderVersion ||
             grass.AtlasRect != new Palimpsest20AtlasRect(0, 0, 20, 20) ||
             grass.LayerClass != Palimpsest20LayerClass.GroundField ||
             grass.OverviewPaletteIndex != 1)

@@ -1,12 +1,12 @@
 {
   "cellSize": 20,
   "atlasWidth": 160,
-  "atlasHeight": 640,
+  "atlasHeight": 700,
   "anchor": {
     "x": 10,
     "y": 10
   },
-  "definitionCount": 249,
+  "definitionCount": 276,
   "definitions": [
     {
       "id": "actor.incarnation",
@@ -3419,6 +3419,249 @@
         6,
         8
       ]
+    },
+    {
+      "id": "terrain.surface.scorched-ground",
+      "familyId": "terrain.surface.scorched-ground",
+      "variantOrdinal": 0,
+      "layer": "groundField",
+      "mask": null,
+      "overviewPaletteIndex": 12,
+      "paletteRoleIndexes": [12, 4, 19]
+    },
+    {
+      "id": "subject.mire-brute.living",
+      "familyId": "subject.mire-brute.living",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 23,
+      "paletteRoleIndexes": [22, 23, 24]
+    },
+    {
+      "id": "emphasis.mire-brute.wounded",
+      "familyId": "emphasis.mire-brute.wounded",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 23,
+      "paletteRoleIndexes": [23, 24]
+    },
+    {
+      "id": "effect.mire-brute.burning",
+      "familyId": "effect.mire-brute.burning",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [19, 20, 21]
+    },
+    {
+      "id": "subject.mire-brute.dead",
+      "familyId": "subject.mire-brute.dead",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 23,
+      "paletteRoleIndexes": [22, 23, 24]
+    },
+    {
+      "id": "emphasis.target.selected",
+      "familyId": "emphasis.target.selected",
+      "variantOrdinal": 0,
+      "layer": "targetOrSelection",
+      "mask": null,
+      "overviewPaletteIndex": 21,
+      "paletteRoleIndexes": [21]
+    },
+    {
+      "id": "emphasis.danger.mire-brute",
+      "familyId": "emphasis.danger.mire-brute",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 23,
+      "paletteRoleIndexes": [23, 24]
+    },
+    {
+      "id": "emphasis.action.pending",
+      "familyId": "emphasis.action.pending",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [25]
+    },
+    {
+      "id": "emphasis.action.preparation",
+      "familyId": "emphasis.action.preparation",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [20, 21]
+    },
+    {
+      "id": "emphasis.action.recovery",
+      "familyId": "emphasis.action.recovery",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 17,
+      "paletteRoleIndexes": [17]
+    },
+    {
+      "id": "glyph.equipment.iron-cleaver",
+      "familyId": "glyph.equipment.iron-cleaver",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 27,
+      "paletteRoleIndexes": [27, 13]
+    },
+    {
+      "id": "glyph.equipment.quilted-jack",
+      "familyId": "glyph.equipment.quilted-jack",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 27,
+      "paletteRoleIndexes": [22, 27]
+    },
+    {
+      "id": "glyph.equipment.copper-ward",
+      "familyId": "glyph.equipment.copper-ward",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [19, 20, 21]
+    },
+    {
+      "id": "glyph.word.burn",
+      "familyId": "glyph.word.burn",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [19, 20, 21]
+    },
+    {
+      "id": "glyph.modifier.quickly",
+      "familyId": "glyph.modifier.quickly",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [25, 27]
+    },
+    {
+      "id": "glyph.modifier.lasting",
+      "familyId": "glyph.modifier.lasting",
+      "variantOrdinal": 0,
+      "layer": "uiGlyph",
+      "mask": null,
+      "overviewPaletteIndex": 17,
+      "paletteRoleIndexes": [17]
+    },
+    {
+      "id": "emphasis.home-source-site",
+      "familyId": "emphasis.home-source-site",
+      "variantOrdinal": 0,
+      "layer": "targetOrSelection",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [25]
+    },
+    {
+      "id": "place.singing-seam.embedded",
+      "familyId": "place.singing-seam.embedded",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [12, 13, 20]
+    },
+    {
+      "id": "place.singing-seam.empty",
+      "familyId": "place.singing-seam.empty",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [12, 13]
+    },
+    {
+      "id": "resource.resonant-lode.embedded",
+      "familyId": "resource.resonant-lode.embedded",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 21,
+      "paletteRoleIndexes": [20, 21, 27]
+    },
+    {
+      "id": "resource.resonant-lode.loose",
+      "familyId": "resource.resonant-lode.loose",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 21,
+      "paletteRoleIndexes": [20, 21, 27]
+    },
+    {
+      "id": "resource.resonant-lode.carried",
+      "familyId": "resource.resonant-lode.carried",
+      "variantOrdinal": 0,
+      "layer": "actor",
+      "mask": null,
+      "overviewPaletteIndex": 21,
+      "paletteRoleIndexes": [20, 21, 27]
+    },
+    {
+      "id": "source.hearth-resonator.construction",
+      "familyId": "source.hearth-resonator.construction",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [12, 25, 20]
+    },
+    {
+      "id": "source.hearth-resonator.intact",
+      "familyId": "source.hearth-resonator.intact",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 21,
+      "paletteRoleIndexes": [12, 20, 21]
+    },
+    {
+      "id": "source.hearth-resonator.damaged",
+      "familyId": "source.hearth-resonator.damaged",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 23,
+      "paletteRoleIndexes": [12, 20, 23]
+    },
+    {
+      "id": "source.hearth-resonator.destroyed",
+      "familyId": "source.hearth-resonator.destroyed",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 13,
+      "paletteRoleIndexes": [12, 13]
+    },
+    {
+      "id": "source.hearth-resonator.rebuilding",
+      "familyId": "source.hearth-resonator.rebuilding",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [12, 20, 20]
     }
   ]
 }

@@ -281,6 +281,31 @@ Attunement. A destroyed built Load Source contributes nothing until rebuilt;
 lesser damage and repair thresholds remain distinct unsettled rules.
 _Avoid_: Character level, live spell tether, generic generator currency
 
+**Burn Primer**:
+The single visible book beside Home in the Goal 6B testing Chronicle. Reading it
+adds Burn, Quickly, and Lasting to the persistent Codex so the material Load
+loop can be tested without an opening-path prerequisite. Reading does not equip
+those Words or bypass Attunement. It remains a bounded test fixture, not
+inventory, loot, or a general Study Source framework.
+_Avoid_: Starting-path reward, hidden prerequisite, generic spellbook drop
+
+**Singing Seam**:
+A generated place that remains at its World Address after its one Resonant Lode
+is extracted. It preserves the material's visible and historical origin.
+_Avoid_: Renewable node, loot container, abstract resource spawn
+
+**Resonant Lode**:
+One identifiable piece of expedition matter with a persistent Singing Seam
+origin and exactly one physical state: embedded, loose at an Address, carried
+by an Incarnation, committed to a Hearth Resonator, or installed in it.
+_Avoid_: Inventory count, fungible ore, crafting currency
+
+**Hearth Resonator**:
+The first vulnerable built Load Source at Home. While intact, or damaged but
+still functional, it contributes Load only when an Incarnation next Attunes;
+destruction never remotely disables an already-attuned Loadout.
+_Avoid_: Mana generator, live tether, general building type
+
 **Attunement**:
 The act of creating or changing any part of a Loadout within the Load currently
 available to an Incarnation. Later loss of a Load Source does not sever the

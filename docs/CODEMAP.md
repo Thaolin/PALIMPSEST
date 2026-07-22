@@ -50,10 +50,9 @@ Core commands and renders Core-owned state. Tests drive the same commands,
 ticks, generation, and save codec. Do not add a second implementation of a rule
 to make presentation or testing convenient.
 
-The source map below describes the accepted v5 predecessor runtime, including
-its fitted `Fly[Stone]` and `Fly[Bell]` behavior. The successor Verb + linked
-Modifier + contextual Target grammar is documented but not implemented; do not
-rewrite source ownership descriptions as if that migration has occurred.
+The source map below describes the current strict-v7 successor runtime. Fitted
+predecessor Nouns and fixture gameplay survive only as literal migration input
+and neutral retained-world proof; they are not a second current play path.
 
 World Grammar's bounded area query is the generation seam for Slice 3. The
 player viewport, developer World Atlas Inspector, and Core checks consume the
@@ -69,19 +68,24 @@ without Godot.
 
 | Source | Owns | Interface or callers |
 | --- | --- | --- |
-| [`ChronicleSimulation.cs`](../src/Chronicle.Core/ChronicleSimulation.cs) | Command application, current Study Source, Home, and first-conflict queries, clock pulses, movement, shared fitted-Fly subject resolution, Loadout use, target validity, Incarnation death/replacement, and command results | `ChronicleSimulation.Apply`, `CurrentStudySource`, `HomeContext`, `ConflictContext`, `AdvanceClockPulse`, `ValidTargetsForSlot`; used by Godot and Core checks |
-| [`ChronicleState.cs`](../src/Chronicle.Core/ChronicleState.cs) | Serializable Chronicle state, durable Bell Address, singular Home, first-conflict delta, addresses, clock and Incarnation lifecycle state, deterministic tick advancement, strict current v5 canonical persistence, and explicit v4/v3/v2/v1/pre-envelope migration | `ChronicleState`, `WorldAddress`, `ChronicleSaveCodec` |
+| [`ChronicleSimulation.cs`](../src/Chronicle.Core/ChronicleSimulation.cs) | Sole command/snapshot seam for Chronicle movement, fixed Heartbeats, Goal 6A combat, Goal 6B physical work and Attunement, death/replacement, and retained predecessor queries used by migration fixtures | `ChronicleSimulation.Apply`, `CombatContext`, `PowerComesHomeContext`, `PreviewTarget`, `AdvanceClockPulse`; used by Godot and Core checks |
+| [`ChronicleState.cs`](../src/Chronicle.Core/ChronicleState.cs) | Durable Chronicle, combat, Lode, Source, and recorded-Attunement state; deterministic Heartbeat advancement; strict save v7 persistence; neutral retained-world durables; and explicit v6/v5/v4/v3/v2/v1/pre-envelope migration | `ChronicleState`, `WorldAddress`, `ChronicleSaveCodec` |
+| [`Goal6AActionPlanning.cs`](../src/Chronicle.Core/Goal6AActionPlanning.cs) | Bounded Mire Brute encounter, equipment/HP, Engagement Plan, Expression Load/timing, Target facts, Preparation/revalidation, Burn, Recovery, pursuit, forecast, and read-only combat snapshots | Internal rule owner exposed only through `ChronicleSimulation` commands and `CombatContextSnapshot` |
+| [`Goal6BPowerComesHome.cs`](../src/Chronicle.Core/Goal6BPowerComesHome.cs) | Bounded Singing Seam/Resonant Lode state, physical carrying, one Hearth Resonator, timed work and interruption, vulnerability/rebuilding, current-versus-next Attunement capacity, and read-only decision snapshots | Internal rule owner exposed only through `ChronicleSimulation` commands and `PowerComesHomeContextSnapshot` |
 | [`Home.cs`](../src/Chronicle.Core/Home.cs) | Singular Home identity/material facts, current-site eligibility snapshot, and derived physical Return Route snapshot | `HomeState`, `HomeContextSnapshot`, `HomeSiteSnapshot`, `ReturnRouteSnapshot` |
 | [`FirstConflict.cs`](../src/Chronicle.Core/FirstConflict.cs) | Stable River-Ward/Riven/Shattered identities, the one-exchange persistent state, and read-only conflict context | `FirstConflictState`, `ConflictContextSnapshot`, `FirstConflictSubjects`; consumed through simulation and World Grammar seams |
-| [`WordCatalogue.cs`](../src/Chronicle.Core/WordCatalogue.cs) | Stable Word identities and the authored read-only `Fly`, `Found`, `Smash`, `Stone`, and `Bell` definitions, kinds, meanings, thresholds, and compatibility | `WordIds`, `WordCatalogue.Words`, `WordCatalogue.Get`; used by Core rules, Godot presentation, and Core checks |
+| [`WordCatalogue.cs`](../src/Chronicle.Core/WordCatalogue.cs) | Stable successor Verb/Modifier definitions including `Burn`, `Quickly`, and `Lasting`; predecessor Noun identities remain parseable only for explicit old-save retirement | `WordIds`, `WordCatalogue.Words`, `WordCatalogue.Get`; used by Core rules, Godot presentation, and migration checks |
 | [`LanguageState.cs`](../src/Chronicle.Core/LanguageState.cs) | Canonical ordered Codex membership, word-specific Understanding, one active source/word pursuit, and their strict current/legacy JSON shapes | `CodexState`, `StudyState`, `WordUnderstanding` |
 | [`StudySources.cs`](../src/Chronicle.Core/StudySources.cs) | Generated Bell Study Source identity, qualities, contextual offers, word-specific yield, and regenerated snapshot attached to the Bell's current durable Address | `StudySourceSnapshot` and `StudyOfferSnapshot` through `ChronicleSimulation.CurrentStudySource` |
-| [`WorldArea.cs`](../src/Chronicle.Core/WorldArea.cs) | Versioned deterministic semantic World Grammar over bounded absolute-address rectangles, adjacency context, motif identity, deterministic Riven Cairn selection, and Bell/loose-Stone/Hearthstone/Cairn durable-subject overlays | `WorldArea.Generate`, `WorldRectangle`, `WorldCell`; used by player views, inspector, and Core checks |
-| [`Loadout.cs`](../src/Chronicle.Core/Loadout.cs) | Eight-slot Loadout state, `WordId` Expression shape, catalogue-kind/Codex/compatibility validation, and duplicate-Verb invariant | `LoadoutSlot`, `LoadoutState` |
+| [`WorldArea.cs`](../src/Chronicle.Core/WorldArea.cs) | Versioned deterministic semantic World Grammar over bounded absolute-address rectangles; WG5 adds the Seam/Lode/Source states over the retained WG4 combat subjects while older pins gain neither retroactively | `WorldArea.Generate`, `WorldRectangle`, `WorldCell`; used by player views, Inspector, and Core checks |
+| [`Loadout.cs`](../src/Chronicle.Core/Loadout.cs) | Successor Verb plus unique ordered Modifiers, fixed authored Load and Link validation, and migration-only recognition of predecessor fitted-Noun slots | `LoadoutSlot`, `LoadoutState` |
 | [`SurfacePatch.cs`](../src/Chronicle.Core/SurfacePatch.cs) | Retained World Grammar version 0 surface semantics | Legacy regeneration for predecessor Chronicles |
 | [`SkyStratum.cs`](../src/Chronicle.Core/SkyStratum.cs) | Retained World Grammar version 0 sky semantics and The Bell That Fell Up constants | Legacy regeneration plus durable Landmark address and identity |
 | [`DeterministicHash.cs`](../src/Chronicle.Core/DeterministicHash.cs) | Stable seed/address hashing shared by deterministic generation | Internal generation helper; not a gameplay interface |
 
+World Grammar version `5` adds the deterministic Singing Seam and durable
+Resonant Lode/Source overlays without changing old pins. Version `4` adds the deterministic Goal 6A clearing, Mire Brute,
+basalt Target, and combat overlays without adding them to old grammar pins.
 World Grammar version `3` preserves version `2` terrain and Bell Study semantics
 and adds the deterministic Riven Cairn subject. Version `2` delegates physical
 Surface/Sky cells to version `1` and adds the two-offer Bell Study Source.
@@ -98,7 +102,7 @@ pack seam and the compact manually authored Gate 3B reference pack.
 | --- | --- | --- |
 | [`CompiledVisualPack.cs`](../src/Chronicle.VisualPack/CompiledVisualPack.cs) | Pack identity and versions, indexed atlas, palette roles, stable visual definitions, anchors, layer classes, adjacency masks, validation, and digest | `CompiledVisualPack`, `VisualDefinition`; consumed by the pure composer and Godot adapter |
 | [`CanonicalVisualPackReader.cs`](../src/Chronicle.VisualPack/CanonicalVisualPackReader.cs) | Strict canonical four-file P-GEN bundle validation and construction of the existing runtime pack value | `ReadDirectory`, `ReadCanonical`; filesystem and in-memory Adapter inputs |
-| [`ManualVisualPack.cs`](../src/Chronicle.VisualPack/ManualVisualPack.cs) | Native 16 px and 20 px golden comparison atlases, including intact/shattered Cairn and static danger marks | `ManualVisualPack.CreateGate3B`; retained verification fixture until and after required P-GEN E5 integration |
+| [`ManualVisualPack.cs`](../src/Chronicle.VisualPack/ManualVisualPack.cs) | Native 16 px and 20 px golden comparison atlases, including retained subjects plus the Goal 6B resource/Source state vocabulary | `ManualVisualPack.CreateGate3B`; explicit developer comparison fixture outside packaged production data |
 
 ### In-repository P-GEN authoring Module
 
@@ -119,7 +123,7 @@ Engine-independent Palimpsest-specific Visual Grammar.
 
 | Source | Owns | Interface or callers |
 | --- | --- | --- |
-| [`VisualGrammar.cs`](../src/Chronicle.Visuals/VisualGrammar.cs) | Read-only semantic-to-visual mapping, adjacency composition, stable address-derived variants, Core-fed static danger emphasis, layer order, visible crop, and render-plan digest | `VisualGrammar.Compose`, `VisualCompositionInput`, `VisualRenderPlan`; shared by player view and Inspector |
+| [`VisualGrammar.cs`](../src/Chronicle.Visuals/VisualGrammar.cs) | Read-only semantic-to-visual mapping, adjacency composition, Brute/scorch/Target/action emphasis, Seam/Lode/carrier/Source states, stable variants, layer order, visible crop, and render-plan digest | `VisualGrammar.Compose`, `VisualCompositionInput`, `VisualRenderPlan`; shared by player view and Inspector |
 | [`VisualViewportBounds.cs`](../src/Chronicle.Visuals/VisualViewportBounds.cs) | Finite viewport centering, numeric-domain-safe panning, and the largest representable one-cell semantic halo | Shared by player and Inspector request adapters; numeric storage limits do not become authored World edges |
 
 ### `Chronicle.Godot`
@@ -130,11 +134,12 @@ decision.
 
 | Source | Owns | Must not own |
 | --- | --- | --- |
-| [`ChronicleApp.cs`](../src/Chronicle.Godot/ChronicleApp.cs) | Scene construction, nonbinding Starting Vector and mixed-Codex Loadout controls, catalogue-derived composition guidance, input-to-command translation, moved-Bell presentation, Home/route and first-conflict readouts, death/replacement UI, clock pulse delivery, save-file I/O, and headless Godot acceptance journeys | Movement legality, Home-site or conflict eligibility, Return Route calculation or movement, conflict timing/result, death eligibility, replacement continuity, Study progress, Loadout compatibility, target validity, generation meaning, or persistence semantics |
+| [`ChronicleApp.cs`](../src/Chronicle.Godot/ChronicleApp.cs) | Lifecycle, map request/composition, keyboard and HUD command routing, fixed pulse delivery, save I/O, Starting Vector choice, retained Goal 6A journeys, and the seven-stage Goal 6B rendered journey | Damage, range, Target eligibility, Load, timing, Source, carrying, forecast order, death, or persistence semantics |
+| [`ChronicleHud.cs`](../src/Chronicle.Godot/ChronicleHud.cs) | Map-first 1600×900 frame: crisp 2× map, persistent four-question power decision panel, current/next capacity, compact action overlays, right Target/forecast/message rail, and command/Target events | Chronicle rules or alternate combat/power state; it presents snapshots and emits `ChronicleCommand` values |
 | [`WorldVisualView.cs`](../src/Chronicle.Godot/WorldVisualView.cs) | One batched player-view draw surface over a shared `VisualRenderPlan` | Semantic generation, variant selection, or durable world state |
 | [`VisualPackGodotAdapter.cs`](../src/Chronicle.Godot/VisualPackGodotAdapter.cs) | Indexed-atlas expansion, native and overview rasterization, atlas-region textures, and Godot draw adaptation | Pack authorship, semantic mapping, or gameplay rules |
 | [`PackagedVisualPackLoader.cs`](../src/Chronicle.Godot/PackagedVisualPackLoader.cs) | One shared P-GEN-default/manual-comparison selection path for player and Inspector | Pack validation or authorship |
-| [`WorldAtlasInspector.cs`](../src/Chronicle.Godot/WorldAtlasInspector.cs) and [`WorldAtlasInspector.tscn`](../src/Chronicle.Godot/WorldAtlasInspector.tscn) | Direct developer-only bounded World Grammar inspection, semantic diagnostics, shared Visual Grammar preview, and deterministic capture | Player save I/O, Chronicle advancement, generation rules, or a player-facing Atlas |
+| [`WorldAtlasInspector.cs`](../src/Chronicle.Godot/WorldAtlasInspector.cs) and [`WorldAtlasInspector.tscn`](../src/Chronicle.Godot/WorldAtlasInspector.tscn) | Direct developer-only bounded World Grammar inspection, semantic diagnostics, shared Visual Grammar preview, deterministic capture, and eight-state Goal 6B player/Inspector parity proof | Player save I/O, Chronicle advancement, generation rules, or a player-facing Atlas |
 | [`project.godot`](../src/Chronicle.Godot/project.godot) | Godot project configuration, root scene, display, and input actions | Gameplay state or rules |
 | [`Chronicle.Godot.csproj`](../src/Chronicle.Godot/Chronicle.Godot.csproj) | Godot C# build and references to Core, VisualPack, and Visuals | Domain dependencies flowing back into Core or the engine-independent visual projects |
 
@@ -146,9 +151,9 @@ variation is deterministic and transient, never serialized simulation state.
 
 | Source | Proves |
 | --- | --- |
-| [`Chronicle.Core.Checks/Program.cs`](../checks/Chronicle.Core.Checks/Program.cs) | Dependency-free Core determinism, commands, ticks, generation, shared `Fly[Stone]`/`Fly[Bell]` resolution, first-conflict invariants, replay, literal predecessor migration, and strict v5 save/load contracts |
-| [`Chronicle.Visuals.Checks/Program.cs`](../checks/Chronicle.Visuals.Checks/Program.cs) | Pack vocabulary and bounds, exact adjacency-edge compatibility, deterministic variants, moved-Bell and Cairn/danger mapping, layering, crop, overlap, numeric-address edges, and render-plan digest |
-| [`verify.ps1`](../checks/verify.ps1) | In-repository P-GEN compiler/workbench proof followed by packaged .NET builds, Core and Visual checks, isolated player/Inspector acceptance, packaging isolation, save non-mutation, and retained journeys |
+| [`Chronicle.Core.Checks/Program.cs`](../checks/Chronicle.Core.Checks/Program.cs) | Goal 6A retained combat plus Goal 6B identity, carrying, work, interruption, Attunement, loss/rebuild, death/replacement, strict v7 replay, malformed-state rejection, and literal v6-through-pre-envelope migration |
+| [`Chronicle.Visuals.Checks/Program.cs`](../checks/Chronicle.Visuals.Checks/Program.cs) | P-GEN v2 combat and Goal 6B power-state vocabulary, semantic/render parity, adjacency, variant, layering, crop, overlap, and numeric-address proof |
+| [`verify.ps1`](../checks/verify.ps1) | P-GEN authoring verification followed by packaged .NET builds, Core/Visual checks, player and eight-state Inspector parity, seven-stage Goal 6B HUD proof, exact four-file isolation, and retained Goal 6A/predecessor journeys |
 
 Exact supported commands and the packaged executable locations remain in the
 [Development guide](DEVELOPMENT.md).
@@ -181,6 +186,8 @@ Exact supported commands and the packaged executable locations remain in the
 | [`RPG-SUCCESSOR-REBUILD-DIRECTION.md`](RPG-SUCCESSOR-REBUILD-DIRECTION.md) | Retained Slice 0–3 foundation, redesigned gameplay surface, same-scale generated-Area north star, Goal 6–8 sequence, and P-GEN timing; not production authorization |
 | [`QUD-GENERATION-ALIGNMENT.md`](QUD-GENERATION-ALIGNMENT.md) | Primary-source comparison of Qud's builders, selective WFC, history, blueprints, populations, and their bounded fit with World Grammar |
 | [`COMBAT-GRAMMAR-PRESSURE-TEST.md`](COMBAT-GRAMMAR-PRESSURE-TEST.md) | Completed isolated prototype question, fixed fixture, player journey, accepted evidence, and forbidden production drift |
+| [`GOAL-6A-A-REAL-FIGHT.md`](GOAL-6A-A-REAL-FIGHT.md) | Contract and accepted prototype-quality result for one generated-world fight, strict successor migration, map-first combat HUD, persistence proof, and player UAT |
+| [`GOAL-6B-POWER-COMES-HOME.md`](GOAL-6B-POWER-COMES-HOME.md) | Bounded expedition-resource, physical-carrying, Home Load Source, Attunement, persistence, presentation, automated-acceptance, and player-UAT contract |
 | [`GOAL-4-THREE-OPENINGS.md`](archive/contracts/GOAL-4-THREE-OPENINGS.md) | Archived Goal 4 contract and accepted 4A Study, 4B Home, and 4C conflict proof |
 | [`GOAL-4C-UAT.md`](archive/uat/GOAL-4C-UAT.md) | Archived fresh-Chronicle fight journey, player result, and deferred visual notes |
 | [`SLICE-5-A-WORD-MULTIPLIES.md`](archive/contracts/SLICE-5-A-WORD-MULTIPLIES.md) | Archived accepted contract for shared authored Expression resolution and the `Fly[Bell]` proof |
@@ -218,7 +225,7 @@ Exact supported commands and the packaged executable locations remain in the
 | Change Visual Grammar | `Chronicle.Visuals` composer | Stable mapping, overlap, variant, and plan-digest checks plus visual UAT; no Core decision may change |
 | Change Godot drawing | `WorldVisualView.cs` or `VisualPackGodotAdapter.cs` | Shared-plan player and Inspector acceptance; no second mapping path |
 | Change the developer World Atlas Inspector | `Chronicle.Godot` inspection adapter | Use Core area snapshots; verify pan/zoom/seed/Stratum controls and no player-save mutation |
-| Change controls, layout, or feedback | `ChronicleApp.cs` | Godot build/headless check and player UAT |
+| Change controls, layout, or feedback | `ChronicleApp.cs` and `ChronicleHud.cs` | Godot build, rendered HUD journey, and player UAT |
 | Add a vertical slice | Roadmap plus one slice contract | Player-visible hypothesis, automated Core proof, Godot proof, save compatibility, and UAT gate |
 | Complete or cross a UAT gate | Active contract Status and `HANDOFF.md` | Record exact proof, reconcile Roadmap, and stop before unauthorized next work |
 | Make a hard-to-reverse technical choice | `docs/adr/` | Link the accepted ADR from Architecture or the owning contract |
@@ -234,6 +241,8 @@ Exact supported commands and the packaged executable locations remain in the
 - [RPG Successor Rebuild Direction](RPG-SUCCESSOR-REBUILD-DIRECTION.md)
 - [Caves of Qud Generation Alignment](QUD-GENERATION-ALIGNMENT.md)
 - [Passed Combat Grammar Pressure Test](COMBAT-GRAMMAR-PRESSURE-TEST.md)
+- [Goal 6A — A Real Fight contract and accepted result](GOAL-6A-A-REAL-FIGHT.md)
+- [Goal 6B — Power Comes Home implementation and pending-UAT contract](GOAL-6B-POWER-COMES-HOME.md)
 - [ADR 0003 — Verbs, linked Modifiers, and world Targets](adr/0003-use-verbs-linked-modifiers-and-world-targets.md)
 - [ADR 0004 — P-GEN visual authoring pipeline](adr/0004-use-p-gen-as-the-visual-authoring-pipeline.md)
 - [ADR 0005 — One character scale across generated Areas](adr/0005-use-one-character-scale-across-generated-areas.md)

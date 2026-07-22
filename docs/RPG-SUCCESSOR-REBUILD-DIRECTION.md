@@ -1,7 +1,8 @@
 # RPG Successor Rebuild Direction
 
 **Decided:** 2026-07-21
-**Status:** settled sequencing and retention boundary; production not authorized
+**Status:** settled sequencing and retention boundary; Goal 6A accepted as a
+prototype-quality vertical slice; Goal 6B not authorized
 
 The successor keeps the proven Chronicle substrate through Slice 3 and rebuilds
 the player-facing RPG on top through bounded vertical slices. This is neither a
@@ -121,6 +122,14 @@ Thread one material loop through the now-real RPG spine:
   impossible but desirable Loadout; and
 - destruction or dismantling that removes future Attunement capacity without
   remotely disabling the current expedition's Loadout, followed by rebuilding.
+
+The future contract must treat feedback as part of the loop itself. The map
+must visibly locate the resource, its physical carrier, Home, the Load Source,
+and damage or destruction. Text must explain acquisition, carrying limits,
+construction commitment, current and next-Attunement capacity, why a Loadout is
+invalid, and exactly when Source loss or rebuilding takes effect. A disabled
+choice without a reason, a resource change visible only as a number, or a
+durable consequence reported only in a log does not pass.
 
 The player-visible proof is the complete loop:
 

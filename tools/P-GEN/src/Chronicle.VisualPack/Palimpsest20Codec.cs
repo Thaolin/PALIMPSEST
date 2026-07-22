@@ -9,7 +9,7 @@ namespace Chronicle.VisualPack;
 public static class Palimpsest20Codec
 {
     public const string AtlasPath = "atlases/palimpsest20.indices";
-    public const string ReaderVersion = "1.0.0";
+    public const string ReaderVersion = "2.0.0";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

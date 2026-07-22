@@ -79,8 +79,8 @@ public sealed class Palimpsest20Definition
 public sealed class Palimpsest20Pack
 {
     public const int SupportedFormatVersion = 1;
-    public const int SupportedStyleVersion = 1;
-    public const int SupportedComposerVersion = 1;
+    public const int SupportedStyleVersion = 2;
+    public const int SupportedComposerVersion = 2;
     public const int NativeCellSize = 20;
 
     private readonly IReadOnlyDictionary<string, Palimpsest20Definition> _definitionsById;
@@ -207,7 +207,7 @@ public sealed class Palimpsest20Pack
         {
             throw new ArgumentOutOfRangeException(
                 nameof(formatVersion),
-                "Palimpsest20 supports pack, style, and composer version 1.");
+                "Palimpsest20 supports pack format 1 with visual style and composer contract version 2.");
         }
 
         if (cellSize != NativeCellSize ||

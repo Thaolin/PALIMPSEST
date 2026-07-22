@@ -26,6 +26,12 @@ public static class WordIds
     public static readonly WordId Fly = new("word.fly");
     public static readonly WordId Found = new("word.found");
     public static readonly WordId Smash = new("word.smash");
+    public static readonly WordId Burn = new("word.burn");
+    public static readonly WordId Quickly = new("word.quickly");
+    public static readonly WordId Lasting = new("word.lasting");
+
+    // These identities remain parseable solely for explicit v6 retirement of
+    // literal predecessor saves. They are not successor vocabulary.
     public static readonly WordId Stone = new("word.stone");
     public static readonly WordId Bell = new("word.bell");
 }
@@ -34,6 +40,7 @@ public enum WordKind
 {
     Verb = 1,
     Noun = 2,
+    Modifier = 3,
 }
 
 public sealed record WordDefinition(
@@ -42,7 +49,13 @@ public sealed record WordDefinition(
     WordKind Kind,
     string Meaning,
     int UnderstandingRequired,
-    IReadOnlyList<WordId> CompatibleNouns);
+    IReadOnlyList<WordId> CompatibleNouns,
+    int Load = 0,
+    IReadOnlyList<WordId>? CompatibleModifiers = null)
+{
+    public IReadOnlyList<WordId> SupportedModifiers =>
+        CompatibleModifiers ?? Array.Empty<WordId>();
+}
 
 public static class WordCatalogue
 {
@@ -69,6 +82,31 @@ public static class WordCatalogue
             "Break a resisting material at the current site by direct force.",
             0,
             Array.Empty<WordId>()),
+        new(
+            WordIds.Burn,
+            "Burn",
+            WordKind.Verb,
+            "Scorch a flammable Chronicle subject through interruptible preparation.",
+            0,
+            Array.Empty<WordId>(),
+            Load: 1,
+            CompatibleModifiers: Array.AsReadOnly([WordIds.Quickly, WordIds.Lasting])),
+        new(
+            WordIds.Quickly,
+            "Quickly",
+            WordKind.Modifier,
+            "Shorten the exposed preparation for an authored compatible Verb.",
+            0,
+            Array.Empty<WordId>(),
+            Load: 6),
+        new(
+            WordIds.Lasting,
+            "Lasting",
+            WordKind.Modifier,
+            "Extend the authored consequence for an authored compatible Verb.",
+            0,
+            Array.Empty<WordId>(),
+            Load: 5),
         new(
             WordIds.Stone,
             "Stone",

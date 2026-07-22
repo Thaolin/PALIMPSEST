@@ -4,10 +4,12 @@ namespace Chronicle.Core;
 
 public readonly record struct LoadoutSlot(
     WordId? Verb = null,
-    WordId? Noun = null)
+    WordId? Noun = null,
+    WordId? Modifier = null,
+    WordId? Modifier2 = null)
 {
     [JsonIgnore]
-    public bool IsEmpty => Verb is null && Noun is null;
+    public bool IsEmpty => Verb is null && Noun is null && Modifier is null && Modifier2 is null;
 
     [JsonIgnore]
     public bool IsIntrinsicFly => Verb == WordIds.Fly && Noun is null;
@@ -20,6 +22,18 @@ public readonly record struct LoadoutSlot(
 
     [JsonIgnore]
     public bool IsFittedFly => Verb == WordIds.Fly && Noun is not null;
+
+    [JsonIgnore]
+    public bool IsSuccessorExpression => Verb is not null && Noun is null;
+
+    [JsonIgnore]
+    public IReadOnlyList<WordId> Modifiers => (Modifier, Modifier2) switch
+    {
+        ({ } first, { } second) => [first, second],
+        ({ } first, null) => [first],
+        (null, { } second) => [second],
+        _ => [],
+    };
 
     [JsonIgnore]
     public string DisplayName
@@ -39,7 +53,24 @@ public readonly record struct LoadoutSlot(
 
             if (Noun is not { } nounId)
             {
-                return verb.DisplayName.ToUpperInvariant();
+                if (Modifiers.Count == 0)
+                {
+                    return verb.DisplayName.ToUpperInvariant();
+                }
+
+                var modifierNames = new List<string>();
+                foreach (var modifierId in Modifiers)
+                {
+                    if (!WordCatalogue.TryGet(modifierId, out var modifier))
+                    {
+                        return "?";
+                    }
+
+                    modifierNames.Add(modifier.DisplayName);
+                }
+
+                return string.Join("—", new[] { verb.DisplayName }.Concat(modifierNames))
+                    .ToUpperInvariant();
             }
 
             return WordCatalogue.TryGet(nounId, out var noun)
@@ -110,9 +141,10 @@ public readonly record struct LoadoutState(
     {
         foreach (var slot in Slots)
         {
-            if (slot.Verb is null && slot.Noun is not null)
+            if (slot.Verb is null &&
+                (slot.Noun is not null || slot.Modifier is not null || slot.Modifier2 is not null))
             {
-                throw new InvalidOperationException("A Loadout Noun requires a Verb.");
+                throw new InvalidOperationException("A Loadout attachment requires a Verb.");
             }
 
             if (slot.Verb is not { } verbId)
@@ -133,7 +165,48 @@ public readonly record struct LoadoutState(
 
             if (slot.Noun is not { } nounId)
             {
+                if (slot.Modifiers.Count == 0)
+                {
+                    continue;
+                }
+
+                if (slot.Modifiers.Distinct().Count() != slot.Modifiers.Count)
+                {
+                    throw new InvalidOperationException(
+                        "A Modifier is unique within one Expression.");
+                }
+
+                var canonical = WordCatalogue.Canonicalize(slot.Modifiers);
+                if (!canonical.SequenceEqual(slot.Modifiers))
+                {
+                    throw new InvalidOperationException(
+                        "Loadout Modifiers must use canonical catalogue order.");
+                }
+
+                foreach (var modifierId in slot.Modifiers)
+                {
+                    if (!WordCatalogue.TryGet(modifierId, out var modifier) ||
+                        modifier.Kind != WordKind.Modifier ||
+                        !verb.SupportedModifiers.Contains(modifierId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Loadout Modifier identity '{modifierId}' is incompatible with {verb.DisplayName}.");
+                    }
+
+                    if (!codex.Contains(modifierId))
+                    {
+                        throw new InvalidOperationException(
+                            $"A Loadout cannot contain {modifier.DisplayName} before it is in the Codex.");
+                    }
+                }
+
                 continue;
+            }
+
+            if (slot.Modifier is not null || slot.Modifier2 is not null)
+            {
+                throw new InvalidOperationException(
+                    "A predecessor Noun attachment cannot carry a successor Modifier.");
             }
 
             if (!WordCatalogue.TryGet(nounId, out var noun) ||

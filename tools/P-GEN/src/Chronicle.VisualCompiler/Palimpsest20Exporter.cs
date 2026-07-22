@@ -28,9 +28,19 @@ internal static class Palimpsest20Exporter
         "actor.dark",
         "actor.primary",
         "actor.read",
+        "combat.pending",
+        "combat.preparation",
+        "combat.recovery",
+        "combat.scorch.dark",
+        "combat.scorch.primary",
         "cloud.primary",
         "cloud.shadow",
+        "danger.primary",
+        "danger.read",
         "emphasis.active",
+        "fire.bright",
+        "fire.dark",
+        "fire.primary",
         "landmark.bright",
         "landmark.gold",
         "sky.deep",
@@ -40,6 +50,7 @@ internal static class Palimpsest20Exporter
         "surface.dark",
         "surface.grass",
         "surface.soil",
+        "target.selected",
         "ui.light",
         "water.deep",
         "water.primary",
@@ -140,7 +151,7 @@ internal static class Palimpsest20Exporter
             PackFormatVersion: Palimpsest20Pack.SupportedFormatVersion,
             ComposerContractVersion: Palimpsest20Pack.SupportedComposerVersion,
             VisualStyleVersion: Palimpsest20Pack.SupportedStyleVersion,
-            MinimumReaderVersion: "1.0.0");
+            MinimumReaderVersion: "2.0.0");
 
         return (pack, validation);
     }
@@ -178,7 +189,7 @@ internal static class Palimpsest20Exporter
                 Palimpsest20Pack.SupportedStyleVersion)
         {
             throw new FormatException(
-                "CVC-PAL20-007: Palimpsest20 requires source compatibility versions 1.");
+                "CVC-PAL20-007: Palimpsest20 requires source compatibility matching the current supported contract.");
         }
     }
 

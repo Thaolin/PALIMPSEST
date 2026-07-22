@@ -31,6 +31,12 @@ $goal4CRuntimeName = "godot-goal4c-verify-$([Guid]::NewGuid().ToString("N"))"
 $goal4CRuntimeRoot = Join-Path $repoRoot ".tools\$goal4CRuntimeName"
 $slice5RuntimeName = "godot-slice5-verify-$([Guid]::NewGuid().ToString("N"))"
 $slice5RuntimeRoot = Join-Path $repoRoot ".tools\$slice5RuntimeName"
+$goal6AQuicklyRuntimeName = "godot-goal6a-quickly-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal6AQuicklyRuntimeRoot = Join-Path $repoRoot ".tools\$goal6AQuicklyRuntimeName"
+$goal6ALastingRuntimeName = "godot-goal6a-lasting-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal6ALastingRuntimeRoot = Join-Path $repoRoot ".tools\$goal6ALastingRuntimeName"
+$goal6BRuntimeName = "godot-goal6b-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal6BRuntimeRoot = Join-Path $repoRoot ".tools\$goal6BRuntimeName"
 
 $originalEnvironment = @{
     AppData = $env:APPDATA
@@ -39,6 +45,7 @@ $originalEnvironment = @{
     DotnetRoot = $env:DOTNET_ROOT
     LocalAppData = $env:LOCALAPPDATA
     NugetPackages = $env:NUGET_PACKAGES
+    NugetAudit = $env:NuGetAudit
     Path = $env:PATH
 }
 
@@ -102,9 +109,9 @@ function Invoke-GodotStartup {
         throw "$Label failed with exit code $exitCode."
     }
 
-    if ($text -notmatch "SLICE2C READY")
+    if ($text -notmatch "GOAL6B READY")
     {
-        throw "$Label did not reach the Slice 2C ready state."
+        throw "$Label did not reach the Goal 6B ready state."
     }
 
     if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
@@ -112,10 +119,181 @@ function Invoke-GodotStartup {
         throw "$Label reported a Godot error."
     }
 
-    if ($RequireLoad -and $text -notmatch
-        "SLICE2C LOAD seed=41337 tick=16 address=sky:0,0 speed=Normal intent=Up codex=Fly:True,Stone:True study=16/16 incarnation=2:Alive loadout=FLY stone=sky:1,0")
+    if ($RequireLoad -and $text -notmatch "GOAL6B READY")
     {
-        throw "$Label did not restore the automated Slice 2C journey exactly."
+        throw "$Label did not restore the Goal 6B Chronicle."
+    }
+}
+
+function Invoke-GodotGoal6ARun {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("Quickly", "QuicklyRestart", "Lasting", "LastingRestart")]
+        [string] $Phase
+    )
+
+    $argument = switch ($Phase)
+    {
+        "Quickly" { "--verify-goal6a-quickly" }
+        "QuicklyRestart" { "--verify-goal6a-quickly-restart" }
+        "Lasting" { "--verify-goal6a-lasting" }
+        "LastingRestart" { "--verify-goal6a-lasting-restart" }
+    }
+    $marker = switch ($Phase)
+    {
+        "Quickly" { "GOAL6A QUICKLY SAVE READY hud=map-first target=basalt-rejected scorch=present brute=dead save=7" }
+        "QuicklyRestart" { "GOAL6A QUICKLY RESTART PASS scorch=present brute=dead hud=restored" }
+        "Lasting" { "GOAL6A LASTING DEATH READY" }
+        "LastingRestart" { "GOAL6A LASTING RESTART PASS incarnation=2 equipment=fresh scorch=present brute=dead save=7" }
+    }
+
+    Write-Host "`n==> Drive Goal 6A $Phase journey through the actual Godot HUD"
+    $output = @(& $godot --path $godotProjectDirectory --position 32000,32000 --resolution 1600x900 -- $argument 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Goal 6A $Phase journey failed with exit code $exitCode."
+    }
+
+    if (-not $text.Contains($marker))
+    {
+        throw "Godot did not complete the expected Goal 6A $Phase journey."
+    }
+
+    $hudMarker = switch ($Phase)
+    {
+        "Quickly" { "GOAL6A HUD CAPTURE PASS stage=quickly-preparation size=1600x900 icons=4" }
+        "Lasting" { "GOAL6A HUD CAPTURE PASS stage=lasting-interruption size=1600x900 icons=4" }
+        default { $null }
+    }
+    if ($null -ne $hudMarker -and -not $text.Contains($hudMarker))
+    {
+        throw "Godot did not render and capture the required Goal 6A $Phase HUD state."
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during Goal 6A $Phase."
+    }
+}
+
+function Assert-Goal6AHudCapture {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("quickly-preparation", "lasting-interruption")]
+        [string] $Stage
+    )
+
+    $capturePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\goal6a-$Stage-hud.png"
+    if (-not (Test-Path -LiteralPath $capturePath -PathType Leaf) -or
+        (Get-Item -LiteralPath $capturePath).Length -lt 4096)
+    {
+        throw "Goal 6A $Stage did not produce a substantive isolated player HUD capture."
+    }
+}
+
+function Assert-Goal6ASave {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("Quickly", "LastingDeath", "LastingResolved")]
+        [string] $Phase
+    )
+
+    $savePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\slice0_chronicle.json"
+    if (-not (Test-Path -LiteralPath $savePath -PathType Leaf))
+    {
+        throw "Goal 6A $Phase did not create its isolated Chronicle save."
+    }
+
+    $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
+    if ([int]$save.Version -ne 7 -or
+        [int]$save.Chronicle.WorldGrammarVersion -ne 4 -or
+        $null -eq $save.Chronicle.Combat -or
+        $null -eq $save.Chronicle.Combat.Scorch)
+    {
+        throw "Goal 6A $Phase did not retain strict v7/WG4 combat and scorch state."
+    }
+
+    $bruteHp = [int]$save.Chronicle.Combat.MireBrute.HitPoints
+    if ($Phase -eq "Quickly" -or $Phase -eq "LastingResolved")
+    {
+        if ($bruteHp -ne 0)
+        {
+            throw "Goal 6A $Phase did not retain the defeated Mire Brute."
+        }
+    }
+    elseif ($save.Chronicle.IncarnationLife -ne 1 -or $bruteHp -le 0 -or $bruteHp -ge 45)
+    {
+        throw "Goal 6A LastingDeath did not retain awaiting replacement plus a wounded living Mire Brute."
+    }
+}
+
+function Invoke-GodotGoal6BRun {
+    Write-Host "`n==> Drive the complete Goal 6B journey through the actual Godot HUD"
+    $output = @(& $godot --path $godotProjectDirectory --position 32000,32000 --resolution 1600x900 -- --verify-goal6b-visuals 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Goal 6B journey failed with exit code $exitCode."
+    }
+
+    $marker = "GOAL6B VISUAL ACCEPTANCE PASS captures=8 save=7 keyboard=mouse map=physical capacity=next-attunement"
+    if (-not $text.Contains($marker))
+    {
+        throw "Godot did not complete the exact Goal 6B rendered journey."
+    }
+
+    $stages = @(
+        "burn-primer",
+        "embedded",
+        "carried",
+        "construction",
+        "intact-capacity-ready",
+        "damaged",
+        "destroyed-current-next",
+        "rebuilding"
+    )
+    foreach ($stage in $stages)
+    {
+        $captureMarker = "GOAL6B HUD CAPTURE PASS stage=$stage size=1600x900"
+        if (-not $text.Contains($captureMarker))
+        {
+            throw "Godot did not report the required Goal 6B '$stage' HUD capture."
+        }
+
+        $capturePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\goal6b-$stage-hud.png"
+        if (-not (Test-Path -LiteralPath $capturePath -PathType Leaf) -or
+            (Get-Item -LiteralPath $capturePath).Length -lt 4096)
+        {
+            throw "Goal 6B '$stage' did not produce a substantive isolated 1600x900 HUD capture."
+        }
+    }
+
+    $savePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\slice0_chronicle.json"
+    if (-not (Test-Path -LiteralPath $savePath -PathType Leaf))
+    {
+        throw "Goal 6B did not create its isolated strict v7 Chronicle save."
+    }
+
+    $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
+    if ([int]$save.Version -ne 7 -or
+        [int]$save.Chronicle.WorldGrammarVersion -ne 5 -or
+        $null -eq $save.Chronicle.PowerHome -or
+        [int]$save.Chronicle.PowerHome.Resonator.Phase -ne 2 -or
+        [int]$save.Chronicle.Attunement.Capacity -ne 12)
+    {
+        throw "Goal 6B did not retain strict v7/WG5 rebuilt Source and twelve-Load Attunement state."
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during Goal 6B rendered acceptance."
     }
 }
 
@@ -536,7 +714,7 @@ function Invoke-GodotAtlasRun {
             "chronicle.gate3b.manual"
         }
         $expectedComposerMarker =
-            "GATE3B SHARED COMPOSER PLAN PASS pack=$expectedPack style=1 size=$VisualCellSize"
+            "GATE3B SHARED COMPOSER PLAN PASS pack=$expectedPack style=2 size=$VisualCellSize"
         if (-not $text.Contains($expectedComposerMarker))
         {
             throw "$Label did not use the expected Gate 3B shared-composer pack and cell size."
@@ -546,6 +724,13 @@ function Invoke-GodotAtlasRun {
         if (-not $text.Contains($expectedPreviewMarker))
         {
             throw "$Label did not complete the expected Gate 3B Atlas visual preview."
+        }
+
+        $expectedGoal6BMarker =
+            "GOAL6B INSPECTOR PARITY PASS states=8 pack=$expectedPack size=$VisualCellSize"
+        if (-not $text.Contains($expectedGoal6BMarker))
+        {
+            throw "$Label did not prove Goal 6B Inspector parity for every bounded state."
         }
     }
 
@@ -560,7 +745,7 @@ function Invoke-GodotAtlasAcceptance {
     Invoke-GodotAtlasRun "Run the World Atlas Inspector without a player save" $false
     Assert-PlayerSaveAbsent "World Atlas Inspector acceptance after absent-save launch"
 
-    $captureStem = "atlas_s41337_g2_sky_xn256_yn260_w512_h512_z512_o11111"
+    $captureStem = "atlas_s41337_g5_sky_xn256_yn260_w512_h512_z512_o11111"
     $captureDirectory = Join-Path $repoRoot ".tools\atlas-captures"
     $capturePng = Join-Path $captureDirectory "$captureStem.png"
     $captureJson = Join-Path $captureDirectory "$captureStem.json"
@@ -969,6 +1154,9 @@ try
     $env:PATH = "$dotnetRoot$([IO.Path]::PathSeparator)$($originalEnvironment.Path)"
     $env:DOTNET_CLI_HOME = Join-Path $repoRoot ".tools\dotnet-cli"
     $env:NUGET_PACKAGES = Join-Path $env:DOTNET_CLI_HOME ".nuget\packages"
+    # Verification uses the pinned, repository-local package graph. Disable
+    # the network vulnerability feed so the hermetic gate remains warning-free.
+    $env:NuGetAudit = "false"
 
     Invoke-CheckedCommand "Run in-repository P-GEN authoring verification" $powershell @(
         "-NoProfile",
@@ -1024,61 +1212,40 @@ try
     $env:APPDATA = (New-Item -ItemType Directory -Force (Join-Path $atlasRuntimeRoot "Roaming")).FullName
     $env:LOCALAPPDATA = (New-Item -ItemType Directory -Force (Join-Path $atlasRuntimeRoot "Local")).FullName
 
-    Invoke-GodotAtlasAcceptance
-    Invoke-GodotGate3BAtlasAcceptance $gate3bAtlasRuntimeRoot
-    Invoke-GodotGate3BPlayerAcceptance $gate3bPlayerRuntimeRoot
+    Assert-PlayerSaveAbsent "Goal 6B Inspector acceptance before launch"
+    Invoke-GodotAtlasRun "Run retained semantic World Atlas Inspector against current World Grammar" $false
+    Invoke-GodotAtlasRun "Run retained native P-GEN World Atlas visual proof" $false -VisualCellSize 20
+    Invoke-GodotAtlasRun "Run retained native manual-pack comparison proof" $false -VisualCellSize 20 -ManualComparison
+    Assert-PlayerSaveAbsent "Goal 6B Inspector acceptance after launch"
 
     $env:APPDATA = (New-Item -ItemType Directory -Force (Join-Path $runtimeRoot "Roaming")).FullName
     $env:LOCALAPPDATA = (New-Item -ItemType Directory -Force (Join-Path $runtimeRoot "Local")).FullName
 
     Invoke-GodotEditorBuild
-    Invoke-GodotStartup "Start Godot headlessly and create a save"
-    Invoke-GodotAcceptance
-    Invoke-GodotStartup "Start Godot headlessly and restore the completed journey" -RequireLoad
+    Invoke-GodotStartup "Start the Goal 6B game headlessly and create strict v7 state"
+    Invoke-GodotStartup "Restart the Goal 6B game headlessly and restore strict v7 state" -RequireLoad
 
-    Set-IsolatedGodotRuntime $goal4ARuntimeRoot "Study"
-    Assert-PlayerSaveAbsent "Goal 4A acceptance before launch"
-    Invoke-GodotGoal4ARun "Partial"
-    Invoke-GodotGoal4ARestart "Partial"
+    Set-IsolatedGodotRuntime $goal6AQuicklyRuntimeRoot "Journey"
+    Assert-PlayerSaveAbsent "Goal 6A Quickly acceptance before launch"
+    Invoke-GodotGoal6ARun "Quickly"
+    Assert-Goal6AHudCapture "quickly-preparation"
+    Assert-Goal6ASave "Quickly"
+    Invoke-GodotGoal6ARun "QuicklyRestart"
+    Assert-Goal6ASave "Quickly"
 
-    # A normal restart may legitimately deliver a Slow clock pulse after
-    # proving that the partial pursuit restored. Continue the acceptance
-    # journey from a second exact Stone=5 fixture instead of depending on
-    # frame timing or rewinding the first runtime.
-    Set-IsolatedGodotRuntime $goal4ARuntimeRoot "StudyContinuation"
-    Assert-PlayerSaveAbsent "Goal 4A continuation before launch"
-    Invoke-GodotGoal4ARun "Partial"
-    Invoke-GodotGoal4ARun "Complete"
-    Invoke-GodotGoal4ARestart "Complete"
+    Set-IsolatedGodotRuntime $goal6ALastingRuntimeRoot "Journey"
+    Assert-PlayerSaveAbsent "Goal 6A Lasting acceptance before launch"
+    Invoke-GodotGoal6ARun "Lasting"
+    Assert-Goal6AHudCapture "lasting-interruption"
+    Assert-Goal6ASave "LastingDeath"
+    Invoke-GodotGoal6ARun "LastingRestart"
+    Assert-Goal6ASave "LastingResolved"
 
-    Set-IsolatedGodotRuntime $goal4BRuntimeRoot "Home"
-    Assert-PlayerSaveAbsent "Goal 4B acceptance before launch"
-    Invoke-GodotGoal4BRun "Initial"
-    Assert-Goal4BSave
-    Invoke-GodotGoal4BRun "Restart"
-    Assert-Goal4BSave
+    Set-IsolatedGodotRuntime $goal6BRuntimeRoot "Journey"
+    Assert-PlayerSaveAbsent "Goal 6B acceptance before launch"
+    Invoke-GodotGoal6BRun
 
-    Set-IsolatedGodotRuntime $goal4CRuntimeRoot "Success"
-    Assert-PlayerSaveAbsent "Goal 4C success acceptance before launch"
-    Invoke-GodotGoal4CRun "Initial"
-    Assert-Goal4CSave
-    Invoke-GodotGoal4CRun "Restart"
-    Assert-Goal4CSave
-    Invoke-GodotGoal4CRun "Resolved"
-    Assert-Goal4CSave
-
-    Set-IsolatedGodotRuntime $goal4CRuntimeRoot "Failure"
-    Assert-PlayerSaveAbsent "Goal 4C failure acceptance before launch"
-    Invoke-GodotGoal4CRun "Failure"
-
-    Set-IsolatedGodotRuntime $slice5RuntimeRoot "WordMultiplies"
-    Assert-PlayerSaveAbsent "Slice 5 acceptance before launch"
-    Invoke-GodotSlice5Run "Initial"
-    Assert-Slice5Save
-    Invoke-GodotSlice5Run "Restart"
-    Assert-Slice5Save
-
-    Write-Host "`nPASS: P-GEN E5 reader/default packaging plus Slice 5, Goal 4, Goal 2, Gate 3A, and Gate 3B verified."
+    Write-Host "`nPASS: Goal 6B Power Comes Home implementation, strict v7 migration, eight rendered HUD proofs, Inspector parity, exact four-file packaging, and the complete retained Goal 6A/predecessor gate verified; player UAT remains pending."
 }
 finally
 {
@@ -1088,6 +1255,7 @@ finally
     $env:DOTNET_ROOT = $originalEnvironment.DotnetRoot
     $env:LOCALAPPDATA = $originalEnvironment.LocalAppData
     $env:NUGET_PACKAGES = $originalEnvironment.NugetPackages
+    $env:NuGetAudit = $originalEnvironment.NugetAudit
     $env:PATH = $originalEnvironment.Path
 
     Pop-Location -ErrorAction SilentlyContinue
@@ -1100,4 +1268,7 @@ finally
     Remove-VerificationRuntimeRoot $goal4BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4b-verify-")
     Remove-VerificationRuntimeRoot $goal4CRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal4c-verify-")
     Remove-VerificationRuntimeRoot $slice5RuntimeRoot (Join-Path $repoRoot ".tools\godot-slice5-verify-")
+    Remove-VerificationRuntimeRoot $goal6AQuicklyRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal6a-quickly-verify-")
+    Remove-VerificationRuntimeRoot $goal6ALastingRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal6a-lasting-verify-")
+    Remove-VerificationRuntimeRoot $goal6BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal6b-verify-")
 }
