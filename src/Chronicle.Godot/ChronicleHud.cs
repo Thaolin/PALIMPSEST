@@ -36,6 +36,7 @@ public sealed record ChronicleHudSnapshot(
     string PowerStatus,
     string PowerCapacity,
     string PowerDecision,
+    bool ShowsCombatContext,
     bool AwaitingReplacement,
     string ReplacementStatus,
     bool IsPaused);
@@ -77,6 +78,9 @@ public sealed partial class ChronicleHud : Control
     private readonly Label _powerCapacity = new();
     private readonly Label _powerDecision = new();
     private readonly Label _targetHeading = new();
+    private Label _contextSectionHeading = null!;
+    private Label _consequenceSectionHeading = null!;
+    private Label _forecastSectionHeading = null!;
     private readonly Label _targetHealthText = new();
     private readonly Label _targetFacts = new();
     private readonly Label _targetOutcome = new();
@@ -122,6 +126,8 @@ public sealed partial class ChronicleHud : Control
     public Label PowerStatus => _powerStatus;
     public Label PowerCapacity => _powerCapacity;
     public Label PowerDecision => _powerDecision;
+    public Label ClockReadout => _clock;
+    public Label PlaceReadout => _place;
 
     public void ConfigureVisualPack(CompiledVisualPack visualPack)
     {
@@ -146,7 +152,7 @@ public sealed partial class ChronicleHud : Control
         _incarnationHealthText.VerticalAlignment = VerticalAlignment.Center;
         ConfigureLabel(_load, new Vector2(328, 9), new Vector2(88, 24), 14, Bone);
         ConfigureLabel(_equipment, new Vector2(500, 10), new Vector2(240, 22), 12, Muted);
-        ConfigureLabel(_clock, new Vector2(744, 4), new Vector2(296, 26), 18, Ochre);
+        ConfigureLabel(_clock, new Vector2(744, 4), new Vector2(280, 26), 18, Ochre);
         _clock.HorizontalAlignment = HorizontalAlignment.Center;
         _clock.ZIndex = 8;
         ConfigureLabel(_place, new Vector2(1032, 9), new Vector2(160, 24), 13, Muted);
@@ -168,12 +174,12 @@ public sealed partial class ChronicleHud : Control
         load.Pressed += () => LoadRequested?.Invoke();
 
         _pauseBadgeBackground.Position = new Vector2(744, 2);
-        _pauseBadgeBackground.Size = new Vector2(296, 40);
+        _pauseBadgeBackground.Size = new Vector2(280, 40);
         _pauseBadgeBackground.Color = new Color(0.18f, 0.12f, 0.045f, 0.96f);
         _pauseBadgeBackground.MouseFilter = MouseFilterEnum.Ignore;
         _pauseBadgeBackground.ZIndex = 7;
         AddChild(_pauseBadgeBackground);
-        ConfigureLabel(_pauseBadge, new Vector2(744, 26), new Vector2(296, 14), 10, Ochre);
+        ConfigureLabel(_pauseBadge, new Vector2(744, 25), new Vector2(280, 16), 11, Ochre);
         _pauseBadge.Text = "SPACE RESUMES";
         _pauseBadge.HorizontalAlignment = HorizontalAlignment.Center;
         _pauseBadge.VerticalAlignment = VerticalAlignment.Center;
@@ -191,7 +197,7 @@ public sealed partial class ChronicleHud : Control
 
         var railX = MapWidth;
         AddSectionPanel(new Vector2(railX + 8, 50), new Vector2(304, 150));
-        AddSectionHeading("TARGET · [T] CYCLE", new Vector2(railX + 16, 54));
+        _contextSectionHeading = AddSectionHeading("TARGET · [T] CYCLE", new Vector2(railX + 16, 54));
         ConfigureLabel(_targetHeading, new Vector2(railX + 16, 78), new Vector2(288, 26), 19, Bone);
         ConfigureHealthBar(_targetHealth, new Vector2(railX + 16, 106), new Vector2(180, 18), Ember);
         ConfigureLabel(_targetHealthText, new Vector2(railX + 16, 104), new Vector2(180, 22), 12, Bone);
@@ -211,29 +217,32 @@ public sealed partial class ChronicleHud : Control
             _targetButtons.Add(button);
         }
 
-        AddSectionPanel(new Vector2(railX + 8, 208), new Vector2(304, 168), raised: true);
-        AddSectionHeading("CONSEQUENCE", new Vector2(railX + 16, 212));
+        AddSectionPanel(new Vector2(railX + 8, 208), new Vector2(304, 218), raised: true);
+        _consequenceSectionHeading = AddSectionHeading("CONSEQUENCE", new Vector2(railX + 16, 212));
         ConfigureLabel(_targetOutcome, new Vector2(-1000, -1000), Vector2.One, 1, Bone);
         _targetOutcome.Visible = false;
         var consequenceColors = new[] { Bone, Ochre, Ember, Bone, Verdigris };
         for (var index = 0; index < 5; index++)
         {
             var row = new Label();
-            ConfigureLabel(row, new Vector2(railX + 18, 240 + index * 25), new Vector2(284, 24), index == 0 ? 15 : 14, consequenceColors[index]);
-            row.AutowrapMode = TextServer.AutowrapMode.Off;
-            row.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+
+            var height = index == 0 ? 52 : 32;
+            var top = index == 0 ? 238 : 290 + (index - 1) * 32;
+            ConfigureLabel(row, new Vector2(railX + 18, top), new Vector2(284, height), index == 0 ? 15 : 13, consequenceColors[index]);
+            row.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            row.TextOverrunBehavior = TextServer.OverrunBehavior.NoTrimming;
             _consequenceRows.Add(row);
         }
 
-        AddSectionPanel(new Vector2(railX + 8, 384), new Vector2(304, 152));
-        AddSectionHeading("FORECAST · NEXT FOUR", new Vector2(railX + 16, 388));
-        ConfigureLabel(_forecast, new Vector2(railX + 28, 416), new Vector2(276, 108), 13, Bone);
+        AddSectionPanel(new Vector2(railX + 8, 434), new Vector2(304, 148));
+        _forecastSectionHeading = AddSectionHeading("FORECAST · NEXT FOUR", new Vector2(railX + 16, 438));
+        ConfigureLabel(_forecast, new Vector2(railX + 28, 466), new Vector2(276, 104), 13, Bone);
         _forecast.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        AddHeartbeatSpine(new Vector2(railX + 18, 418), 100);
+        AddHeartbeatSpine(new Vector2(railX + 18, 468), 96);
 
-        AddSectionPanel(new Vector2(railX + 8, 544), new Vector2(304, 348));
-        AddSectionHeading("MESSAGE LOG", new Vector2(railX + 16, 548));
-        ConfigureLabel(_messages, new Vector2(railX + 16, 576), new Vector2(288, 304), 13, Bone);
+        AddSectionPanel(new Vector2(railX + 8, 590), new Vector2(304, 302));
+        AddSectionHeading("MESSAGE LOG", new Vector2(railX + 16, 594));
+        ConfigureLabel(_messages, new Vector2(railX + 16, 622), new Vector2(288, 258), 13, Bone);
         _messages.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 
         AddRail(new Vector2(8, 808), new Vector2(1012, 88), new Color(0.014f, 0.025f, 0.04f, 0.94f));
@@ -293,6 +302,15 @@ public sealed partial class ChronicleHud : Control
         _powerStatus.Text = snapshot.PowerStatus;
         _powerCapacity.Text = snapshot.PowerCapacity;
         _powerDecision.Text = snapshot.PowerDecision;
+        _contextSectionHeading.Text = snapshot.ShowsCombatContext
+            ? "TARGET · [T] CYCLE"
+            : "MATERIAL STATE";
+        _consequenceSectionHeading.Text = snapshot.ShowsCombatContext
+            ? "CONSEQUENCE"
+            : "DECISION";
+        _forecastSectionHeading.Text = snapshot.ShowsCombatContext
+            ? "FORECAST · NEXT FOUR"
+            : "NEXT CHANGE";
         _targetHeading.Text = snapshot.TargetHeading;
         _targetHeading.AddThemeColorOverride(
             "font_color",
@@ -365,6 +383,7 @@ public sealed partial class ChronicleHud : Control
         for (var index = 0; index < _targetButtons.Count; index++)
         {
             var button = _targetButtons[index];
+            button.Visible = snapshot.ShowsCombatContext;
             if (index >= snapshot.Targets.Count)
             {
                 button.Text = "TARGET —";
@@ -541,20 +560,24 @@ public sealed partial class ChronicleHud : Control
         {
             var row = _consequenceRows[index];
             var source = index < lines.Length ? lines[index] : string.Empty;
-            row.Text = prefixes[index] +
-                       (source.StartsWith(labels[index], StringComparison.Ordinal)
-                           ? source[labels[index].Length..]
-                           : source);
+            row.Visible = !string.IsNullOrWhiteSpace(source);
+            row.Text = row.Visible
+                ? prefixes[index] +
+                  (source.StartsWith(labels[index], StringComparison.Ordinal)
+                      ? source[labels[index].Length..]
+                      : source)
+                : string.Empty;
         }
     }
 
-    private void AddSectionHeading(string text, Vector2 position)
+    private Label AddSectionHeading(string text, Vector2 position)
     {
         var label = new Label();
         ConfigureLabel(label, position, new Vector2(292, 20), 11, Muted);
         label.Text = text;
         AddDivider(new Vector2(position.X, position.Y + 20), 288);
         AddDivider(new Vector2(position.X, position.Y + 23), 288);
+        return label;
     }
 
     private void ConfigureLabel(
@@ -583,15 +606,16 @@ public sealed partial class ChronicleHud : Control
         {
             Position = position,
             Text = text,
-            FocusMode = FocusModeEnum.None,
+            FocusMode = FocusModeEnum.All,
         };
         button.AddThemeFontSizeOverride("font_size", fontSize);
         button.AddThemeColorOverride("font_color", quiet ? Muted : Bone);
         button.AddThemeColorOverride("font_hover_color", Bone);
-        button.AddThemeColorOverride("font_disabled_color", Muted with { A = 0.48f });
-        button.AddThemeStyleboxOverride("normal", ButtonStyle(quiet ? Backdrop : Panel, quiet ? Rule with { A = 0.55f } : Rule));
+        button.AddThemeColorOverride("font_disabled_color", Muted with { A = 0.78f });
+        button.AddThemeStyleboxOverride("normal", ButtonStyle(quiet ? Backdrop : Panel, Rule));
         button.AddThemeStyleboxOverride("hover", ButtonStyle(PanelRaised, Bone));
         button.AddThemeStyleboxOverride("pressed", ButtonStyle(Backdrop, Verdigris, 2));
+        button.AddThemeStyleboxOverride("focus", ButtonStyle(PanelRaised, Ochre, 2));
         AddChild(button);
         button.Size = size;
         return button;

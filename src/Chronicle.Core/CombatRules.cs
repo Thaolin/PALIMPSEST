@@ -23,12 +23,12 @@ public sealed record CombatState(
 {
     public const int BaseIncarnationHitPoints = 30;
     public const int SharedLoadCapacity = 8;
-    public const int Goal6ALinkCapacity = 2;
-    public const int LinkCapacity = Goal6ALinkCapacity;
+    public const int GrammarFourLinkCapacity = 2;
+    public const int LinkCapacity = GrammarFourLinkCapacity;
     public const int ActiveVerbSlots = 1;
     public const int BurnRange = 3;
-    public const int BurnDamage = 4;
-    public const int BurnRecovery = 8;
+    public static int BurnDamage => WordEffects.BaseFor(WordIds.Burn).Damage;
+    public static int BurnRecovery => WordEffects.BaseFor(WordIds.Burn).Recovery;
     public const int IronCleaverDamage = 5;
     public const int IronCleaverCadence = 2;
     public const int MireBruteMaximumHitPoints = 45;
@@ -281,7 +281,7 @@ internal readonly record struct CombatAdvanceResult(
     ChronicleState State,
     IReadOnlyList<CombatResultSnapshot> Results);
 
-internal static class Goal6AActionPlanning
+internal static class CombatRules
 {
     private static readonly TargetFactsSnapshot MireBruteFacts = new(
         IsLiving: true,
@@ -326,7 +326,7 @@ internal static class Goal6AActionPlanning
     {
         if (!IsAvailable(state))
         {
-            return MissingTarget(address, "This Chronicle has no Goal 6A Targets.");
+            return MissingTarget(address, "This Chronicle has no combat Targets.");
         }
 
         var combat = state.Combat!;
@@ -339,16 +339,16 @@ internal static class Goal6AActionPlanning
                           brute.IsLiving &&
                           distance <= CombatState.BurnRange &&
                           expression.Verb == WordIds.Burn &&
-                          !Goal6BPowerComesHome.IsCarrying(state) &&
-                          !Goal6BPowerComesHome.HasCommitment(state) &&
+                          !HoldingFacts.IsCarrying(state) &&
+                          !HoldingFacts.HasCommitment(state) &&
                           combat.RecoveryRemaining == 0 &&
                           combat.PendingAction is null &&
                           combat.Preparation is null;
             var eligibility = !state.HasLivingIncarnation
                 ? "A replacement Incarnation is required before Burn can be prepared."
-                : Goal6BPowerComesHome.IsCarrying(state)
+                : HoldingFacts.IsCarrying(state)
                     ? "Set down the Resonant Lode before preparing Burn; carrying occupies both hands and focused Attunement."
-                    : Goal6BPowerComesHome.HasCommitment(state)
+                    : HoldingFacts.HasCommitment(state)
                         ? "Finish or cancel the physical commitment before preparing Burn."
                 : !brute.IsLiving
                     ? "The Mire Brute is already dead."
@@ -374,7 +374,7 @@ internal static class Goal6AActionPlanning
                 eligibility,
                 PreparationFor(expression),
                 ConsequenceFor(expression),
-                CombatState.BurnRecovery,
+                RecoveryFor(expression),
                 IsCurrentTarget(state, brute.Identity));
         }
 
@@ -393,7 +393,7 @@ internal static class Goal6AActionPlanning
                 "Basalt is mineral, nonflammable, and anchored.",
                 PreparationFor(ActiveExpression(state)),
                 ConsequenceFor(ActiveExpression(state)),
-                CombatState.BurnRecovery,
+                RecoveryFor(ActiveExpression(state)),
                 IsCurrentTarget(state, WorldArea.GeneratedBasaltIdentity(state.Seed)));
         }
 
@@ -428,13 +428,13 @@ internal static class Goal6AActionPlanning
             return false;
         }
 
-        if (Goal6BPowerComesHome.IsCarrying(state))
+        if (HoldingFacts.IsCarrying(state))
         {
             message = "Set down the Resonant Lode before preparing Burn; carrying occupies both hands and focused Attunement.";
             return false;
         }
 
-        if (Goal6BPowerComesHome.HasCommitment(state))
+        if (HoldingFacts.HasCommitment(state))
         {
             message = "Finish or cancel the physical commitment before preparing Burn.";
             return false;
@@ -479,7 +479,9 @@ internal static class Goal6AActionPlanning
         return true;
     }
 
-    internal static CombatAdvanceResult Advance(ChronicleState state)
+    internal static CombatAdvanceResult Advance(
+        ChronicleState state,
+        IMaterialCommitments material)
     {
         if (!IsAvailable(state) ||
             !state.HasLivingIncarnation ||
@@ -496,7 +498,7 @@ internal static class Goal6AActionPlanning
         var results = new List<CombatResultSnapshot>();
         var beforeDanger = IsImmediateDanger(state);
         var next = state with { Tick = checked(state.Tick + 1) };
-        var powerAdvance = Goal6BPowerComesHome.AdvanceAfterTick(next);
+        var powerAdvance = material.AdvanceAfterTick(next);
         next = powerAdvance.State;
         if (powerAdvance.Message is { } powerMessage)
         {
@@ -521,14 +523,14 @@ internal static class Goal6AActionPlanning
                         checked(next.Address.X + pending.DeltaX),
                         checked(next.Address.Y + pending.DeltaY));
                     if (IsOccupiedByLivingMireBrute(next, destination) ||
-                        Goal6BPowerComesHome.BlocksMovement(next, destination))
+                        HoldingFacts.BlocksMovement(next, destination))
                     {
                         results.Add(Result(
                             next,
                             CombatResultKind.Command,
                             IsOccupiedByLivingMireBrute(next, destination)
                                 ? "The living Mire Brute occupies that cell."
-                                : "A physical Goal 6B subject occupies that cell.",
+                                : "A physical subject occupies that cell.",
                             destination));
                     }
                     else
@@ -619,7 +621,7 @@ internal static class Goal6AActionPlanning
         // 5. Resolve the authored Brute's bounded pursuit or cadence.
         if (!bruteDied && next.HasLivingIncarnation && IsImmediateDanger(next))
         {
-            (next, preparationInterrupted) = ApplyMireBrute(next, results, preparationInterrupted);
+            (next, preparationInterrupted) = ApplyMireBrute(next, results, preparationInterrupted, material);
         }
 
         // 6. Recovery and all derived transitions happen after observable
@@ -642,7 +644,8 @@ internal static class Goal6AActionPlanning
 
     internal static CombatContextSnapshot Snapshot(
         ChronicleState state,
-        IReadOnlyList<CombatResultSnapshot> recentResults)
+        IReadOnlyList<CombatResultSnapshot> recentResults,
+        IMaterialCommitments material)
     {
         if (!IsAvailable(state))
         {
@@ -656,7 +659,7 @@ internal static class Goal6AActionPlanning
                 new EquipmentSnapshot("", 0, 0, "", 0, "", 0),
                 null,
                 [],
-                new DangerSnapshot(false, null, "No Goal 6A encounter in this World Grammar pin."),
+                new DangerSnapshot(false, null, "No combat encounter in this World Grammar pin."),
                 new EngagementPlanState(false),
                 false,
                 EmptyExpression(),
@@ -719,10 +722,12 @@ internal static class Goal6AActionPlanning
             new RecoverySnapshot(combat.RecoveryRemaining, CanSkipRecovery(state)),
             combat.Scorch,
             recentResults,
-            Forecast(state));
+            Forecast(state, material));
     }
 
-    internal static IReadOnlyList<CombatForecastEventSnapshot> Forecast(ChronicleState state)
+    internal static IReadOnlyList<CombatForecastEventSnapshot> Forecast(
+        ChronicleState state,
+        IMaterialCommitments material)
     {
         if (!IsAvailable(state) || !state.HasLivingIncarnation)
         {
@@ -733,7 +738,7 @@ internal static class Goal6AActionPlanning
         var forecast = new List<CombatForecastEventSnapshot>(4);
         for (var heartbeat = 0; heartbeat < 64 && forecast.Count < 4; heartbeat++)
         {
-            var result = Advance(projected);
+            var result = Advance(projected, material);
             if (result.State == projected)
             {
                 break;
@@ -827,15 +832,16 @@ internal static class Goal6AActionPlanning
             return false;
         }
 
-        if (modifiers.Any(id => !verb.SupportedModifiers.Contains(id)))
+        if (modifiers.Any(id =>
+                !WordCatalogue.AreCompatible(verb, WordCatalogue.Get(id))))
         {
             message = $"That Modifier is incompatible with {verb.DisplayName}.";
             return false;
         }
 
         var load = verb.Load + modifiers.Sum(id => WordCatalogue.Get(id).Load);
-        var linkCapacity = Goal6BPowerComesHome.LinkCapacityFor(state);
-        var loadCapacity = Goal6BPowerComesHome.NextAttunementCapacity(state);
+        var linkCapacity = HoldingFacts.LinkCapacityFor(state);
+        var loadCapacity = HoldingFacts.NextAttunementCapacity(state);
         var exceedsLinks = requestedModifiers.Count > linkCapacity - 1;
         var exceedsLoad = load > loadCapacity;
         if (exceedsLinks && exceedsLoad)
@@ -853,7 +859,7 @@ internal static class Goal6AActionPlanning
 
         if (exceedsLoad)
         {
-            message = Goal6BPowerComesHome.IsAvailable(state) && loadCapacity == Goal6BPowerComesHome.InherentLoadCapacity
+            message = HoldingFacts.IsAvailable(state) && loadCapacity == HoldingFacts.InherentLoadCapacity
                 ? $"Needs {load} Load; next Attunement capacity is {loadCapacity}. " +
                   (state.PowerHome!.Resonator?.Phase switch
                   {
@@ -911,7 +917,9 @@ internal static class Goal6AActionPlanning
         return updated;
     }
 
-    internal static ChronicleState EndIncarnation(ChronicleState state)
+    internal static ChronicleState EndIncarnation(
+        ChronicleState state,
+        IMaterialCommitments material)
     {
         if (!IsAvailable(state))
         {
@@ -922,7 +930,7 @@ internal static class Goal6AActionPlanning
             };
         }
 
-        state = Goal6BPowerComesHome.EndIncarnation(state);
+        state = material.EndIncarnation(state);
         var combat = state.Combat!;
         return state with
         {
@@ -1022,8 +1030,11 @@ internal static class Goal6AActionPlanning
             Combat = combat with
             {
                 Preparation = null,
-                OngoingBurn = new BurnConsequenceState(brute.Identity, CombatState.BurnDamage, duration),
-                RecoveryRemaining = CombatState.BurnRecovery,
+                OngoingBurn = new BurnConsequenceState(
+                    brute.Identity,
+                    DamageFor(preparation.Expression),
+                    duration),
+                RecoveryRemaining = RecoveryFor(preparation.Expression),
                 Scorch = combat.Scorch ?? new ScorchedGroundState(brute.Address, state.Tick),
             },
         };
@@ -1060,7 +1071,12 @@ internal static class Goal6AActionPlanning
                     : null,
             },
         };
-        results.Add(Result(updated, CombatResultKind.BurnDamage, "Burn deals 4 fire damage.", brute.Address, burning.Damage));
+        results.Add(Result(
+            updated,
+            CombatResultKind.BurnDamage,
+            $"Burn deals {burning.Damage} fire damage.",
+            brute.Address,
+            burning.Damage));
         if (hitPoints > 0)
         {
             return (updated, false);
@@ -1125,7 +1141,8 @@ internal static class Goal6AActionPlanning
     private static (ChronicleState State, bool PreparationInterrupted) ApplyMireBrute(
         ChronicleState state,
         ICollection<CombatResultSnapshot> results,
-        bool preparationInterrupted)
+        bool preparationInterrupted,
+        IMaterialCommitments material)
     {
         var combat = state.Combat!;
         var brute = combat.MireBrute;
@@ -1165,12 +1182,12 @@ internal static class Goal6AActionPlanning
             $"Mire Brute swing deals {damage} physical damage after Quilted Jack.",
             state.Address,
             damage));
-        updated = Goal6BPowerComesHome.InterruptAfterHostileDamage(updated, results);
+        updated = material.InterruptAfterHostileDamage(updated, results);
         updatedCombat = updated.Combat!;
 
         if (hitPoints == 0)
         {
-            updated = EndIncarnation(updated);
+            updated = EndIncarnation(updated, material);
             results.Add(Result(updated, CombatResultKind.IncarnationDied, "The Incarnation dies; the Chronicle pauses."));
             return (updated, true);
         }
@@ -1254,9 +1271,9 @@ internal static class Goal6AActionPlanning
             slot.Verb,
             Array.AsReadOnly(modifiers.ToArray()),
             load,
-            state.Attunement?.Capacity ?? Goal6BPowerComesHome.NextAttunementCapacity(state),
+            state.Attunement?.Capacity ?? HoldingFacts.NextAttunementCapacity(state),
             slot.IsEmpty ? 0 : 1 + modifiers.Count,
-            Goal6BPowerComesHome.LinkCapacityFor(state),
+            HoldingFacts.LinkCapacityFor(state),
             CombatState.ActiveVerbSlots,
             slot.IsEmpty ? "No Expression attuned" : ExpressionName(slot));
     }
@@ -1309,10 +1326,16 @@ internal static class Goal6AActionPlanning
         : null;
 
     private static int PreparationFor(LoadoutSlot expression) =>
-        expression.Modifiers.Contains(WordIds.Quickly) ? 1 : 3;
+        WordEffects.Compose(expression).Preparation;
 
     private static int ConsequenceFor(LoadoutSlot expression) =>
-        expression.Modifiers.Contains(WordIds.Lasting) ? 6 : 3;
+        WordEffects.Compose(expression).Consequence;
+
+    private static int RecoveryFor(LoadoutSlot expression) =>
+        WordEffects.Compose(expression).Recovery;
+
+    private static int DamageFor(LoadoutSlot expression) =>
+        WordEffects.Compose(expression).Damage;
 
     private static string ExpressionName(LoadoutSlot expression)
     {
