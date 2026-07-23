@@ -302,7 +302,7 @@ internal static class CombatRules
         Scale: "anchored place");
 
     internal static bool IsAvailable(ChronicleState state) =>
-        state.WorldGrammarVersion is 4 or 5 && state.Combat is not null;
+        state.WorldGrammarVersion is 4 or 5 or 6 && state.Combat is not null;
 
     internal static bool IsImmediateDanger(ChronicleState state)
     {
@@ -937,8 +937,8 @@ internal static class CombatRules
             Speed = ChronicleSpeed.Paused,
             IncarnationLife = IncarnationLifeState.AwaitingReplacement,
             Study = state.Study.Stop(),
-            Loadout = state.WorldGrammarVersion == 5 ? LoadoutState.Empty : state.Loadout,
-            Attunement = state.WorldGrammarVersion == 5 ? null : state.Attunement,
+            Loadout = state.WorldGrammarVersion is 5 or 6 ? LoadoutState.Empty : state.Loadout,
+            Attunement = state.WorldGrammarVersion is 5 or 6 ? null : state.Attunement,
             Combat = combat with
             {
                 IncarnationHitPoints = 0,
@@ -968,7 +968,7 @@ internal static class CombatRules
         {
             Address = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 0),
             Loadout = LoadoutState.Empty,
-            Attunement = state.WorldGrammarVersion == 5 ? null : state.Attunement,
+            Attunement = state.WorldGrammarVersion is 5 or 6 ? null : state.Attunement,
             IncarnationId = checked(state.IncarnationId + 1),
             IncarnationLife = IncarnationLifeState.Alive,
             Study = state.Study.Stop(),

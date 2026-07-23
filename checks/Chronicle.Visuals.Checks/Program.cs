@@ -11,6 +11,8 @@ VerifyCanonicalPGenBundleAndReaderFailures();
 VerifyPGenAndManualPacksComposeTheSameSemantics();
 VerifyGoal6AVisualVocabularyAndLayerCoexistence();
 VerifyGoal6BVisualVocabularyAndSemanticStates();
+VerifyGoal7AVisualVocabularyAndSemanticStates();
+VerifyGoal7BInspectionAndDirectiveParity();
 VerifyConnectedSurfaceFeaturesUseExplicitCardinalMasks();
 VerifyGate3BManualPacksResolveRequiredVisualVocabulary();
 VerifyGate3BCompositionCropsAndLayersTheSharedSkySnapshot();
@@ -20,7 +22,7 @@ VerifyGoal4CManualPackAndStaticDangerSeam();
 VerifyGoal4CCairnSubjectsComposeOverCoreSemantics();
 VerifyMovedBellComposesAtItsCoreAddress();
 Console.WriteLine(
-    "PASS: Goal 6B canonical P-GEN reader, power-state vocabulary, retained combat semantics, deterministic composition, and overlap verified.");
+    "PASS: Goal 7B canonical P-GEN reader, inspection/Directive emphasis, retained Agent/combat/power semantics, deterministic composition, and overlap verified.");
 
 static void VerifyCanonicalPGenBundleAndReaderFailures()
 {
@@ -57,13 +59,14 @@ static void VerifyCanonicalPGenBundleAndReaderFailures()
     }
     .Concat(Goal6AVisualVocabulary().Select(static expected => expected.VisualId))
     .Concat(Goal6BVisualVocabulary().Select(static expected => expected.VisualId))
+    .Concat(Goal7AVisualVocabulary().Select(static expected => expected.VisualId))
     .ToArray();
 
     Assert(
         pack.Digest ==
-            "sha256:e3c5871dabefdb5a61078ad0b556e4304e4066b089d0cf50d36e1acbc96f3e71" &&
+            "sha256:62156457b4f32817dcedbd3ded81f38f8145550d3f03beb231e542ebefa55682" &&
         fromDirectory.Digest == pack.Digest &&
-        pack.Definitions.Count == 276 &&
+        pack.Definitions.Count == 282 &&
         pack.StyleVersion == 2 &&
         pack.ComposerVersion == 2 &&
         requiredIds.All(id => pack.Resolve(id).VisualId == id),
@@ -432,7 +435,11 @@ static void VerifyGoal6BVisualVocabularyAndSemanticStates()
             $"Goal 6B visual '{visualId}' must occupy at least {minimum.Width}x{minimum.Height} native pixels so it cannot disappear into ridge terrain; actual {occupied.Width}x{occupied.Height}.");
     }
 
-    var embedded = ChronicleState.Begin(41_337);
+    var embedded = ChronicleState.Begin(41_337) with
+    {
+        WorldGrammarVersion = 5,
+        Agents = default,
+    };
     var primer = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 2);
     var seam = new WorldAddress(SurfacePatch.SurfaceStratum, 8, 3);
     var site = new WorldAddress(SurfacePatch.SurfaceStratum, 1, 3);
@@ -558,8 +565,8 @@ static void VerifyGoal6BVisualVocabularyAndSemanticStates()
         }.Concat(sourceDigests)));
     var acceptedDigest = Convert.ToHexString(SHA256.HashData(acceptedDigestBytes)).ToLowerInvariant();
     Assert(
-        acceptedDigest == "3e36190bed4e1cc15f66831adf96b2e69d1d6bde81bc02c62e60394d0707e936",
-        $"The accepted pre-6C Goal 6B render plans must retain their historical digest; actual {acceptedDigest}.");
+        acceptedDigest == "ec8efe8d01160e8886a8181eee9bcf44583af8ed2b5df7878e5eccdb7489a4ee",
+        $"The retained Goal 6B semantic plans must remain frozen under the accepted Goal 7A pack contract; actual {acceptedDigest}.");
 }
 
 static (string VisualId, VisualLayerClass Layer)[] Goal6BVisualVocabulary() =>
@@ -576,6 +583,315 @@ static (string VisualId, VisualLayerClass Layer)[] Goal6BVisualVocabulary() =>
     ("source.hearth-resonator.destroyed", VisualLayerClass.LandmarkOrSubject),
     ("source.hearth-resonator.rebuilding", VisualLayerClass.LandmarkOrSubject),
 ];
+
+static void VerifyGoal7AVisualVocabularyAndSemanticStates()
+{
+    var pgen = LoadPGenPack();
+    var manual = ManualVisualPack.CreateGate3B(20);
+    foreach (var pack in new[] { pgen, manual })
+    {
+        foreach (var expected in Goal7AVisualVocabulary())
+        {
+            var definition = pack.Resolve(expected.VisualId);
+            Assert(
+                definition.LayerClass == expected.Layer &&
+                ReadTilePixels(pack, definition).Any(index => pack.Palette[index].Alpha != 0),
+                $"Goal 7A visual '{expected.VisualId}' must resolve to its authored layer with visible pixels.");
+        }
+    }
+
+    var state = ChronicleState.Begin(41_337) with { Tick = 20 };
+    var profile = AgentGrammar.Generate(
+        state.Seed,
+        6,
+        "resource.resonant-lode.41337",
+        new WorldAddress(SurfacePatch.SurfaceStratum, 8, 3),
+        0);
+    var waiting = new WorldAddress(SurfacePatch.SurfaceStratum, -1, 3);
+    AgentState Agent(
+        AgentPresenceState presence,
+        AgentNeedStatus need,
+        AgentHomeRelationshipKind relationship,
+        AgentIntentKind intent,
+        WorldAddress address,
+        long? arrival = null,
+        long? offered = null,
+        long? established = null,
+        WorldAddress? roadRoll = null) => new(
+            profile,
+            address,
+            waiting,
+            presence,
+            new AgentNeedState(AgentNeedKind.Refuge, need),
+            new AgentHomeRelationshipState("holding.home", relationship, established, offered is null ? null : 1),
+            intent,
+            PromotedTick: 10,
+            ArrivalTick: arrival,
+            WelcomeOfferedTick: offered,
+            RoadRollAddress: roadRoll);
+
+    var approaching = Agent(
+        AgentPresenceState.ApproachingHome,
+        AgentNeedStatus.Seeking,
+        AgentHomeRelationshipKind.Unfamiliar,
+        AgentIntentKind.ApproachHome,
+        new WorldAddress(SurfacePatch.SurfaceStratum, -3, 3));
+    var waitingAgent = Agent(
+        AgentPresenceState.WaitingAtHome,
+        AgentNeedStatus.Seeking,
+        AgentHomeRelationshipKind.Unfamiliar,
+        AgentIntentKind.WaitForWelcome,
+        waiting,
+        arrival: 13);
+    var offeredAgent = Agent(
+        AgentPresenceState.WaitingAtHome,
+        AgentNeedStatus.Offered,
+        AgentHomeRelationshipKind.WelcomeOffered,
+        AgentIntentKind.ConsiderWelcome,
+        waiting,
+        arrival: 13,
+        offered: 14);
+    var guestAgent = Agent(
+        AgentPresenceState.AtHome,
+        AgentNeedStatus.Satisfied,
+        AgentHomeRelationshipKind.Guest,
+        AgentIntentKind.RemainAtHome,
+        waiting,
+        arrival: 13,
+        offered: 14,
+        established: 15,
+        roadRoll: new WorldAddress(SurfacePatch.SurfaceStratum, -1, 4));
+    var cases = new[]
+    {
+        (Agent: approaching, VisualId: "agent.wayfarer-listener.approaching"),
+        (Agent: waitingAgent, VisualId: "agent.wayfarer-listener.waiting"),
+        (Agent: offeredAgent, VisualId: "agent.wayfarer-listener.welcome-offered"),
+        (Agent: guestAgent, VisualId: "agent.wayfarer-listener.guest"),
+    };
+    var visible = new WorldRectangle(-5, 2, 8, 4);
+    foreach (var (agent, visualId) in cases)
+    {
+        var fixture = state with { Agents = new AgentCollectionState([agent]) };
+        var semantic = WorldArea.Generate(
+            fixture,
+            SurfacePatch.SurfaceStratum,
+            VisualViewportBounds.WithOneCellSemanticHalo(visible));
+        VisualRenderPlan Compose(CompiledVisualPack pack) => VisualGrammar.Compose(
+            new VisualCompositionInput(
+                semantic,
+                visible,
+                fixture.Seed,
+                pack,
+                pack.StyleVersion,
+                fixture.Address,
+                [],
+                []));
+        var pgenPlan = Compose(pgen);
+        var manualPlan = Compose(manual);
+        Assert(
+            pgenPlan.Marks.Any(mark => mark.Address == agent.Address && mark.VisualId == visualId) &&
+            pgenPlan.Marks.Any(mark =>
+                mark.Address == ChronicleState.AcceptedHomeFixtureAddress &&
+                mark.VisualId == "subject.home-hearthstone") &&
+            pgenPlan.Marks.Select(mark => (mark.Address, mark.VisualId, mark.Layer, mark.Column, mark.Row))
+                .SequenceEqual(manualPlan.Marks.Select(mark =>
+                    (mark.Address, mark.VisualId, mark.Layer, mark.Column, mark.Row))),
+            $"Packaged P-GEN and manual proof must compose '{visualId}' from the same Agent WorldSubject while Home remains visible.");
+
+        if (agent.RoadRollAddress is { } roadRoll)
+        {
+            Assert(
+                pgenPlan.Marks.Any(mark =>
+                    mark.Address == roadRoll && mark.VisualId == "place.wayfarer-road-roll.laid"),
+                "The accepted Guest plan must visibly place Tamar's personal road-roll beside Home.");
+        }
+    }
+
+    var blockedState = state with { Agents = new AgentCollectionState([approaching]) };
+    var blockedAddress = approaching.Address with { X = approaching.Address.X + 1 };
+    var blockedSemantic = WorldArea.Generate(
+        blockedState,
+        SurfacePatch.SurfaceStratum,
+        VisualViewportBounds.WithOneCellSemanticHalo(visible));
+    var blockedPlan = VisualGrammar.Compose(new VisualCompositionInput(
+        blockedSemantic,
+        visible,
+        blockedState.Seed,
+        pgen,
+        pgen.StyleVersion,
+        blockedState.Address,
+        [],
+        [],
+        ActionEmphases:
+        [
+            new VisualPresentationEmphasis(
+                blockedAddress,
+                VisualPresentationEmphasisKind.AgentBlockedRoute),
+        ]));
+    Assert(
+        blockedPlan.Marks.Any(mark =>
+            mark.Address == blockedAddress && mark.VisualId == "emphasis.agent.blocked-route"),
+        "A blocked Agent route must mark the exact interrupted next cell through the shared composer.");
+}
+
+static (string VisualId, VisualLayerClass Layer)[] Goal7AVisualVocabulary() =>
+[
+    ("agent.wayfarer-listener.approaching", VisualLayerClass.Actor),
+    ("agent.wayfarer-listener.waiting", VisualLayerClass.Actor),
+    ("agent.wayfarer-listener.welcome-offered", VisualLayerClass.Actor),
+    ("agent.wayfarer-listener.guest", VisualLayerClass.Actor),
+    ("place.wayfarer-road-roll.laid", VisualLayerClass.LandmarkOrSubject),
+    ("emphasis.agent.blocked-route", VisualLayerClass.TemporaryAction),
+];
+
+static void VerifyGoal7BInspectionAndDirectiveParity()
+{
+    var pgen = LoadPGenPack();
+    var manual = ManualVisualPack.CreateGate3B(20);
+    var state = CompleteGoal7AVisualGuest();
+    var agent = state.Agents[0];
+    var brute = state.Combat!.MireBrute;
+    var visible = VisualViewportBounds.Centered(
+        state.Address.X,
+        state.Address.Y,
+        32,
+        23);
+    var semantic = WorldArea.Generate(
+        state,
+        SurfacePatch.SurfaceStratum,
+        VisualViewportBounds.WithOneCellSemanticHalo(visible));
+    var visibleCells = semantic.Cells.Where(cell =>
+        cell.Address.X >= visible.MinX && cell.Address.X < visible.MinX + visible.Width &&
+        cell.Address.Y >= visible.MinY && cell.Address.Y < visible.MinY + visible.Height).ToArray();
+    var empty = visibleCells.First(cell => cell.Subjects.Count == 0 && cell.Ground == WorldGround.Grass);
+    var waterOrRidge = visibleCells.First(cell =>
+        cell.Ground == WorldGround.Water || cell.Feature == WorldFeature.Stone);
+    var hearth = visibleCells.Single(cell => cell.Address == ChronicleState.AcceptedHomeFixtureAddress);
+    var resonator = visibleCells.Single(cell => cell.Address == state.PowerHome!.Resonator!.Address);
+    var roadRoll = visibleCells.Single(cell => cell.Address == agent.RoadRollAddress);
+    var tamar = visibleCells.Single(cell => cell.Address == agent.Address);
+    var mireBrute = visibleCells.Single(cell => cell.Address == brute.Address);
+    Assert(empty.Subjects.Count == 0, "Inspection must expose representative empty terrain.");
+    Assert(waterOrRidge.Ground == WorldGround.Water || waterOrRidge.Feature == WorldFeature.Stone,
+        "Inspection must expose representative water or ridge terrain.");
+    Assert(hearth.DurableIdentity == "The First Hearthstone",
+        $"Inspection must expose the accepted Hearth identity; durable={hearth.DurableIdentity}.");
+    Assert(resonator.Has(WorldSubjectKind.LoadSource),
+        $"Inspection must expose the intact Resonator; subjects={string.Join(',', resonator.Subjects.Select(subject => subject.Kind))}.");
+    Assert(roadRoll.Subject(WorldSubjectKind.PersonalPlace) is
+        {
+            OwnerIdentity: var owner,
+            Condition: WorldSubjects.Laid,
+        } && owner == agent.Profile.Identity,
+        "Inspection must expose the road-roll's condition and owner identity.");
+    Assert(tamar.Subject(WorldSubjectKind.Agent)?.Identity == agent.Profile.Identity,
+        "Inspection must expose Tamar's consequential identity.");
+    Assert(mireBrute.Subject(WorldSubjectKind.Creature)?.Identity == brute.Identity,
+        "Inspection must expose the living Mire Brute identity.");
+
+    var cases = new[]
+    {
+        (Name: "inspect-road-roll", Selections: new[] { roadRoll.Address },
+            Emphases: Array.Empty<VisualPresentationEmphasis>()),
+        (Name: "safe-preview", Selections: new[] { tamar.Address, roadRoll.Address },
+            Emphases: Array.Empty<VisualPresentationEmphasis>()),
+        (Name: "safe-pending", Selections: Array.Empty<WorldAddress>(),
+            Emphases: new[]
+            {
+                new VisualPresentationEmphasis(tamar.Address, VisualPresentationEmphasisKind.PendingAction),
+                new VisualPresentationEmphasis(roadRoll.Address, VisualPresentationEmphasisKind.PendingAction),
+            }),
+        (Name: "accepted", Selections: new[] { roadRoll.Address },
+            Emphases: Array.Empty<VisualPresentationEmphasis>()),
+        (Name: "blocked-delayed", Selections: new[] { roadRoll.Address },
+            Emphases: new[]
+            {
+                new VisualPresentationEmphasis(roadRoll.Address, VisualPresentationEmphasisKind.AgentBlockedRoute),
+            }),
+        (Name: "dangerous-pending", Selections: new[] { mireBrute.Address },
+            Emphases: new[]
+            {
+                new VisualPresentationEmphasis(tamar.Address, VisualPresentationEmphasisKind.PendingAction),
+                new VisualPresentationEmphasis(mireBrute.Address, VisualPresentationEmphasisKind.PendingAction),
+            }),
+        (Name: "refused", Selections: new[] { tamar.Address, mireBrute.Address },
+            Emphases: Array.Empty<VisualPresentationEmphasis>()),
+        (Name: "restored-replacement-memory", Selections: new[] { tamar.Address },
+            Emphases: Array.Empty<VisualPresentationEmphasis>()),
+    };
+    foreach (var fixture in cases)
+    {
+        VisualRenderPlan Compose(CompiledVisualPack pack) => VisualGrammar.Compose(
+            new VisualCompositionInput(
+                semantic,
+                visible,
+                state.Seed,
+                pack,
+                pack.StyleVersion,
+                state.Address,
+                [brute.Address],
+                fixture.Selections,
+                [],
+                fixture.Emphases));
+        var packaged = Compose(pgen);
+        var golden = Compose(manual);
+        Assert(
+            packaged.Marks.Select(mark =>
+                    (mark.Address, mark.VisualId, mark.Layer, mark.Column, mark.Row))
+                .SequenceEqual(golden.Marks.Select(mark =>
+                    (mark.Address, mark.VisualId, mark.Layer, mark.Column, mark.Row))) &&
+            packaged.Marks.Any(mark => mark.Address == tamar.Address &&
+                mark.VisualId == "agent.wayfarer-listener.guest") &&
+            packaged.Marks.Any(mark => mark.Address == roadRoll.Address &&
+                mark.VisualId == "place.wayfarer-road-roll.laid") &&
+            packaged.Marks.Any(mark => mark.Address == mireBrute.Address &&
+                mark.VisualId == "subject.mire-brute.living"),
+            $"Goal 7B '{fixture.Name}' must compose byte-source-independent semantic marks through packaged and manual packs.");
+    }
+}
+
+static ChronicleState CompleteGoal7AVisualGuest()
+{
+    var simulation = new ChronicleSimulation(ChronicleState.Begin(41_337));
+    Assert(simulation.Apply(new ChooseHereIntent()).Applied, "Visual Guest fixture must establish Home.");
+    Assert(simulation.Apply(new ReadBurnPrimer()).Applied, "Visual Guest fixture must read the Burn Primer.");
+    simulation = new ChronicleSimulation(simulation.State with
+    {
+        Address = new WorldAddress(SurfacePatch.SurfaceStratum, 7, 3),
+        Speed = ChronicleSpeed.Paused,
+    });
+    Assert(simulation.Apply(new BeginPowerCommitment(PowerCommitmentKind.Extract)).Applied,
+        "Visual Guest fixture must begin extraction.");
+    AdvanceVisualFixture(simulation, 2);
+    Assert(simulation.Apply(new LiftResonantLode()).Applied, "Visual Guest fixture must lift the Lode.");
+    simulation = new ChronicleSimulation(simulation.State with
+    {
+        Address = ChronicleState.AcceptedHomeFixtureAddress,
+        Speed = ChronicleSpeed.Paused,
+    });
+    Assert(simulation.Apply(new BeginPowerCommitment(PowerCommitmentKind.Build)).Applied,
+        "Visual Guest fixture must begin building.");
+    AdvanceVisualFixture(simulation, 3);
+    AdvanceVisualFixture(simulation, 3);
+    Assert(simulation.Apply(new OfferWelcome(simulation.State.Agents[0].Profile.Identity)).Applied,
+        "Visual Guest fixture must offer welcome.");
+    AdvanceVisualFixture(simulation, 1);
+    return simulation.State;
+}
+
+static void AdvanceVisualFixture(ChronicleSimulation simulation, int ticks)
+{
+    if (simulation.State.Speed != ChronicleSpeed.Slow)
+    {
+        Assert(simulation.Apply(new SetChronicleSpeed(ChronicleSpeed.Slow)).Applied,
+            "Visual fixture must resume at Slow.");
+    }
+
+    for (var index = 0; index < ticks; index++)
+    {
+        simulation.AdvanceOneTick();
+    }
+}
 
 static ChronicleState Goal6AFixture() => ChronicleState.Begin(41_337) with
 {
@@ -1135,6 +1451,8 @@ static void VerifyGate3BManualPacksResolveRequiredVisualVocabulary()
         "glyph.codex.stone",
     }
     .Concat(Goal6AVisualVocabulary().Select(static expected => expected.VisualId))
+    .Concat(Goal6BVisualVocabulary().Select(static expected => expected.VisualId))
+    .Concat(Goal7AVisualVocabulary().Select(static expected => expected.VisualId))
     .ToArray();
 
     foreach (var cellSize in new[] { 16, 20 })

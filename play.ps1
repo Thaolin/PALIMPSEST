@@ -190,6 +190,22 @@ try
     {
         $gameArguments += "--manual-visual-pack"
     }
+    if ($Profile -eq "goal7a-welcome-uat")
+    {
+        $gameArguments += "--prepare-goal7a-welcome-uat"
+    }
+    elseif ($Profile -eq "goal7a-replacement-uat")
+    {
+        $gameArguments += "--prepare-goal7a-replacement-uat"
+    }
+    elseif ($Profile -eq "goal7b-suggest-uat")
+    {
+        $gameArguments += "--prepare-goal7b-suggest-uat"
+    }
+    elseif ($Profile -eq "goal7b-command-uat")
+    {
+        $gameArguments += "--prepare-goal7b-command-uat"
+    }
     & $godot --path $projectDirectory -- @gameArguments
     if ($LASTEXITCODE -ne 0)
     {

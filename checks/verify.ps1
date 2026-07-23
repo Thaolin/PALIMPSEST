@@ -25,6 +25,10 @@ $goal6ALastingRuntimeName = "godot-goal6a-lasting-verify-$([Guid]::NewGuid().ToS
 $goal6ALastingRuntimeRoot = Join-Path $repoRoot ".tools\$goal6ALastingRuntimeName"
 $goal6BRuntimeName = "godot-goal6b-verify-$([Guid]::NewGuid().ToString("N"))"
 $goal6BRuntimeRoot = Join-Path $repoRoot ".tools\$goal6BRuntimeName"
+$goal7ARuntimeName = "godot-goal7a-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal7ARuntimeRoot = Join-Path $repoRoot ".tools\$goal7ARuntimeName"
+$goal7BRuntimeName = "godot-goal7b-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal7BRuntimeRoot = Join-Path $repoRoot ".tools\$goal7BRuntimeName"
 
 $originalEnvironment = @{
     AppData = $env:APPDATA
@@ -110,10 +114,10 @@ function Invoke-GodotGoal6ARun {
     }
     $marker = switch ($Phase)
     {
-        "Quickly" { "GOAL6A QUICKLY SAVE READY hud=map-first target=basalt-rejected scorch=present brute=dead save=7" }
+        "Quickly" { "GOAL6A QUICKLY SAVE READY hud=map-first target=basalt-rejected scorch=present brute=dead save=9" }
         "QuicklyRestart" { "GOAL6A QUICKLY RESTART PASS scorch=present brute=dead hud=restored" }
         "Lasting" { "GOAL6A LASTING DEATH READY" }
-        "LastingRestart" { "GOAL6A LASTING RESTART PASS incarnation=2 equipment=fresh scorch=present brute=dead save=7" }
+        "LastingRestart" { "GOAL6A LASTING RESTART PASS incarnation=2 equipment=fresh scorch=present brute=dead save=9" }
     }
 
     Write-Host "`n==> Drive Goal 6A $Phase journey through the actual Godot HUD"
@@ -178,12 +182,12 @@ function Assert-Goal6ASave {
     }
 
     $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
-    if ([int]$save.Version -ne 7 -or
+    if ([int]$save.Version -ne 9 -or
         [int]$save.Chronicle.WorldGrammarVersion -ne 4 -or
         $null -eq $save.Chronicle.Combat -or
         $null -eq $save.Chronicle.Combat.Scorch)
     {
-        throw "Goal 6A $Phase did not retain strict v7/WG4 combat and scorch state."
+        throw "Goal 6A $Phase did not retain strict v9/WG4 combat and scorch state."
     }
 
     $bruteHp = [int]$save.Chronicle.Combat.MireBrute.HitPoints
@@ -212,7 +216,7 @@ function Invoke-GodotGoal6BRun {
         throw "Godot Goal 6B journey failed with exit code $exitCode."
     }
 
-    $marker = "GOAL6B VISUAL ACCEPTANCE PASS captures=8 save=7 keyboard=mouse map=physical capacity=next-attunement"
+    $marker = "GOAL6B VISUAL ACCEPTANCE PASS captures=8 save=9 keyboard=mouse map=physical capacity=next-attunement"
     if (-not $text.Contains($marker))
     {
         throw "Godot did not complete the exact Goal 6B rendered journey."
@@ -247,22 +251,168 @@ function Invoke-GodotGoal6BRun {
     $savePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\slice0_chronicle.json"
     if (-not (Test-Path -LiteralPath $savePath -PathType Leaf))
     {
-        throw "Goal 6B did not create its isolated strict v7 Chronicle save."
+        throw "Goal 6B did not create its isolated strict v9 Chronicle save."
     }
 
     $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
-    if ([int]$save.Version -ne 7 -or
+    if ([int]$save.Version -ne 9 -or
         [int]$save.Chronicle.WorldGrammarVersion -ne 5 -or
         $null -eq $save.Chronicle.PowerHome -or
         [int]$save.Chronicle.PowerHome.Resonator.Phase -ne 2 -or
         [int]$save.Chronicle.Attunement.Capacity -ne 12)
     {
-        throw "Goal 6B did not retain strict v7/WG5 rebuilt Source and twelve-Load Attunement state."
+        throw "Goal 6B did not retain strict v9/WG5 rebuilt Source and twelve-Load Attunement state."
     }
 
     if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
     {
         throw "Godot reported an error during Goal 6B rendered acceptance."
+    }
+}
+
+function Invoke-GodotGoal7ARun {
+    Write-Host "`n==> Drive both bounded Goal 7A journeys through the actual Godot HUD"
+    $output = @(& $godot --path $godotProjectDirectory --position 32000,32000 --resolution 1600x900 -- --verify-goal7a-visuals 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Goal 7A journey failed with exit code $exitCode."
+    }
+
+    $marker = "GOAL7A VISUAL ACCEPTANCE PASS captures=6 save=9 keyboard=mouse agent=consequential relationship=guest"
+    if (-not $text.Contains($marker))
+    {
+        throw "Godot did not complete the exact Goal 7A rendered journeys."
+    }
+
+    $stages = @(
+        "approaching",
+        "waiting",
+        "open-offer",
+        "accepted-guest",
+        "restored-guest",
+        "replacement-return"
+    )
+    foreach ($stage in $stages)
+    {
+        $captureMarker = "GOAL7A HUD CAPTURE PASS stage=$stage size=1600x900"
+        if (-not $text.Contains($captureMarker))
+        {
+            throw "Godot did not report the required Goal 7A '$stage' HUD capture."
+        }
+
+        $capturePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\goal7a-$stage-hud.png"
+        if (-not (Test-Path -LiteralPath $capturePath -PathType Leaf) -or
+            (Get-Item -LiteralPath $capturePath).Length -lt 4096)
+        {
+            throw "Goal 7A '$stage' did not produce a substantive isolated 1600x900 HUD capture."
+        }
+    }
+
+    $savePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\slice0_chronicle.json"
+    if (-not (Test-Path -LiteralPath $savePath -PathType Leaf))
+    {
+        throw "Goal 7A did not create its isolated strict v9 Chronicle save."
+    }
+
+    $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
+    $agents = @($save.Chronicle.Agents)
+    if ([int]$save.Version -ne 9 -or
+        [int]$save.Chronicle.WorldGrammarVersion -ne 6 -or
+        [int]$save.Chronicle.IncarnationId -ne 2 -or
+        $agents.Count -ne 1 -or
+        $agents[0].Profile.DisplayName -ne "Tamar Venn" -or
+        [int]$agents[0].Presence -ne 3 -or
+        [int]$agents[0].Need.Status -ne 3 -or
+        [int]$agents[0].HomeRelationship.Kind -ne 3 -or
+        [int]$agents[0].HomeRelationship.WelcomingIncarnationId -ne 1 -or
+        $null -eq $agents[0].RoadRollAddress)
+    {
+        throw "Goal 7A did not retain strict-v9 WG6 identity, Guest history, prior-Incarnation cause, and road-roll."
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during Goal 7A rendered acceptance."
+    }
+}
+
+function Invoke-GodotGoal7BRun {
+    Write-Host "`n==> Drive both bounded Goal 7B journeys through the actual Godot HUD"
+    $output = @(& $godot --path $godotProjectDirectory --position 32000,32000 --resolution 1600x900 -- --verify-goal7b-visuals 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Goal 7B journey failed with exit code $exitCode."
+    }
+
+    $marker = "GOAL7B VISUAL ACCEPTANCE PASS captures=8 save=9 inspection=keyboard+mouse directive=agency"
+    if (-not $text.Contains($marker))
+    {
+        throw "Godot did not complete the exact Goal 7B rendered journeys."
+    }
+
+    $stages = @(
+        "inspected-road-roll",
+        "safe-suggest-preview",
+        "safe-pending",
+        "accepted-movement",
+        "dangerous-suggest-rejection",
+        "dangerous-command-pending",
+        "refusal",
+        "restored-refusal"
+    )
+    foreach ($stage in $stages)
+    {
+        $captureMarker = "GOAL7B HUD CAPTURE PASS stage=$stage size=1600x900"
+        if (-not $text.Contains($captureMarker))
+        {
+            throw "Godot did not report the required Goal 7B '$stage' HUD capture."
+        }
+
+        $capturePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\goal7b-$stage-hud.png"
+        if (-not (Test-Path -LiteralPath $capturePath -PathType Leaf) -or
+            (Get-Item -LiteralPath $capturePath).Length -lt 4096)
+        {
+            throw "Goal 7B '$stage' did not produce a substantive isolated 1600x900 HUD capture."
+        }
+    }
+
+    $savePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\slice0_chronicle.json"
+    if (-not (Test-Path -LiteralPath $savePath -PathType Leaf))
+    {
+        throw "Goal 7B did not create its isolated strict v9 Chronicle save."
+    }
+
+    $save = Get-Content -LiteralPath $savePath -Raw | ConvertFrom-Json
+    $agents = @($save.Chronicle.Agents)
+    $memories = @($agents[0].DirectiveMemories)
+    $codex = @($save.Chronicle.Codex.Words)
+    if ([int]$save.Version -ne 9 -or
+        [int]$save.Chronicle.WorldGrammarVersion -ne 6 -or
+        $agents.Count -ne 1 -or
+        $agents[0].Profile.DisplayName -ne "Tamar Venn" -or
+        [int]$agents[0].HomeRelationship.Kind -ne 3 -or
+        $null -ne $agents[0].PendingDirective -or
+        $memories.Count -ne 1 -or
+        [int]$memories[0].Response -ne 3 -or
+        [int]$memories[0].Reason -ne 3 -or
+        $memories[0].Verb -ne "word.command" -or
+        -not $codex.Contains("word.suggest") -or
+        -not $codex.Contains("word.command"))
+    {
+        throw "Goal 7B did not retain strict-v9 WG6 social Words, Guest agency, Command refusal, and exact memory."
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during Goal 7B rendered acceptance."
     }
 }
 
@@ -366,11 +516,11 @@ function Invoke-GodotAtlasRun {
 
         $expectedHistoricalDigest = if ($VisualCellSize -eq 20 -and -not $ManualComparison)
         {
-            "sha256:4833f4d82d94f002338cc91184329eebbbc575ee1eddee2911a93bf2608d88c0"
+            "sha256:0c5d7ba3914a594598a95c28a70ce62ed3e2b1c5ebb24ebbb8c043d78d13170a"
         }
         else
         {
-            "sha256:e6e611f272baf6071f43366126983d9c2ad6b71ac23cd573b0c4432a3c85ead8"
+            "sha256:87e56029a56dfe042e3355527d96f7f8d433f7471da0042911d9384abc8b7647"
         }
         if (-not $text.Contains("$expectedComposerMarker digest=$expectedHistoricalDigest"))
         {
@@ -388,6 +538,20 @@ function Invoke-GodotAtlasRun {
         if (-not $text.Contains($expectedGoal6BMarker))
         {
             throw "$Label did not prove Goal 6B Inspector parity for every bounded state."
+        }
+
+        $expectedGoal7AMarker =
+            "GOAL7A INSPECTOR PARITY PASS states=6 pack=$expectedPack size=$VisualCellSize"
+        if (-not $text.Contains($expectedGoal7AMarker))
+        {
+            throw "$Label did not prove Goal 7A packaged/manual Inspector parity for every bounded Agent state."
+        }
+
+        $expectedGoal7BMarker =
+            "GOAL7B INSPECTOR PARITY PASS states=9 pack=$expectedPack size=$VisualCellSize"
+        if (-not $text.Contains($expectedGoal7BMarker))
+        {
+            throw "$Label did not prove Goal 7B packaged/manual Inspector parity for every bounded Directive state."
         }
     }
 
@@ -560,8 +724,8 @@ try
     $env:LOCALAPPDATA = (New-Item -ItemType Directory -Force (Join-Path $runtimeRoot "Local")).FullName
 
     Invoke-GodotEditorBuild
-    Invoke-GodotStartup "Start the Goal 6B game headlessly and create strict v7 state"
-    Invoke-GodotStartup "Restart the Goal 6B game headlessly and restore strict v7 state" -RequireLoad
+    Invoke-GodotStartup "Start the current game headlessly and create strict v9 state"
+    Invoke-GodotStartup "Restart the current game headlessly and restore strict v9 state" -RequireLoad
 
     Set-IsolatedGodotRuntime $goal6AQuicklyRuntimeRoot "Journey"
     Assert-PlayerSaveAbsent "Goal 6A Quickly acceptance before launch"
@@ -583,7 +747,15 @@ try
     Assert-PlayerSaveAbsent "Goal 6B acceptance before launch"
     Invoke-GodotGoal6BRun
 
-    Write-Host "`nPASS: P-GEN authoring verification, Chronicle.Core checks including literal predecessor save migration, Chronicle.Visuals checks, the Godot editor build, exact four-file packaging, World Atlas Inspector semantic and native visual parity, both Goal 6A journeys with their rendered HUD proofs and saves, and the Goal 6B journey with its eight rendered HUD proofs verified."
+    Set-IsolatedGodotRuntime $goal7ARuntimeRoot "Journey"
+    Assert-PlayerSaveAbsent "Goal 7A acceptance before launch"
+    Invoke-GodotGoal7ARun
+
+    Set-IsolatedGodotRuntime $goal7BRuntimeRoot "Journey"
+    Assert-PlayerSaveAbsent "Goal 7B acceptance before launch"
+    Invoke-GodotGoal7BRun
+
+    Write-Host "`nPASS: P-GEN authoring verification, Chronicle.Core strict-v9 and literal migration checks, Chronicle.Visuals checks, Godot editor build, exact four-file packaging, World Atlas Inspector packaged/manual parity, both Goal 6A journeys, retained Goal 6B/7A, and Goal 7B with eight rendered HUD proofs."
 }
 finally
 {
@@ -603,4 +775,6 @@ finally
     Remove-VerificationRuntimeRoot $goal6AQuicklyRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal6a-quickly-verify-")
     Remove-VerificationRuntimeRoot $goal6ALastingRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal6a-lasting-verify-")
     Remove-VerificationRuntimeRoot $goal6BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal6b-verify-")
+    Remove-VerificationRuntimeRoot $goal7ARuntimeRoot (Join-Path $repoRoot ".tools\godot-goal7a-verify-")
+    Remove-VerificationRuntimeRoot $goal7BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal7b-verify-")
 }

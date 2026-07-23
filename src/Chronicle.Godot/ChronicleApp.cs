@@ -29,6 +29,7 @@ public partial class ChronicleApp : Node
     private static readonly StringName CombinedAction = "chronicle_attune_combined";
     private static readonly StringName PowerPrimaryAction = "chronicle_power_primary";
     private static readonly StringName PowerSecondaryAction = "chronicle_power_secondary";
+    private static readonly StringName InspectAction = "chronicle_inspect";
 
     private ChronicleSimulation _simulation = CreateTestingStart();
     private ChronicleHud _hud = null!;
@@ -47,6 +48,15 @@ public partial class ChronicleApp : Node
     private bool _verifyLasting;
     private bool _verifyLastingRestart;
     private bool _verifyGoal6BVisuals;
+    private bool _verifyGoal7AVisuals;
+    private bool _verifyGoal7BVisuals;
+    private bool _prepareGoal7AWelcomeUat;
+    private bool _prepareGoal7AReplacementUat;
+    private bool _prepareGoal7BSuggestUat;
+    private bool _prepareGoal7BCommandUat;
+    private bool _isInspecting;
+    private WorldAddress? _inspectionCursor;
+    private WorldAddress? _inspectionSelection;
 
     public override void _Ready()
     {
@@ -56,6 +66,12 @@ public partial class ChronicleApp : Node
         _verifyLasting = arguments.Contains("--verify-goal6a-lasting", StringComparer.Ordinal);
         _verifyLastingRestart = arguments.Contains("--verify-goal6a-lasting-restart", StringComparer.Ordinal);
         _verifyGoal6BVisuals = arguments.Contains("--verify-goal6b-visuals", StringComparer.Ordinal);
+        _verifyGoal7AVisuals = arguments.Contains("--verify-goal7a-visuals", StringComparer.Ordinal);
+        _verifyGoal7BVisuals = arguments.Contains("--verify-goal7b-visuals", StringComparer.Ordinal);
+        _prepareGoal7AWelcomeUat = arguments.Contains("--prepare-goal7a-welcome-uat", StringComparer.Ordinal);
+        _prepareGoal7AReplacementUat = arguments.Contains("--prepare-goal7a-replacement-uat", StringComparer.Ordinal);
+        _prepareGoal7BSuggestUat = arguments.Contains("--prepare-goal7b-suggest-uat", StringComparer.Ordinal);
+        _prepareGoal7BCommandUat = arguments.Contains("--prepare-goal7b-command-uat", StringComparer.Ordinal);
 
         _visualPack = PackagedVisualPackLoader.Load(arguments, 20);
         _map = new WorldVisualView
@@ -76,12 +92,39 @@ public partial class ChronicleApp : Node
         AddChild(_hud);
         BuildOpeningPanel();
 
+        var hadSave = Godot.FileAccess.FileExists(SavePath);
         LoadOrCreateChronicle();
+        if (!hadSave && _prepareGoal7AWelcomeUat)
+        {
+            PrepareGoal7AWelcomeUat();
+        }
+        else if (!hadSave && _prepareGoal7AReplacementUat)
+        {
+            PrepareGoal7AReplacementUat();
+        }
+        else if (!hadSave && _prepareGoal7BSuggestUat)
+        {
+            PrepareGoal7BUat(WordIds.Suggest);
+        }
+        else if (!hadSave && _prepareGoal7BCommandUat)
+        {
+            PrepareGoal7BUat(WordIds.Command);
+        }
         RefreshPresentation(forceMap: true);
         GD.Print("GOAL6A READY");
         GD.Print("GOAL6B READY");
+        GD.Print("GOAL7A READY");
+        GD.Print("GOAL7B READY");
 
-        if (_verifyGoal6BVisuals)
+        if (_verifyGoal7BVisuals)
+        {
+            Callable.From(() => RunAcceptance(RunGoal7BVisualAcceptance)).CallDeferred();
+        }
+        else if (_verifyGoal7AVisuals)
+        {
+            Callable.From(() => RunAcceptance(RunGoal7AVisualAcceptance)).CallDeferred();
+        }
+        else if (_verifyGoal6BVisuals)
         {
             Callable.From(() => RunAcceptance(RunGoal6BVisualAcceptance)).CallDeferred();
         }
@@ -105,7 +148,7 @@ public partial class ChronicleApp : Node
 
     public override void _Process(double delta)
     {
-        if (!_verifyGoal6BVisuals)
+        if (!_verifyGoal6BVisuals && !_verifyGoal7AVisuals && !_verifyGoal7BVisuals)
         {
             _heartbeatAccumulator += delta;
             while (_heartbeatAccumulator >= SlowHeartbeatSeconds)
@@ -152,6 +195,63 @@ public partial class ChronicleApp : Node
             else if (@event.IsActionPressed("chronicle_fast"))
             {
                 ChooseIntent(new ChooseHereIntent(), "The Chronicle answers: Found.");
+            }
+            else
+            {
+                return;
+            }
+
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (@event.IsActionPressed(InspectAction))
+        {
+            BeginInspection(_simulation.State.Address);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (@event is InputEventMouseButton
+            {
+                Pressed: true,
+                ButtonIndex: MouseButton.Left,
+            } mouse && TryMapAddress(mouse.Position, out var clickedAddress))
+        {
+            BeginInspection(clickedAddress, select: true);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (_isInspecting)
+        {
+            if (@event.IsActionPressed(MoveNorthAction))
+            {
+                MoveInspectionCursor(0, -1);
+            }
+            else if (@event.IsActionPressed(MoveWestAction))
+            {
+                MoveInspectionCursor(-1, 0);
+            }
+            else if (@event.IsActionPressed(MoveSouthAction))
+            {
+                MoveInspectionCursor(0, 1);
+            }
+            else if (@event.IsActionPressed(MoveEastAction))
+            {
+                MoveInspectionCursor(1, 0);
+            }
+            else if (@event.IsActionPressed("ui_accept"))
+            {
+                _inspectionSelection = _inspectionCursor;
+                _presentationStatus = $"Selected visible cell {_inspectionSelection}.";
+                RefreshPresentation(forceMap: true);
+            }
+            else if (@event.IsActionPressed("ui_cancel"))
+            {
+                _isInspecting = false;
+                _presentationStatus = "Inspection closed. WASD moves the Incarnation again.";
+                RefreshPresentation(forceMap: true);
             }
             else
             {
@@ -343,11 +443,17 @@ public partial class ChronicleApp : Node
         var beforeResults = _simulation.CombatContext.RecentResults;
         var beforeLast = beforeResults.LastOrDefault();
         var beforeCount = beforeResults.Count;
+        var beforeAgentEvents = _simulation.AgentContext.RecentEvents;
+        var beforeAgentLast = beforeAgentEvents.LastOrDefault();
+        var beforeAgentCount = beforeAgentEvents.Count;
         var result = _simulation.Apply(command);
         var afterResults = _simulation.CombatContext.RecentResults;
+        var afterAgentEvents = _simulation.AgentContext.RecentEvents;
         var commandRecorded = result.Applied &&
                               (afterResults.Count != beforeCount ||
-                               afterResults.LastOrDefault() != beforeLast);
+                               afterResults.LastOrDefault() != beforeLast ||
+                               afterAgentEvents.Count != beforeAgentCount ||
+                               afterAgentEvents.LastOrDefault() != beforeAgentLast);
         _presentationStatus = commandRecorded
             ? string.Empty
             : string.IsNullOrWhiteSpace(result.Message)
@@ -393,6 +499,40 @@ public partial class ChronicleApp : Node
 
     private void IssuePowerPrimary()
     {
+        if (HasDirectiveSurface())
+        {
+            var agentIdentity = _simulation.DirectiveContext.PrimaryAgentIdentity!;
+            if (_simulation.DirectiveContext.Pending is not null)
+            {
+                Issue(new WithdrawDirective(agentIdentity));
+            }
+            else
+            {
+                IssueDirective(DirectiveKind.RestByRoadRoll);
+            }
+
+            return;
+        }
+
+        if (_simulation.AgentContext.PrimaryAgent is { } agent)
+        {
+            var kind = agent.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered
+                ? AgentActionKind.WithdrawWelcome
+                : AgentActionKind.OfferWelcome;
+            var agentAction = _simulation.AgentContext.Actions.Single(candidate => candidate.Kind == kind);
+            if (!agentAction.Available)
+            {
+                _presentationStatus = AgentPresentation.ActionUnavailable(agent, agentAction);
+                RefreshPresentation();
+                return;
+            }
+
+            Issue(kind == AgentActionKind.OfferWelcome
+                ? new OfferWelcome(agent.Identity)
+                : new WithdrawWelcome(agent.Identity));
+            return;
+        }
+
         var action = SelectPowerPrimary(_simulation.PowerComesHomeContext);
         if (action is null || PowerCommand(action) is not { } command)
         {
@@ -408,6 +548,12 @@ public partial class ChronicleApp : Node
 
     private void IssuePowerSecondary()
     {
+        if (HasDirectiveSurface())
+        {
+            IssueDirective(DirectiveKind.ApproachMireBrute);
+            return;
+        }
+
         if (_simulation.PowerComesHomeContext.Commitment is not null)
         {
             Issue(new CancelPowerCommitment());
@@ -435,6 +581,80 @@ public partial class ChronicleApp : Node
         RefreshPresentation(forceMap: true);
     }
 
+    private void BeginInspection(WorldAddress address, bool select = false)
+    {
+        _isInspecting = true;
+        _inspectionCursor = address;
+        if (select)
+        {
+            _inspectionSelection = address;
+        }
+
+        _presentationStatus = select
+            ? $"Selected visible cell {address}. Escape returns WASD to movement."
+            : "Inspection open. WASD moves the cursor; Enter selects; Escape exits.";
+        RefreshPresentation(forceMap: true);
+    }
+
+    private void MoveInspectionCursor(int deltaX, int deltaY)
+    {
+        var visible = CurrentVisibleBounds();
+        var current = _inspectionCursor ?? _simulation.State.Address;
+        var x = Math.Clamp(current.X + deltaX, visible.MinX, visible.MinX + visible.Width - 1L);
+        var y = Math.Clamp(current.Y + deltaY, visible.MinY, visible.MinY + visible.Height - 1L);
+        _inspectionCursor = new WorldAddress(current.Stratum, x, y);
+        _presentationStatus = $"Inspecting {_inspectionCursor}. Enter selects; no time passes.";
+        RefreshPresentation(forceMap: true);
+    }
+
+    private bool TryMapAddress(Vector2 viewportPosition, out WorldAddress address)
+    {
+        if (viewportPosition.X < 0 || viewportPosition.Y < 0 ||
+            viewportPosition.X >= ChronicleHud.MapWidth || viewportPosition.Y >= ChronicleHud.MapHeight)
+        {
+            address = default;
+            return false;
+        }
+
+        var visible = CurrentVisibleBounds();
+        var column = Math.Clamp((int)(viewportPosition.X / ChronicleHud.MapDisplayCellSize), 0, visible.Width - 1);
+        var row = Math.Clamp((int)(viewportPosition.Y / ChronicleHud.MapDisplayCellSize), 0, visible.Height - 1);
+        address = new WorldAddress(
+            _simulation.State.Address.Stratum,
+            visible.MinX + column,
+            visible.MinY + row);
+        return true;
+    }
+
+    private WorldRectangle CurrentVisibleBounds() => VisualViewportBounds.Centered(
+        _simulation.State.Address.X,
+        _simulation.State.Address.Y,
+        ChronicleHud.MapColumns,
+        ChronicleHud.MapRows);
+
+    private WorldCell? InspectedCell()
+    {
+        var address = _isInspecting ? _inspectionCursor : _inspectionSelection;
+        if (address is not { } inspected ||
+            !string.Equals(inspected.Stratum, _simulation.State.Address.Stratum, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var visible = CurrentVisibleBounds();
+        if (inspected.X < visible.MinX || inspected.X >= visible.MinX + visible.Width ||
+            inspected.Y < visible.MinY || inspected.Y >= visible.MinY + visible.Height)
+        {
+            return null;
+        }
+
+        var area = WorldArea.Generate(
+            _simulation.State,
+            inspected.Stratum,
+            new WorldRectangle(inspected.X, inspected.Y, 1, 1));
+        return area.Cells[0];
+    }
+
     private void CycleTarget()
     {
         _selectedTargetKind = _selectedTargetKind == CombatTargetKind.MireBrute
@@ -459,7 +679,7 @@ public partial class ChronicleApp : Node
         }
 
         _simulation = CreateTestingStart();
-        _presentationStatus = "Created a strict v7 Chronicle.";
+        _presentationStatus = "Created a strict v9 Chronicle.";
         SaveChronicle();
     }
 
@@ -473,6 +693,163 @@ public partial class ChronicleApp : Node
         }
 
         return simulation;
+    }
+
+    private static ChronicleSimulation CreateGoal6BTestingStart()
+    {
+        var state = ChronicleState.Begin(InitialSeed) with
+        {
+            WorldGrammarVersion = 5,
+            Agents = default,
+        };
+        var simulation = new ChronicleSimulation(state);
+        RequireApplied(
+            simulation,
+            new ChooseHereIntent(),
+            "The retained Goal 6B fixture could not establish Home.");
+        return simulation;
+    }
+
+    private void PrepareGoal7AWelcomeUat()
+    {
+        var prepared = CompleteGoal7AResonatorForFixture();
+        _simulation = new ChronicleSimulation(prepared.State with { Speed = ChronicleSpeed.Paused });
+        _renderKey = string.Empty;
+        SaveChronicle();
+        _presentationStatus = "UAT A ready: Tamar approaches Home. Space resumes one Heartbeat at a time.";
+    }
+
+    private void PrepareGoal7AReplacementUat()
+    {
+        var prepared = CompleteGoal7AWelcomeForFixture();
+        prepared = AtForFixture(prepared, prepared.State.CurrentBellAddress);
+        RequireApplied(
+            prepared,
+            new EndIncarnationAtBell(),
+            "The Goal 7A replacement fixture could not end the first Incarnation at the Bell.");
+        _simulation = prepared;
+        _renderKey = string.Empty;
+        SaveChronicle();
+        _presentationStatus = "UAT B ready: the prior body ended away from Home; Tamar remains Home's Guest.";
+    }
+
+    private void PrepareGoal7BUat(WordId activeVerb)
+    {
+        var prepared = CompleteGoal7AWelcomeForFixture();
+        var learned = prepared.State with
+        {
+            Codex = prepared.State.Codex.Learn(WordIds.Suggest).Learn(WordIds.Command),
+            Speed = ChronicleSpeed.Paused,
+        };
+        prepared = new ChronicleSimulation(learned);
+        RequireApplied(
+            prepared,
+            new AttuneExpression(activeVerb, []),
+            $"The Goal 7B fixture could not attune {activeVerb.Value}.");
+        _simulation = new ChronicleSimulation(prepared.State with
+        {
+            Address = new WorldAddress(SurfacePatch.SurfaceStratum, 0, 0),
+            Speed = ChronicleSpeed.Paused,
+        });
+        _isInspecting = false;
+        _inspectionCursor = null;
+        _inspectionSelection = null;
+        _renderKey = string.Empty;
+        SaveChronicle();
+        _presentationStatus =
+            $"Goal 7B ready: {WordCatalogue.Get(activeVerb).DisplayName} attuned. Press I to inspect; move south to reach Tamar.";
+    }
+
+    private static ChronicleSimulation CompleteGoal7AResonatorForFixture()
+    {
+        var simulation = CreateTestingStart();
+        RequireApplied(simulation, new ReadBurnPrimer(), "The Goal 7A fixture could not read the Burn Primer.");
+        simulation = AtForFixture(
+            simulation,
+            new WorldAddress(SurfacePatch.SurfaceStratum, 7, 3));
+        RequireApplied(
+            simulation,
+            new BeginPowerCommitment(PowerCommitmentKind.Extract),
+            "The Goal 7A fixture could not begin Lode extraction.");
+        AdvanceActiveForFixture(simulation, 2);
+        RequireApplied(simulation, new LiftResonantLode(), "The Goal 7A fixture could not lift the Lode.");
+        simulation = AtForFixture(simulation, ChronicleState.AcceptedHomeFixtureAddress);
+        RequireApplied(
+            simulation,
+            new BeginPowerCommitment(PowerCommitmentKind.Build),
+            "The Goal 7A fixture could not begin Resonator construction.");
+        AdvanceActiveForFixture(simulation, 3);
+        return simulation;
+    }
+
+    private static ChronicleSimulation CompleteGoal7AWelcomeForFixture()
+    {
+        var simulation = CompleteGoal7AResonatorForFixture();
+        AdvanceActiveForFixture(simulation, 3);
+        var identity = simulation.AgentContext.PrimaryAgent?.Identity
+            ?? throw new InvalidOperationException("The Goal 7A fixture did not promote Tamar.");
+        RequireApplied(simulation, new OfferWelcome(identity), "The Goal 7A fixture could not offer welcome.");
+        AdvanceActiveForFixture(simulation, 1);
+        return simulation;
+    }
+
+    private static ChronicleSimulation AtForFixture(
+        ChronicleSimulation simulation,
+        WorldAddress address) =>
+        new(simulation.State with { Address = address, Speed = ChronicleSpeed.Paused });
+
+    private static void AdvanceActiveForFixture(ChronicleSimulation simulation, int ticks)
+    {
+        if (simulation.State.Speed != ChronicleSpeed.Slow)
+        {
+            RequireApplied(
+                simulation,
+                new SetChronicleSpeed(ChronicleSpeed.Slow),
+                "The Goal 7A fixture could not resume at Slow speed.");
+        }
+
+        for (var index = 0; index < ticks; index++)
+        {
+            simulation.AdvanceOneTick();
+        }
+    }
+
+    private void IssueDirective(DirectiveKind directive)
+    {
+        var context = _simulation.DirectiveContext;
+        if (context.PrimaryAgentIdentity is not { } identity)
+        {
+            _presentationStatus = "No consequential recipient is available.";
+            RefreshPresentation();
+            return;
+        }
+
+        var action = context.Actions.Single(candidate => candidate.Directive == directive);
+        if (!action.Available)
+        {
+            _presentationStatus = DirectivePresentation.ActionUnavailable(action);
+            RefreshPresentation();
+            return;
+        }
+
+        Issue(new DeliverDirective(0, identity, directive));
+    }
+
+    private bool HasDirectiveSurface() =>
+        _simulation.State.Codex.Contains(WordIds.Suggest) ||
+        _simulation.State.Codex.Contains(WordIds.Command) ||
+        _simulation.DirectiveContext.Pending is not null ||
+        _simulation.DirectiveContext.Memories.Count > 0;
+
+    private static void RequireApplied(
+        ChronicleSimulation simulation,
+        ChronicleCommand command,
+        string message)
+    {
+        if (!simulation.Apply(command).Applied)
+        {
+            throw new InvalidOperationException(message);
+        }
     }
 
     private void LoadChronicle()
@@ -507,7 +884,7 @@ public partial class ChronicleApp : Node
             var json = ChronicleSaveCodec.Serialize(_simulation.State);
             using var file = Godot.FileAccess.Open(SavePath, Godot.FileAccess.ModeFlags.Write);
             file.StoreString(json);
-            _presentationStatus = "Saved strict Chronicle v7 to user://.";
+            _presentationStatus = "Saved strict Chronicle v9 to user://.";
         }
         catch (Exception exception)
         {
@@ -523,6 +900,9 @@ public partial class ChronicleApp : Node
         var state = _simulation.State;
         var combat = _simulation.CombatContext;
         var power = _simulation.PowerComesHomeContext;
+        var agents = _simulation.AgentContext;
+        var agent = agents.PrimaryAgent;
+        var directives = _simulation.DirectiveContext;
         var selected = SelectedTarget();
         _openingPanel.Visible = state.HasLivingIncarnation && state.Intent == OpeningIntent.Unchosen;
         _map.SetPaused(state.Speed == ChronicleSpeed.Paused);
@@ -548,7 +928,21 @@ public partial class ChronicleApp : Node
             power.Resonator?.Phase,
             power.Resonator?.Progress,
             power.Commitment?.CompletedTicks,
-            power.Attunement.NextAttunementCapacity);
+            power.Attunement.NextAttunementCapacity,
+            agent?.Identity,
+            agent?.Address,
+            agent?.Presence,
+            agent?.Need.Status,
+            agent?.HomeRelationship.Kind,
+            agent?.RoadRollAddress,
+            agent?.Blocker,
+            directives.Pending?.Directive,
+            directives.Pending?.ObjectiveAddress,
+            directives.Memories.LastOrDefault()?.ResolvedTick,
+            directives.Memories.LastOrDefault()?.Response,
+            _isInspecting,
+            _inspectionCursor,
+            _inspectionSelection);
         if (forceMap || !string.Equals(key, _renderKey, StringComparison.Ordinal))
         {
             RenderMap(state, combat, selected);
@@ -600,6 +994,32 @@ public partial class ChronicleApp : Node
                 VisualPresentationEmphasisKind.Recovery));
         }
 
+        var agent = _simulation.AgentContext.PrimaryAgent;
+        if (agent is { Blocker: not AgentBlockerKind.None, NextAddress: { } blockedAddress })
+        {
+            emphases.Add(new VisualPresentationEmphasis(
+                blockedAddress,
+                VisualPresentationEmphasisKind.AgentBlockedRoute));
+        }
+
+        var directive = _simulation.DirectiveContext;
+        if (directive.Pending is { } pending && agent is not null)
+        {
+            emphases.Add(new VisualPresentationEmphasis(
+                agent.Address,
+                VisualPresentationEmphasisKind.PendingAction));
+            emphases.Add(new VisualPresentationEmphasis(
+                pending.ObjectiveAddress,
+                VisualPresentationEmphasisKind.PendingAction));
+        }
+
+        var inspectionAddress = _isInspecting ? _inspectionCursor : _inspectionSelection;
+        IReadOnlyList<WorldAddress> selectedAddresses = inspectionAddress is { } inspected
+            ? [inspected]
+            : selected is null
+                ? []
+                : [selected.Address];
+
         var plan = VisualGrammar.Compose(new VisualCompositionInput(
             area,
             visible,
@@ -608,7 +1028,7 @@ public partial class ChronicleApp : Node
             _visualPack.StyleVersion,
             state.HasLivingIncarnation ? state.Address : null,
             combat.Targets.Select(target => target.Address).ToArray(),
-            selected is null ? [] : [selected.Address],
+            selectedAddresses,
             combat.Danger.IsImmediate && combat.MireBrute is not null
                 ? [combat.MireBrute.Address]
                 : [],
@@ -629,14 +1049,48 @@ public partial class ChronicleApp : Node
             ? string.Empty
             : TargetOutcomeText(selected, combat);
         var power = _simulation.PowerComesHomeContext;
-        var showsCombatContext =
-            state.WorldGrammarVersion != 5 ||
+        var agents = _simulation.AgentContext;
+        var agent = agents.PrimaryAgent;
+        var directives = _simulation.DirectiveContext;
+        var inspected = InspectedCell();
+        var urgentCombat =
             combat.Danger.IsImmediate ||
             combat.PendingAction is not null ||
             combat.Preparation is not null ||
             combat.Recovery.RemainingTicks > 0 ||
             combat.MireBrute?.IsBurning == true;
-        if (!showsCombatContext)
+        var showsInspection = _isInspecting && inspected is not null;
+        var showsDirectiveContext = HasDirectiveSurface() && agent is not null &&
+                                    !urgentCombat && power.Commitment is null && !showsInspection;
+        var showsAgentContext = agent is not null && !urgentCombat && power.Commitment is null &&
+                                !showsInspection && !showsDirectiveContext;
+        var showsCombatContext =
+            !showsInspection && !showsDirectiveContext && !showsAgentContext &&
+            (state.WorldGrammarVersion is not (5 or 6) || urgentCombat);
+        if (showsInspection)
+        {
+            targetHeading = InspectionPresentation.Heading(inspected!.Value);
+            targetFacts = InspectionPresentation.Facts(inspected.Value);
+            targetOutcome = InspectionPresentation.Decision(
+                inspected.Value,
+                _inspectionSelection == inspected.Value.Address);
+        }
+        else if (showsDirectiveContext)
+        {
+            targetHeading = DirectivePresentation.Heading(agent!);
+            targetFacts = DirectivePresentation.Facts(state, agent!, directives);
+            targetOutcome = DirectivePresentation.Decision(
+                directives,
+                agent!,
+                state.Speed == ChronicleSpeed.Paused);
+        }
+        else if (showsAgentContext)
+        {
+            targetHeading = AgentPresentation.Heading(agent!);
+            targetFacts = AgentPresentation.Facts(agent!);
+            targetOutcome = AgentPresentation.Decision(agent!, state.Speed == ChronicleSpeed.Paused);
+        }
+        else if (!showsCombatContext)
         {
             targetHeading = HoldingPresentation.MaterialHeading(power);
             targetFacts = HoldingPresentation.MaterialFacts(power);
@@ -644,6 +1098,12 @@ public partial class ChronicleApp : Node
         }
         var forecast = power.Commitment is not null
             ? HoldingPresentation.CommitmentForecast(power)
+            : showsInspection
+            ? InspectionPresentation.Forecast(inspected!.Value)
+            : showsDirectiveContext
+            ? DirectivePresentation.Forecast(directives, agent!, state.Speed == ChronicleSpeed.Paused)
+            : showsAgentContext
+            ? AgentPresentation.Forecast(agent!, state.Speed == ChronicleSpeed.Paused)
             : !showsCombatContext
             ? HoldingPresentation.MaterialForecast(power)
             : combat.Forecast.Count == 0
@@ -652,8 +1112,15 @@ public partial class ChronicleApp : Node
                 .Take(4)
                 .Select(CompactForecastText)
                 .ToArray();
-        var logged = combat.RecentResults
-            .Select(LogText)
+        var logged = combat.RecentResults.Select(LogText)
+            .Concat(agents.RecentEvents.Select(item => AgentPresentation.Log(
+                item,
+                agents.Agents.FirstOrDefault(candidate => candidate.Identity == item.AgentIdentity)
+                    ?.DisplayName ?? "An Agent")))
+            .Concat(directives.RecentEvents.Select(item => DirectivePresentation.Log(
+                item,
+                agents.Agents.FirstOrDefault(candidate => candidate.Identity == item.AgentIdentity)
+                    ?.DisplayName ?? "An Agent")))
             .ToArray();
         var messages = logged
             .Append(_presentationStatus)
@@ -685,15 +1152,35 @@ public partial class ChronicleApp : Node
             $"LOAD {power.Attunement.CurrentUsedLoad}/{power.Attunement.CapacityAtLastAttunement?.ToString() ?? "—"}",
             $"CLEAVER {combat.Equipment.WeaponDamage}/{combat.Equipment.WeaponCadence} · " +
             $"JACK −{combat.Equipment.ArmorReduction} · WARD +{combat.Equipment.MaximumHitPointBonus}",
-            PowerHeadingState(power),
-            HoldingPresentation.Checklist(power),
-            CompactPowerCapacity(power.Attunement),
+            showsInspection
+                ? "INSPECTION · READ ONLY"
+                : showsDirectiveContext
+                    ? DirectivePresentation.Banner(directives)
+                    : showsAgentContext
+                        ? AgentPresentation.Banner(agent!)
+                        : PowerHeadingState(power),
+            showsInspection
+                ? InspectionPresentation.Checklist(
+                    inspected!.Value,
+                    _inspectionSelection == inspected.Value.Address)
+                : showsDirectiveContext
+                    ? DirectivePresentation.Checklist(state, directives, agent!, state.Speed == ChronicleSpeed.Paused)
+                    : showsAgentContext
+                ? AgentPresentation.Checklist(agent!, state.Speed == ChronicleSpeed.Paused)
+                : HoldingPresentation.Checklist(power),
+            showsInspection
+                ? "READ ONLY · I / MOUSE · WASD CURSOR · ENTER · ESC"
+                : showsDirectiveContext
+                    ? $"CODEX · SUGGEST + COMMAND · ACTIVE {state.ActiveLoadout[0].DisplayName}"
+                    : showsAgentContext
+                ? $"CAUSE · RESONANT LODE FROM {agent!.OriginAddress} · " +
+                  $"HOME · {agent.HomeRelationship.Kind.ToString().ToUpperInvariant()}"
+                : CompactPowerCapacity(power.Attunement),
             string.Empty,
             showsCombatContext,
+            showsInspection || showsDirectiveContext || showsAgentContext,
             !state.HasLivingIncarnation,
-            !state.HasLivingIncarnation
-                ? $"BODY ENDED · CHRONICLE HELD\nBrute and scorch persist. Choose NEW BODY below."
-                : string.Empty,
+            !state.HasLivingIncarnation ? AgentPresentation.ReplacementStatus(agent) : string.Empty,
             state.Speed == ChronicleSpeed.Paused);
     }
 
@@ -702,7 +1189,22 @@ public partial class ChronicleApp : Node
         CombatContextSnapshot combat,
         TargetPreviewSnapshot? selected)
     {
-        if (state.WorldGrammarVersion == 5)
+        if (_isInspecting)
+        {
+            return [];
+        }
+
+        if (HasDirectiveSurface() && _simulation.AgentContext.PrimaryAgent is not null)
+        {
+            return BuildGoal7BActions(state);
+        }
+
+        if (state.WorldGrammarVersion == 6 && _simulation.AgentContext.PrimaryAgent is not null)
+        {
+            return BuildGoal7AActions(state, combat, selected);
+        }
+
+        if (state.WorldGrammarVersion is 5 or 6)
         {
             return BuildGoal6BActions(state, combat, selected);
         }
@@ -744,6 +1246,137 @@ public partial class ChronicleApp : Node
             new("burn", "[B] BURN", selected is null ? null : new PrepareBurn(selected.Address), alive && selected?.CanBurn == true && combat.Recovery.RemainingTicks == 0, selected is null ? "NO TARGET" : $"{selected.PreparationTicks} PREP · {selected.ConsequenceTicks} BURN"),
             new("weapon", combat.Danger.IsImmediate ? "[V] CLEAVER" : "[V] PLAN", weaponCommand, alive, combat.Danger.IsImmediate ? (combat.WeaponStanceActive ? "ACTIVE" : "LOWERED") : (combat.EngagementPlan.OpenWithWeaponStance ? "OPEN ACTIVE" : "OPEN LOWERED")),
             new("clock", state.Speed == ChronicleSpeed.Paused ? "[SPACE] RESUME" : "[SPACE] PAUSE", clockCommand, alive, "SLOW HEARTBEATS"),
+            cancelOrSkip,
+        ];
+    }
+
+    private IReadOnlyList<ChronicleHudAction> BuildGoal7BActions(ChronicleState state)
+    {
+        var context = _simulation.DirectiveContext;
+        var identity = context.PrimaryAgentIdentity
+            ?? throw new InvalidOperationException("Goal 7B actions require a consequential recipient.");
+        var alive = state.HasLivingIncarnation && state.Intent != OpeningIntent.Unchosen;
+        var rest = context.Actions.Single(action => action.Directive == DirectiveKind.RestByRoadRoll);
+        var danger = context.Actions.Single(action => action.Directive == DirectiveKind.ApproachMireBrute);
+        var clockCommand = state.Speed == ChronicleSpeed.Paused
+            ? (ChronicleCommand)new SetChronicleSpeed(ChronicleSpeed.Slow)
+            : new SetChronicleSpeed(ChronicleSpeed.Paused);
+        var primary = context.Pending is not null
+            ? new ChronicleHudAction(
+                "directive-withdraw",
+                "[P] WITHDRAW",
+                new WithdrawDirective(identity),
+                alive,
+                "BEFORE ANSWER · NO MEMORY")
+            : new ChronicleHudAction(
+                "directive-rest",
+                "[P] REST",
+                rest.Available ? new DeliverDirective(0, identity, rest.Directive) : null,
+                rest.Available,
+                DirectivePresentation.ActionDetail(rest));
+
+        return
+        [
+            primary,
+            new(
+                "directive-danger",
+                "[X] BRUTE",
+                danger.Available ? new DeliverDirective(0, identity, danger.Directive) : null,
+                danger.Available,
+                DirectivePresentation.ActionDetail(danger)),
+            new("move-north", "[W]", new MoveIncarnation(0, -1), alive),
+            new("move-west", "[A]", new MoveIncarnation(-1, 0), alive),
+            new("move-south", "[S]", new MoveIncarnation(0, 1), alive),
+            new("move-east", "[D]", new MoveIncarnation(1, 0), alive),
+            new(
+                "clock",
+                state.Speed == ChronicleSpeed.Paused ? "[SPACE] RESUME" : "[SPACE] PAUSE",
+                clockCommand,
+                alive,
+                context.Pending is { } pending ? $"ANSWER H{pending.ResolvesAtTick}" : "SLOW HEARTBEATS"),
+        ];
+    }
+
+    private IReadOnlyList<ChronicleHudAction> BuildGoal7AActions(
+        ChronicleState state,
+        CombatContextSnapshot combat,
+        TargetPreviewSnapshot? selected)
+    {
+        var agent = _simulation.AgentContext.PrimaryAgent
+            ?? throw new InvalidOperationException("Goal 7A actions require a consequential Agent.");
+        var actionKind = agent.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered
+            ? AgentActionKind.WithdrawWelcome
+            : AgentActionKind.OfferWelcome;
+        var agentAction = _simulation.AgentContext.Actions.Single(action => action.Kind == actionKind);
+        ChronicleCommand agentCommand = actionKind == AgentActionKind.OfferWelcome
+            ? new OfferWelcome(agent.Identity)
+            : new WithdrawWelcome(agent.Identity);
+        var alive = state.HasLivingIncarnation && state.Intent != OpeningIntent.Unchosen;
+        var safe = alive && !combat.Danger.IsImmediate;
+        var power = _simulation.PowerComesHomeContext;
+        var combinedActive = combat.Expression.Modifiers.SequenceEqual([WordIds.Quickly, WordIds.Lasting]);
+        var canAttune = safe && power.BurnPrimer.IsRead && power.Commitment is null &&
+                        power.Lode.Disposition != ResonantLodeDisposition.Carried;
+        var clockCommand = state.Speed == ChronicleSpeed.Paused
+            ? (ChronicleCommand)new SetChronicleSpeed(ChronicleSpeed.Slow)
+            : new SetChronicleSpeed(ChronicleSpeed.Paused);
+        var weaponCommand = combat.Danger.IsImmediate
+            ? (ChronicleCommand)new SetWeaponStance(!combat.WeaponStanceActive)
+            : new ConfigureEngagementPlan(!combat.EngagementPlan.OpenWithWeaponStance);
+        var cancelOrSkip = combat.PendingAction is not null || combat.Preparation is not null
+            ? new ChronicleHudAction(
+                "cancel",
+                "[C] CANCEL",
+                new CancelPendingTacticalAction(),
+                state.Speed == ChronicleSpeed.Paused,
+                "ABANDON PENDING")
+            : new ChronicleHudAction(
+                "skip-recovery",
+                "[C] SKIP",
+                new SkipRecovery(),
+                combat.Recovery.CanSkipSafely,
+                $"REC {combat.Recovery.RemainingTicks}");
+
+        return
+        [
+            new(
+                "attune-combined",
+                combinedActive ? "◆ ATTUNED 12" : "[G] ATTUNE 12",
+                new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]),
+                canAttune,
+                combinedActive ? "BURN + QUICK + LAST" : $"NEXT CAPACITY {power.Attunement.NextAttunementCapacity}"),
+            new(
+                "agent-primary",
+                $"[P] {AgentPresentation.ActionLabel(agent)}",
+                agentAction.Available ? agentCommand : null,
+                agentAction.Available,
+                AgentPresentation.ActionDetail(agentAction)),
+            new("move-north", "[W]", new MoveIncarnation(0, -1), alive),
+            new("move-west", "[A]", new MoveIncarnation(-1, 0), alive),
+            new("move-south", "[S]", new MoveIncarnation(0, 1), alive),
+            new("move-east", "[D]", new MoveIncarnation(1, 0), alive),
+            new(
+                "burn",
+                "[B] BURN",
+                selected is null ? null : new PrepareBurn(selected.Address),
+                alive && selected?.CanBurn == true && combat.Recovery.RemainingTicks == 0,
+                selected is null ? "NO TARGET" : $"{selected.PreparationTicks} PREP · {selected.ConsequenceTicks} BURN"),
+            new(
+                "weapon",
+                combat.Danger.IsImmediate ? "[V] CLEAVER" : "[V] PLAN",
+                weaponCommand,
+                alive,
+                combat.Danger.IsImmediate
+                    ? combat.WeaponStanceActive ? "ACTIVE" : "LOWERED"
+                    : combat.EngagementPlan.OpenWithWeaponStance ? "OPEN ACTIVE" : "OPEN LOWERED"),
+            new(
+                "clock",
+                state.Speed == ChronicleSpeed.Paused ? "[SPACE] RESUME" : "[SPACE] PAUSE",
+                clockCommand,
+                alive,
+                agent.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered
+                    ? $"ANSWER H{agent.NextHeartbeat}"
+                    : "SLOW HEARTBEATS"),
             cancelOrSkip,
         ];
     }
@@ -1035,9 +1668,501 @@ public partial class ChronicleApp : Node
                $"RECOVERY   {combat.Recovery.RemainingTicks}/{target.RecoveryTicks}";
     }
 
+    private async Task RunGoal7BVisualAcceptance()
+    {
+        PrepareGoal7BUat(WordIds.Suggest);
+        _presentationStatus = string.Empty;
+        _renderKey = string.Empty;
+        RefreshPresentation(forceMap: true);
+        var initialState = _simulation.State;
+        var tamar = _simulation.AgentContext.PrimaryAgent
+            ?? throw new InvalidOperationException("Goal 7B requires Tamar.");
+
+        TriggerInput(InspectAction);
+        TriggerInput(MoveWestAction);
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        TriggerInput("ui_accept");
+        Verify(
+            _simulation.State == initialState &&
+            _inspectionCursor == tamar.RoadRollAddress &&
+            _inspectionSelection == tamar.RoadRollAddress,
+            "Keyboard inspection must select the visible road-roll without moving the Incarnation or advancing time.");
+        await CaptureGoal7BProof("inspected-road-roll");
+        TriggerInput("ui_cancel");
+
+        var visible = CurrentVisibleBounds();
+        var tamarScreen = new Vector2(
+            (float)((tamar.Address.X - visible.MinX + 0.5) * ChronicleHud.MapDisplayCellSize),
+            (float)((tamar.Address.Y - visible.MinY + 0.5) * ChronicleHud.MapDisplayCellSize));
+        _UnhandledInput(new InputEventMouseButton
+        {
+            ButtonIndex = MouseButton.Left,
+            Pressed = true,
+            Position = tamarScreen,
+        });
+        Verify(
+            _simulation.State == initialState && _inspectionSelection == tamar.Address &&
+            InspectedCell()?.Subjects.Any(subject => subject.Kind == WorldSubjectKind.Agent) == true,
+            "Mouse inspection must select Tamar's semantic cell without mutating the Chronicle.");
+        TriggerInput("ui_cancel");
+        Verify(
+            _simulation.DirectiveContext.Actions.Single(action =>
+                action.Directive == DirectiveKind.RestByRoadRoll).AvailabilityReason ==
+            DirectiveAvailabilityReason.RecipientOutOfReach,
+            "Remote inspection must leave delivery disabled with an explicit physical-reach reason.");
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        Verify(
+            _simulation.DirectiveContext.Actions.Single(action =>
+                action.Directive == DirectiveKind.RestByRoadRoll).Available,
+            $"Three explicit southward steps must bring the Incarnation into delivery reach without a queued extra move; " +
+            $"address={_simulation.State.Address}, Tamar={_simulation.State.Agents[0].Address}, " +
+            $"reason={_simulation.DirectiveContext.Actions.Single(action => action.Directive == DirectiveKind.RestByRoadRoll).AvailabilityReason}.");
+        await CaptureGoal7BProof("safe-suggest-preview");
+
+        var beforeMouse = _simulation.State;
+        Press(ActionButton("directive-rest"));
+        var mousePending = ChronicleSaveCodec.Serialize(_simulation.State);
+        _simulation = new ChronicleSimulation(beforeMouse);
+        _presentationStatus = string.Empty;
+        _renderKey = string.Empty;
+        RefreshPresentation(forceMap: true);
+        await PushPhysicalKey(Key.P);
+        Verify(
+            ChronicleSaveCodec.Serialize(_simulation.State) == mousePending &&
+            _simulation.DirectiveContext.Pending is not null &&
+            _simulation.State.Speed == ChronicleSpeed.Paused,
+            "Mouse and physical P must deliver the same safe Suggestion without spending a Heartbeat.");
+        await CaptureGoal7BProof("safe-pending");
+
+        await PushPhysicalKey(Key.P);
+        Verify(
+            _simulation.DirectiveContext.Pending is null &&
+            _simulation.DirectiveContext.Memories.Count == 0,
+            "P must withdraw the pending Suggestion without fabricating a response memory.");
+        await PushPhysicalKey(Key.P);
+        ActionButton("directive-withdraw").GrabFocus();
+        await PushPhysicalKey(Key.Space);
+        Verify(
+            _simulation.State.Speed == ChronicleSpeed.Slow &&
+            _simulation.DirectiveContext.Pending is not null,
+            "Focused Space must resume consideration without activating the focused withdrawal button.");
+        AdvanceAndRefresh();
+        var accepted = _simulation.DirectiveContext.Memories.Single();
+        Verify(
+            accepted.Response == DirectiveResponseKind.Accepted &&
+            _simulation.State.Agents[0].Address == tamar.RoadRollAddress &&
+            _simulation.State.Speed == ChronicleSpeed.Paused,
+            "One active Heartbeat must accept the Suggestion, move Tamar once, remember it, and pause once.");
+        await CaptureGoal7BProof("accepted-movement");
+
+        await PushPhysicalKey(Key.Space);
+        AdvanceAndRefresh();
+        var acceptedCount = _simulation.DirectiveContext.Memories.Count;
+        TriggerInput(MoveEastAction);
+        Verify(
+            _simulation.State.Speed == ChronicleSpeed.Slow &&
+            _simulation.DirectiveContext.Memories.Count == acceptedCount,
+            "The following Heartbeat and movement must not latch auto-pause, repeat the answer, or queue Agent movement.");
+
+        _simulation = AtForFixture(
+            _simulation,
+            new WorldAddress(SurfacePatch.SurfaceStratum, 0, 4));
+        _renderKey = string.Empty;
+        RefreshPresentation(forceMap: true);
+        var beforeRejection = _simulation.State;
+        await PushPhysicalKey(Key.X);
+        Verify(
+            _simulation.State == beforeRejection &&
+            _simulation.DirectiveContext.Memories.Count == acceptedCount &&
+            _presentationStatus.Contains("requires Command", StringComparison.Ordinal),
+            "Suggest must reject the dangerous Directive before consideration, with no time or memory mutation.");
+        await CaptureGoal7BProof("dangerous-suggest-rejection");
+
+        PrepareGoal7BUat(WordIds.Command);
+        _presentationStatus = string.Empty;
+        _renderKey = string.Empty;
+        RefreshPresentation(forceMap: true);
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        await PushPhysicalKey(Key.X);
+        Verify(
+            _simulation.DirectiveContext.Pending is
+            {
+                Verb: var pendingVerb,
+                Directive: DirectiveKind.ApproachMireBrute,
+            } && pendingVerb == WordIds.Command &&
+            _simulation.State.Speed == ChronicleSpeed.Paused,
+            "Command must deliver the dangerous Directive as consideration, not immediate movement or obedience.");
+        await CaptureGoal7BProof("dangerous-command-pending");
+
+        var savedPending = ChronicleSaveCodec.Serialize(_simulation.State);
+        Press(_hud.GetNode<Button>("SaveAction"));
+        Press(_hud.GetNode<Button>("LoadAction"));
+        Verify(
+            ChronicleSaveCodec.Serialize(_simulation.State) == savedPending &&
+            _simulation.DirectiveContext.Pending is not null && SaveVersion() == 9,
+            "Actual Godot save/load must restore the exact strict-v9 pending Command and paused Clock.");
+        ActionButton("directive-withdraw").GrabFocus();
+        await PushPhysicalKey(Key.Space);
+        AdvanceAndRefresh();
+        var refused = _simulation.DirectiveContext.Memories.Single();
+        Verify(
+            refused is
+            {
+                Response: DirectiveResponseKind.Refused,
+                Reason: DirectiveResponseReason.GuestHasNoViolentCommitment,
+            } &&
+            _simulation.State.Agents[0].Address == tamar.Address &&
+            _simulation.State.Speed == ChronicleSpeed.Paused,
+            "Tamar must refuse once for the Guest/no-violent-commitment reason without moving either actor.");
+        await CaptureGoal7BProof("refusal");
+
+        await PushPhysicalKey(Key.Space);
+        AdvanceAndRefresh();
+        var refusalCount = _simulation.DirectiveContext.Memories.Count;
+        TriggerInput(MoveEastAction);
+        Verify(
+            _simulation.State.Speed == ChronicleSpeed.Slow &&
+            _simulation.DirectiveContext.Memories.Count == refusalCount,
+            "The Heartbeat after refusal must not repeat, retry, or reacquire pause.");
+        var savedRefusal = ChronicleSaveCodec.Serialize(_simulation.State);
+        Press(_hud.GetNode<Button>("SaveAction"));
+        Press(_hud.GetNode<Button>("LoadAction"));
+        Verify(
+            ChronicleSaveCodec.Serialize(_simulation.State) == savedRefusal && SaveVersion() == 9,
+            "Strict v9 must restore the refusal memory without rewriting Tamar's Guest relationship.");
+        await CaptureGoal7BProof("restored-refusal");
+
+        GD.Print("GOAL7B VISUAL ACCEPTANCE PASS captures=8 save=9 inspection=keyboard+mouse directive=agency");
+    }
+
+    private async Task CaptureGoal7BProof(string stage)
+    {
+        RefreshPresentation(forceMap: true);
+        var agent = _simulation.AgentContext.PrimaryAgent
+            ?? throw new InvalidOperationException("Goal 7B capture requires Tamar.");
+        var plan = _map.CurrentPlan
+            ?? throw new InvalidOperationException("Goal 7B capture requires a rendered map plan.");
+        var pending = _simulation.DirectiveContext.Pending;
+        var inspectedStage = stage == "inspected-road-roll";
+        Verify(
+            _hud.TargetOutcome.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length <= 5 &&
+            _hud.TargetOutcome.Text.Contains("NEXT", StringComparison.Ordinal) &&
+            _hud.TargetOutcome.Text.Contains("WHEN", StringComparison.Ordinal) &&
+            _hud.TargetOutcome.Text.Contains("INTERRUPTS", StringComparison.Ordinal) &&
+            _hud.TargetOutcome.Text.Contains("PREVENTS", StringComparison.Ordinal) &&
+            _hud.PowerStatus.Text.StartsWith("CHECKLIST · ", StringComparison.Ordinal) &&
+            _hud.PowerStatus.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length <= 5 &&
+            plan.Marks.Any(mark => mark.Address == agent.Address &&
+                mark.VisualId.StartsWith("agent.", StringComparison.Ordinal)) &&
+            plan.Marks.Any(mark => mark.VisualId == "place.wayfarer-road-roll.laid") &&
+            plan.Marks.Any(mark => mark.VisualId == "source.hearth-resonator.intact") &&
+            plan.Marks.Any(mark => mark.VisualId == "subject.mire-brute.living") &&
+            (!inspectedStage || plan.Marks.Any(mark =>
+                mark.Address == agent.RoadRollAddress && mark.VisualId == "emphasis.selection")) &&
+            (pending is null ||
+             plan.Marks.Any(mark => mark.Address == agent.Address &&
+                 mark.VisualId == "emphasis.action.pending") &&
+             plan.Marks.Any(mark => mark.Address == pending.ObjectiveAddress &&
+                 mark.VisualId == "emphasis.action.pending")) &&
+            ChronicleHud.MapWidth * ChronicleHud.MapHeight >=
+                ChronicleHud.CanvasWidth * ChronicleHud.CanvasHeight * 3 / 4,
+            $"Goal 7B '{stage}' must align the concise decision surface with Tamar, objective, Source, Brute, inspection, and pending emphasis.");
+
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        Verify(
+            _hud.PowerStatus.GetMinimumSize().Y <= _hud.PowerStatus.Size.Y &&
+            _hud.TargetHeading.GetMinimumSize().X <= _hud.TargetHeading.Size.X &&
+            _hud.TargetFacts.GetMinimumSize().Y <= _hud.TargetFacts.Size.Y &&
+            _hud.ConsequenceRows.Where(row => row.Visible)
+                .All(row => row.GetMinimumSize().Y <= row.Size.Y) &&
+            _hud.ForecastReadout.GetMinimumSize().Y <= _hud.ForecastReadout.Size.Y &&
+            _hud.MessageReadout.GetMinimumSize().Y <= _hud.MessageReadout.Size.Y &&
+            _hud.ActionButtons.All(button =>
+                button.FocusMode == Control.FocusModeEnum.All &&
+                button.GetThemeColor("font_disabled_color").A >= 0.75f),
+            $"Goal 7B '{stage}' must not clip or overlap identity, timing, reason, memory, or action feedback.");
+        RenderingServer.ForceDraw(swapBuffers: false);
+        var image = GetViewport().GetTexture().GetImage();
+        Verify(
+            image is not null && image.GetWidth() == ChronicleHud.CanvasWidth &&
+            image.GetHeight() == ChronicleHud.CanvasHeight,
+            "Goal 7B native HUD proof must capture the exact 1600 × 900 viewport.");
+        Verify(
+            image!.SavePng($"user://goal7b-{stage}-hud.png") == Error.Ok,
+            $"Goal 7B '{stage}' native HUD capture must be writable.");
+        GD.Print($"GOAL7B HUD CAPTURE PASS stage={stage} size=1600x900");
+    }
+
+    private async Task RunGoal7AVisualAcceptance()
+    {
+        _simulation = CompleteGoal7AResonatorForFixture();
+        _selectedTargetKind = CombatTargetKind.MireBrute;
+        _presentationStatus = string.Empty;
+        _renderKey = string.Empty;
+        RefreshPresentation(forceMap: true);
+
+        var approaching = _simulation.AgentContext.PrimaryAgent
+            ?? throw new InvalidOperationException("Goal 7A did not promote its consequential Agent.");
+        Verify(
+            approaching is
+            {
+                DisplayName: "Tamar Venn",
+                Presence: AgentPresenceState.ApproachingHome,
+                Need.Status: AgentNeedStatus.Seeking,
+                HomeRelationship.Kind: AgentHomeRelationshipKind.Unfamiliar,
+            } &&
+            approaching.Address.X == approaching.WaitingAddress.X - 3,
+            "The rendered Goal 7A journey must begin with generated Tamar three steps west of Home's waiting place.");
+        await CaptureGoal7AProof("approaching");
+
+        TriggerInput(PauseAction);
+        var pausedState = ChronicleSaveCodec.Serialize(_simulation.State);
+        AdvanceAndRefresh();
+        Verify(
+            ChronicleSaveCodec.Serialize(_simulation.State) == pausedState,
+            "Pause must freeze Tamar, intent, and Chronicle time before the first approach step.");
+
+        await PushPhysicalKey(Key.Space);
+        var beforeFirstStep = _simulation.AgentContext.PrimaryAgent!.Address;
+        var beforeFirstTick = _simulation.State.Tick;
+        AdvanceAndRefresh();
+        Verify(
+            _simulation.State.Tick == beforeFirstTick + 1 &&
+            _simulation.AgentContext.PrimaryAgent!.Address.X == beforeFirstStep.X + 1,
+            "One focused-safe Space resume and one Heartbeat must move Tamar exactly one cardinal step.");
+
+        for (var index = 0; index < 2; index++)
+        {
+            TriggerInput(PauseAction);
+            var beforePause = _simulation.AgentContext.PrimaryAgent!.Address;
+            AdvanceAndRefresh();
+            Verify(
+                _simulation.AgentContext.PrimaryAgent!.Address == beforePause,
+                "A pause between Agent steps must not queue a catch-up move.");
+            await PushPhysicalKey(Key.Space);
+            AdvanceAndRefresh();
+        }
+
+        var waiting = _simulation.AgentContext.PrimaryAgent!;
+        Verify(
+            waiting.Presence == AgentPresenceState.WaitingAtHome &&
+            waiting.Address == waiting.WaitingAddress &&
+            _simulation.State.Speed == ChronicleSpeed.Paused,
+            "Arrival must land on the visible waiting place and acquire exactly one pause.");
+        await CaptureGoal7AProof("waiting");
+
+        var arrivalTick = _simulation.State.Tick;
+        var arrivalEvents = _simulation.AgentContext.RecentEvents.Count(item =>
+            item.Kind == AgentEventKind.Arrived);
+        await PushPhysicalKey(Key.Space);
+        AdvanceAndRefresh();
+        Verify(
+            _simulation.State.Tick == arrivalTick + 1 &&
+            _simulation.State.Speed == ChronicleSpeed.Slow &&
+            _simulation.AgentContext.PrimaryAgent == waiting &&
+            _simulation.AgentContext.RecentEvents.Count(item => item.Kind == AgentEventKind.Arrived) == arrivalEvents,
+            "Resuming after arrival must advance normally without a second pause, repeated arrival, or queued step.");
+
+        var beforeOffer = _simulation.State;
+        Press(ActionButton("agent-primary"));
+        var mouseOfferState = ChronicleSaveCodec.Serialize(_simulation.State);
+        var mouseOfferChecklist = _hud.PowerStatus.Text;
+        _simulation = new ChronicleSimulation(beforeOffer);
+        _presentationStatus = string.Empty;
+        _renderKey = string.Empty;
+        RefreshPresentation(forceMap: true);
+        await PushPhysicalKey(Key.P);
+        var offered = _simulation.AgentContext.PrimaryAgent!;
+        Verify(
+            ChronicleSaveCodec.Serialize(_simulation.State) == mouseOfferState &&
+            _hud.PowerStatus.Text == mouseOfferChecklist &&
+            offered.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered &&
+            offered.Need.Status == AgentNeedStatus.Offered &&
+            offered.WelcomeOfferedTick == _simulation.State.Tick,
+            "Mouse and physical P must open the same visible welcome offer without spending a Heartbeat.");
+        ActionButton("agent-primary").GrabFocus();
+        await PushPhysicalKey(Key.Space);
+        Verify(
+            _simulation.State.Speed == ChronicleSpeed.Paused &&
+            _simulation.AgentContext.PrimaryAgent!.HomeRelationship.Kind ==
+                AgentHomeRelationshipKind.WelcomeOffered,
+            "Focused Space must pause the Chronicle without activating the focused Withdraw Welcome button.");
+        await CaptureGoal7AProof("open-offer");
+
+        var offerTick = _simulation.State.Tick;
+        ActionButton("agent-primary").GrabFocus();
+        await PushPhysicalKey(Key.Space);
+        Verify(
+            _simulation.State.Speed == ChronicleSpeed.Slow &&
+            _simulation.AgentContext.PrimaryAgent!.HomeRelationship.Kind ==
+                AgentHomeRelationshipKind.WelcomeOffered,
+            "Focused Space must resume the pending answer without withdrawing or duplicating the offer.");
+        AdvanceAndRefresh();
+        var accepted = _simulation.AgentContext.PrimaryAgent!;
+        Verify(
+            _simulation.State.Tick == offerTick + 1 &&
+            _simulation.State.Speed == ChronicleSpeed.Paused &&
+            accepted is
+            {
+                Presence: AgentPresenceState.AtHome,
+                Need.Status: AgentNeedStatus.Satisfied,
+                HomeRelationship:
+                {
+                    Kind: AgentHomeRelationshipKind.Guest,
+                    WelcomingIncarnationId: 1,
+                },
+                RoadRollAddress: not null,
+            } &&
+            _hud.MessageReadout.Text.Contains("Tamar Venn accepts Refuge", StringComparison.Ordinal),
+            "The next active Heartbeat must name Tamar's autonomous acceptance, satisfied need, Guest relationship, and road-roll.");
+        await CaptureGoal7AProof("accepted-guest");
+
+        var acceptanceEvents = _simulation.AgentContext.RecentEvents.Count(item =>
+            item.Kind == AgentEventKind.WelcomeAccepted);
+        await PushPhysicalKey(Key.Space);
+        AdvanceAndRefresh();
+        Verify(
+            _simulation.State.Speed == ChronicleSpeed.Slow &&
+            _simulation.AgentContext.PrimaryAgent == accepted &&
+            _simulation.AgentContext.RecentEvents.Count(item =>
+                item.Kind == AgentEventKind.WelcomeAccepted) == acceptanceEvents,
+            "The Heartbeat after acceptance must not latch auto-pause, answer again, or move Tamar.");
+
+        var savedGuest = ChronicleSaveCodec.Serialize(_simulation.State);
+        Press(_hud.GetNode<Button>("SaveAction"));
+        Press(_hud.GetNode<Button>("LoadAction"));
+        Verify(
+            ChronicleSaveCodec.Serialize(_simulation.State) == savedGuest && SaveVersion() == 9,
+            "Actual Godot save/load must restore the strict-v9 Guest, relationship cause, road-roll, and tick exactly.");
+        await CaptureGoal7AProof("restored-guest");
+
+        _simulation = AtForFixture(_simulation, _simulation.State.CurrentBellAddress);
+        _renderKey = string.Empty;
+        Issue(new EndIncarnationAtBell());
+        Verify(
+            !_simulation.State.HasLivingIncarnation &&
+            _simulation.AgentContext.PrimaryAgent == accepted &&
+            _hud.ReplacementReadout.Text.Contains("Tamar Venn", StringComparison.Ordinal) &&
+            _hud.ReplacementReadout.Text.Contains("HOME", StringComparison.OrdinalIgnoreCase),
+            "The ended-body summary must name Tamar and Home while preserving the prior Incarnation's welcome cause.");
+        TriggerInput(ReplaceAction);
+        Verify(
+            _simulation.State.IncarnationId == 2 &&
+            _simulation.AgentContext.PrimaryAgent == accepted,
+            "Replacement must preserve the same Agent without cloning, teleporting, or recruiting them.");
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        TriggerInput(MoveSouthAction);
+        Verify(
+            _simulation.State.Address == ChronicleState.AcceptedHomeFixtureAddress &&
+            _simulation.AgentContext.PrimaryAgent == accepted,
+            "The replacement Incarnation must return physically to the same Guest at Home.");
+        await CaptureGoal7AProof("replacement-return");
+        Press(_hud.GetNode<Button>("SaveAction"));
+        Verify(SaveVersion() == 9, "Goal 7A rendered acceptance must write strict save v9.");
+        GD.Print("GOAL7A VISUAL ACCEPTANCE PASS captures=6 save=9 keyboard=mouse agent=consequential relationship=guest");
+    }
+
+    private async Task CaptureGoal7AProof(string stage)
+    {
+        RefreshPresentation(forceMap: true);
+        var agent = _simulation.AgentContext.PrimaryAgent
+            ?? throw new InvalidOperationException("Goal 7A capture requires Tamar.");
+        var expectedVisual = stage switch
+        {
+            "approaching" => "agent.wayfarer-listener.approaching",
+            "waiting" => "agent.wayfarer-listener.waiting",
+            "open-offer" => "agent.wayfarer-listener.welcome-offered",
+            "accepted-guest" or "restored-guest" or "replacement-return" =>
+                "agent.wayfarer-listener.guest",
+            _ => throw new InvalidOperationException($"Unknown Goal 7A capture stage '{stage}'."),
+        };
+        var expectedState = stage switch
+        {
+            "approaching" => agent.Presence == AgentPresenceState.ApproachingHome,
+            "waiting" => agent.Presence == AgentPresenceState.WaitingAtHome &&
+                agent.HomeRelationship.Kind == AgentHomeRelationshipKind.Unfamiliar,
+            "open-offer" => agent.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered &&
+                _simulation.State.Speed == ChronicleSpeed.Paused,
+            "accepted-guest" or "restored-guest" =>
+                agent.HomeRelationship.Kind == AgentHomeRelationshipKind.Guest &&
+                agent.Need.Status == AgentNeedStatus.Satisfied,
+            "replacement-return" => _simulation.State.IncarnationId == 2 &&
+                _simulation.State.Address == ChronicleState.AcceptedHomeFixtureAddress &&
+                agent.HomeRelationship.Kind == AgentHomeRelationshipKind.Guest,
+            _ => false,
+        };
+        var plan = _map.CurrentPlan
+            ?? throw new InvalidOperationException("Goal 7A capture requires a rendered map plan.");
+        var agentAction = ActionButton("agent-primary");
+        Verify(
+            expectedState &&
+            _hud.TargetHeading.Text.Contains(agent.DisplayName.ToUpperInvariant(), StringComparison.Ordinal) &&
+            _hud.TargetFacts.Text.Contains("NEEDS · Refuge", StringComparison.Ordinal) &&
+            _hud.TargetFacts.Text.Contains("Resonant Lode", StringComparison.Ordinal) &&
+            _hud.TargetOutcome.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length <= 5 &&
+            _hud.TargetOutcome.Text.Contains("NEXT", StringComparison.Ordinal) &&
+            _hud.TargetOutcome.Text.Contains("WHEN", StringComparison.Ordinal) &&
+            _hud.TargetOutcome.Text.Contains("INTERRUPTS", StringComparison.Ordinal) &&
+            _hud.TargetOutcome.Text.Contains("PREVENTS", StringComparison.Ordinal) &&
+            _hud.PowerStatus.Text.StartsWith("CHECKLIST · ", StringComparison.Ordinal) &&
+            _hud.PowerStatus.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length <= 5 &&
+            _hud.TargetButtons.All(button => !button.Visible) &&
+            agentAction.Text.Contains(
+                agent.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered
+                    ? "WITHDRAW WELCOME"
+                    : "OFFER WELCOME",
+                StringComparison.Ordinal) &&
+            plan.Marks.Any(mark => mark.Address == agent.Address && mark.VisualId == expectedVisual) &&
+            plan.Marks.Any(mark =>
+                mark.Address == ChronicleState.AcceptedHomeFixtureAddress &&
+                mark.VisualId == "subject.home-hearthstone") &&
+            plan.Marks.Any(mark => mark.VisualId == "source.hearth-resonator.intact") &&
+            (agent.RoadRollAddress is null || plan.Marks.Any(mark =>
+                mark.Address == agent.RoadRollAddress &&
+                mark.VisualId == "place.wayfarer-road-roll.laid")) &&
+            ChronicleHud.MapWidth * ChronicleHud.MapHeight >=
+                ChronicleHud.CanvasWidth * ChronicleHud.CanvasHeight * 3 / 4,
+            $"Goal 7A '{stage}' must align the compact Agent checklist, decision, action, Home, Agent, Source, and persistent place.");
+
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        Verify(
+            _hud.PowerStatus.GetMinimumSize().Y <= _hud.PowerStatus.Size.Y &&
+            _hud.TargetHeading.GetMinimumSize().X <= _hud.TargetHeading.Size.X &&
+            _hud.TargetFacts.GetMinimumSize().Y <= _hud.TargetFacts.Size.Y &&
+            _hud.ConsequenceRows.Where(row => row.Visible)
+                .All(row => row.GetMinimumSize().Y <= row.Size.Y) &&
+            _hud.ForecastReadout.GetMinimumSize().Y <= _hud.ForecastReadout.Size.Y &&
+            _hud.MessageReadout.GetMinimumSize().Y <= _hud.MessageReadout.Size.Y &&
+            _hud.ActionButtons.All(button =>
+                button.FocusMode == Control.FocusModeEnum.All &&
+                button.GetThemeColor("font_disabled_color").A >= 0.75f),
+            $"Goal 7A '{stage}' must not clip or overlap identity, need, timing, interruption, consequence, or action feedback.");
+        RenderingServer.ForceDraw(swapBuffers: false);
+        var image = GetViewport().GetTexture().GetImage();
+        Verify(
+            image is not null &&
+            image.GetWidth() == ChronicleHud.CanvasWidth &&
+            image.GetHeight() == ChronicleHud.CanvasHeight,
+            "Goal 7A native HUD proof must capture the exact 1600 × 900 viewport.");
+        Verify(
+            image!.SavePng($"user://goal7a-{stage}-hud.png") == Error.Ok,
+            $"Goal 7A '{stage}' native HUD capture must be writable.");
+        GD.Print($"GOAL7A HUD CAPTURE PASS stage={stage} size=1600x900");
+    }
+
     private async Task RunGoal6BVisualAcceptance()
     {
-        _simulation = CreateTestingStart();
+        _simulation = CreateGoal6BTestingStart();
         _selectedTargetKind = CombatTargetKind.MireBrute;
         _presentationStatus = string.Empty;
         _renderKey = string.Empty;
@@ -1218,8 +2343,8 @@ public partial class ChronicleApp : Node
             _simulation.PowerComesHomeContext.Attunement.NextAttunementCapacity == 12,
             "The rendered rebuild path must restore future capacity without hidden material changes.");
         Press(_hud.GetNode<Button>("SaveAction"));
-        Verify(SaveVersion() == 7, "Goal 6B rendered acceptance must write strict save v7.");
-        GD.Print("GOAL6B VISUAL ACCEPTANCE PASS captures=8 save=7 keyboard=mouse map=physical capacity=next-attunement");
+        Verify(SaveVersion() == 9, "Goal 6B rendered acceptance must rewrite through strict save v9.");
+        GD.Print("GOAL6B VISUAL ACCEPTANCE PASS captures=8 save=9 keyboard=mouse map=physical capacity=next-attunement");
     }
 
     private void Goal6BMove(string actionId)
@@ -1365,8 +2490,8 @@ public partial class ChronicleApp : Node
         FinishFightWithCleaver();
         Verify(_simulation.CombatContext.MireBrute?.IsLiving == false, "Quickly journey must defeat the Mire Brute.");
         Press(_hud.GetNode<Button>("SaveAction"));
-        Verify(SaveVersion() == 7, "Quickly journey must rewrite through strict save v7.");
-        GD.Print("GOAL6A QUICKLY SAVE READY hud=map-first target=basalt-rejected scorch=present brute=dead save=7");
+        Verify(SaveVersion() == 9, "Quickly journey must rewrite through strict save v9.");
+        GD.Print("GOAL6A QUICKLY SAVE READY hud=map-first target=basalt-rejected scorch=present brute=dead save=9");
     }
 
     private async Task VerifyFocusedSpaceResumesCombat()
@@ -1414,7 +2539,7 @@ public partial class ChronicleApp : Node
 
     private Task RunQuicklyRestartAcceptance()
     {
-        Verify(SaveVersion() == 7, "Quickly restart must load current save v7.");
+        Verify(SaveVersion() == 9, "Quickly restart must load current save v9.");
         Verify(_simulation.CombatContext.Scorch is not null, "Quickly restart must retain scorch.");
         Verify(_simulation.CombatContext.MireBrute?.IsLiving == false, "Quickly restart must retain the Brute outcome.");
         Verify(_hud.TargetHeading.Text.Contains("MIRE BRUTE", StringComparison.Ordinal), "Target rail must restore the Brute identity.");
@@ -1479,7 +2604,7 @@ public partial class ChronicleApp : Node
         Verify(!_simulation.State.HasLivingIncarnation, "Lasting journey must preserve the deliberate death branch.");
         Verify(_simulation.CombatContext.Scorch is not null, "Scorch must survive body death.");
         Press(_hud.GetNode<Button>("SaveAction"));
-        GD.Print($"GOAL6A LASTING DEATH READY scorch=present bruteHp={_simulation.CombatContext.MireBrute?.HitPoints} incarnation=ended save=7");
+        GD.Print($"GOAL6A LASTING DEATH READY scorch=present bruteHp={_simulation.CombatContext.MireBrute?.HitPoints} incarnation=ended save=9");
     }
 
     private Task RunLastingRestartAcceptance()
@@ -1497,7 +2622,7 @@ public partial class ChronicleApp : Node
         FinishFightWithCleaver();
         Verify(_simulation.CombatContext.MireBrute?.IsLiving == false, "Replacement must be able to finish the continuing encounter.");
         Press(_hud.GetNode<Button>("SaveAction"));
-        GD.Print("GOAL6A LASTING RESTART PASS incarnation=2 equipment=fresh scorch=present brute=dead save=7");
+        GD.Print("GOAL6A LASTING RESTART PASS incarnation=2 equipment=fresh scorch=present brute=dead save=9");
         return Task.CompletedTask;
     }
 

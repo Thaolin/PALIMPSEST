@@ -130,9 +130,16 @@ _Avoid_: Base-management command, remote claim, conjured terrain, extra Holding
 
 **Agent**:
 An autonomous person, mutant, creature, construct, or stranger with continuing
-identity, needs, relationships, and agency in a Chronicle. Agent is a systemic
-category, not a species or a promise of obedience.
+identity, needs, relationships, and agency in a Chronicle. Agent is the game's
+systemic NPC category, not a species or a promise of obedience.
 _Avoid_: Worker token, population count, helper species
+
+**Consequential Agent**:
+An Agent whose contact with a person, place, faction, or material event makes
+their individual identity and continuing history part of the Chronicle. World
+Grammar may leave untouched Agent possibilities latent, but a consequential
+Agent persists.
+_Avoid_: Eager world population, disposable encounter spawn, unique quest flag
 
 **Creature Grammar**:
 The authored body plans, materials, traits, capabilities, ecologies, behaviors,

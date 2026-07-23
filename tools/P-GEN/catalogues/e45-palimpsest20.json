@@ -1292,6 +1292,102 @@
         "overviewPaletteRole": "combat.preparation",
         "requireConnected": false
       }]
+    },
+    {
+      "id": "agent.wayfarer-listener.approaching",
+      "seed": 1777,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["000000111000000", "000001222100000", "000001232100000", "000000222000000", "000001222100000", "000012222210000", "000122222221000", "000122223321000", "000122223321000", "000012222210000", "000001212100000", "000001202100000", "000012000210000", "000120000021000", "001100000000000", "000000000001100"],
+        "anchor": [7, 9],
+        "layer": "actor",
+        "paletteRoles": ["actor.dark", "actor.primary", "emphasis.active"],
+        "overviewPaletteRole": "emphasis.active",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "agent.wayfarer-listener.waiting",
+      "seed": 1783,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["000000111000300", "000001222100300", "000001232100300", "000000222000300", "000001222100300", "000012222210300", "000122222221300", "000122222221300", "000122222221300", "000012222210300", "000001212100300", "000001202100300", "000001202100300", "000012020210300", "000120020021300", "001100020001100"],
+        "anchor": [7, 9],
+        "layer": "actor",
+        "paletteRoles": ["actor.dark", "actor.primary", "landmark.gold"],
+        "overviewPaletteRole": "landmark.gold",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "agent.wayfarer-listener.welcome-offered",
+      "seed": 1787,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["300000111000003", "030001222100030", "003001232100300", "000300222003000", "000031222130000", "000012222210000", "000122222221000", "000122232221000", "000122222221000", "000012222210000", "000001212100000", "000001202100000", "000001202100000", "000012020210000", "000120020021000", "001100020001100"],
+        "anchor": [7, 9],
+        "layer": "actor",
+        "paletteRoles": ["actor.dark", "actor.primary", "emphasis.active"],
+        "overviewPaletteRole": "emphasis.active",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "agent.wayfarer-listener.guest",
+      "seed": 1789,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["000000111000000", "000001222100000", "000001232100000", "000000222000000", "000001222100000", "000012222210000", "000122222221000", "000122233221000", "000122233221000", "000012222210000", "000001212100000", "000001202100000", "000001202100000", "000012020210000", "000120020021000", "001100020001100", "000333333333000"],
+        "anchor": [7, 9],
+        "layer": "actor",
+        "paletteRoles": ["actor.dark", "actor.primary", "landmark.bright"],
+        "overviewPaletteRole": "landmark.bright",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "place.wayfarer-road-roll.laid",
+      "seed": 1801,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["000001111110000", "000112222221100", "001222333322210", "012233333333221", "122333222333221", "012233333333221", "001222333322210", "000112222221100", "000001111110000"],
+        "anchor": [7, 4],
+        "layer": "landmark",
+        "paletteRoles": ["actor.dark", "landmark.gold", "actor.read"],
+        "overviewPaletteRole": "landmark.gold",
+        "requireConnected": false
+      }]
+    },
+    {
+      "id": "emphasis.agent.blocked-route",
+      "seed": 1811,
+      "variantCount": 1,
+      "generation": "role-mask",
+      "identity": "single",
+      "targets": [{
+        "nativeSize": 20,
+        "rows": ["100000001", "010000010", "001000100", "000101000", "000010000", "000101000", "001000100", "010000010", "100000001"],
+        "anchor": [4, 4],
+        "layer": "effect",
+        "paletteRoles": ["danger.primary"],
+        "overviewPaletteRole": "danger.primary",
+        "requireConnected": false
+      }]
     }
   ],
   "connectedFamilies": [

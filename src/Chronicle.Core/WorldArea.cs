@@ -110,13 +110,13 @@ public sealed class WorldArea
                     checked(bounds.MinX + x),
                     checked(bounds.MinY + y));
                 var semantics = SemanticsAt(state, address, cairnAddress);
-                var brute = state.WorldGrammarVersion is 4 or 5 &&
+                var brute = state.WorldGrammarVersion is 4 or 5 or 6 &&
                             state.Combat?.MireBrute.Address == address
                     ? state.Combat.MireBrute
                     : null;
-                var scorch = state.WorldGrammarVersion is 4 or 5 &&
+                var scorch = state.WorldGrammarVersion is 4 or 5 or 6 &&
                              state.Combat?.Scorch?.Address == address;
-                var target = state.WorldGrammarVersion is 4 or 5 &&
+                var target = state.WorldGrammarVersion is 4 or 5 or 6 &&
                              address == GeneratedBasaltAddress(state.Seed)
                     ? new WorldSubject(
                         GeneratedBasaltIdentity(state.Seed),
@@ -125,7 +125,7 @@ public sealed class WorldArea
                         WorldSubjects.Present,
                         displayName: "Basalt")
                     : null;
-                var power = state.WorldGrammarVersion == 5 ? state.PowerHome : null;
+                var power = state.WorldGrammarVersion is 5 or 6 ? state.PowerHome : null;
                 var seam = power is not null && address == HoldingFacts.SingingSeamAddress
                     ? SeamSubject(
                         HoldingRules.SingingSeamIdentity(state.Seed),
@@ -156,7 +156,13 @@ public sealed class WorldArea
                         HoldingRules.BurnPrimerIdentity(state.Seed),
                         HoldingRules.HasBurnPrimerKnowledge(state))
                     : null;
-                var subjects = new List<WorldSubject>(3);
+                var agents = state.WorldGrammarVersion == 6
+                    ? state.Agents.Where(agent => agent.Address == address).ToArray()
+                    : [];
+                var roadRolls = state.WorldGrammarVersion == 6
+                    ? state.Agents.Where(agent => agent.RoadRollAddress == address).ToArray()
+                    : [];
+                var subjects = new List<WorldSubject>(5);
                 if (brute is not null)
                 {
                     subjects.Add(CreatureSubject(
@@ -197,6 +203,16 @@ public sealed class WorldArea
                 if (lode is not null)
                 {
                     subjects.Add(lode);
+                }
+
+                foreach (var agent in agents)
+                {
+                    subjects.Add(AgentSubject(agent));
+                }
+
+                foreach (var owner in roadRolls)
+                {
+                    subjects.Add(RoadRollSubject(owner));
                 }
 
                 cells[index++] = new WorldCell(
@@ -246,7 +262,7 @@ public sealed class WorldArea
         WorldAddress address,
         WorldAddress? cairnAddress)
     {
-        if (state.WorldGrammarVersion is not (0 or 1 or 2 or 3 or 4 or 5))
+        if (state.WorldGrammarVersion is not (0 or 1 or 2 or 3 or 4 or 5 or 6))
         {
             throw new InvalidOperationException(
                 $"Unsupported World Grammar version '{state.WorldGrammarVersion}'.");
@@ -254,12 +270,14 @@ public sealed class WorldArea
 
         if (string.Equals(address.Stratum, SurfacePatch.SurfaceStratum, StringComparison.Ordinal))
         {
-            if (state.WorldGrammarVersion == 5)
+            if (state.WorldGrammarVersion is 5 or 6)
             {
                 return OverlayDurableSubject(
                     state,
                     address,
-                    Version5SurfaceAt(state, address),
+                    state.WorldGrammarVersion == 6
+                        ? Version6SurfaceAt(state, address)
+                        : Version5SurfaceAt(state, address),
                     cairnAddress);
             }
 
@@ -299,7 +317,7 @@ public sealed class WorldArea
             return OverlayDurableSubject(state, address, legacySurface, cairnAddress);
         }
 
-        CellSemantics sky = state.WorldGrammarVersion is 1 or 2 or 3 or 4 or 5
+        CellSemantics sky = state.WorldGrammarVersion is 1 or 2 or 3 or 4 or 5 or 6
             ? Version1SkyAt(state.Seed, address)
             : SkyStratum.TerrainAt(state.Seed, address.X, address.Y) switch
             {
@@ -511,6 +529,23 @@ public sealed class WorldArea
             displayName: "Hearth Resonator",
             progress: new WorldSubjectProgress(resonator.Progress, totalProgress));
 
+    private static WorldSubject AgentSubject(AgentState agent) =>
+        new(
+            agent.Profile.Identity,
+            WorldSubjectKind.Agent,
+            WorldSubjects.WayfarerListenerArchetype,
+            WorldSubjects.Condition(agent),
+            displayName: agent.Profile.DisplayName);
+
+    private static WorldSubject RoadRollSubject(AgentState owner) =>
+        new(
+            AgentRules.RoadRollIdentity(owner.Profile.Identity),
+            WorldSubjectKind.PersonalPlace,
+            WorldSubjects.WayfarerRoadRollArchetype,
+            WorldSubjects.Laid,
+            displayName: $"{owner.Profile.DisplayName}'s road-roll",
+            ownerIdentity: owner.Profile.Identity);
+
     public static WorldAddress GeneratedMireBruteAddress(long seed) =>
         new(SurfacePatch.SurfaceStratum, 5, 0);
 
@@ -687,6 +722,35 @@ public sealed class WorldArea
         }
 
         return Version4SurfaceAt(state.Seed, address);
+    }
+
+    private static CellSemantics Version6SurfaceAt(ChronicleState state, WorldAddress address)
+    {
+        if (state.Home is null)
+        {
+            return Version5SurfaceAt(state, address);
+        }
+
+        var start = AgentRules.ResonanceListenerStartAddress(state);
+        var waiting = AgentRules.ResonanceListenerWaitingAddress(state);
+        var roadRoll = AgentRules.ResonanceListenerRoadRollAddress(state);
+        if ((address.Stratum == start.Stratum &&
+             address.Y == start.Y &&
+             address.X >= start.X &&
+             address.X <= waiting.X) ||
+            address == roadRoll)
+        {
+            return new CellSemantics(
+                address.Stratum,
+                WorldGround.Grass,
+                Feature: null,
+                DurableIdentity: null,
+                MotifIdentity: address == roadRoll
+                    ? "surface-wayfarer-rest"
+                    : "surface-wayfarer-route");
+        }
+
+        return Version5SurfaceAt(state, address);
     }
 
     private static long Triangle(Int128 value, int period, int amplitude)

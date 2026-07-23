@@ -14,6 +14,8 @@ public enum WorldSubjectKind
     LooseMaterial = 5,
     LoadSource = 6,
     ConstructionSite = 7,
+    Agent = 8,
+    PersonalPlace = 9,
 }
 
 /// <summary>
@@ -65,7 +67,8 @@ public sealed record WorldSubject
         string displayName = "",
         IReadOnlyList<WorldSubjectMark>? marks = null,
         WorldSubjectProgress? progress = null,
-        long? holderIncarnationId = null)
+        long? holderIncarnationId = null,
+        string? ownerIdentity = null)
     {
         if (string.IsNullOrWhiteSpace(identity))
         {
@@ -100,6 +103,7 @@ public sealed record WorldSubject
         Marks = Array.AsReadOnly(boundedMarks);
         Progress = progress;
         HolderIncarnationId = holderIncarnationId;
+        OwnerIdentity = ownerIdentity;
     }
 
     public string Identity { get; }
@@ -117,6 +121,8 @@ public sealed record WorldSubject
     public WorldSubjectProgress? Progress { get; }
 
     public long? HolderIncarnationId { get; }
+
+    public string? OwnerIdentity { get; }
 }
 
 /// <summary>
@@ -132,6 +138,8 @@ public static class WorldSubjects
     public const string ResonantLodeArchetype = "resonant-lode";
     public const string HearthResonatorArchetype = "hearth-resonator";
     public const string HearthResonatorSiteArchetype = "hearth-resonator-site";
+    public const string WayfarerListenerArchetype = "wayfarer-listener";
+    public const string WayfarerRoadRollArchetype = "wayfarer-road-roll";
 
     public const string Living = "living";
     public const string Dead = "dead";
@@ -140,6 +148,21 @@ public static class WorldSubjects
     public const string Present = "present";
     public const string Ready = "ready";
     public const string Occupied = "occupied";
+    public const string Approaching = "approaching";
+    public const string Waiting = "waiting";
+    public const string WelcomeOffered = "welcome-offered";
+    public const string Guest = "guest";
+    public const string Laid = "laid";
+
+    public static string Condition(AgentState agent) => agent switch
+    {
+        { HomeRelationship.Kind: AgentHomeRelationshipKind.WelcomeOffered } => WelcomeOffered,
+        { Presence: AgentPresenceState.ApproachingHome } => Approaching,
+        { Presence: AgentPresenceState.WaitingAtHome } => Waiting,
+        { Presence: AgentPresenceState.AtHome } => Guest,
+        _ => throw new InvalidOperationException(
+            $"Unknown Agent presentation state '{agent.Presence}/{agent.HomeRelationship.Kind}'."),
+    };
 
     public static string Condition(SingingSeamVisualState state) => state switch
     {

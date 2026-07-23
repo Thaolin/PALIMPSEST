@@ -16,7 +16,7 @@ internal static class HoldingFacts
         new(SurfacePatch.SurfaceStratum, 8, 3);
 
     internal static bool IsAvailable(ChronicleState state) =>
-        state.WorldGrammarVersion == 5 && state.PowerHome is not null;
+        state.WorldGrammarVersion is 5 or 6 && state.PowerHome is not null;
 
     internal static bool IsCarrying(ChronicleState state) =>
         IsAvailable(state) &&

@@ -32,6 +32,7 @@ public enum VisualPresentationEmphasisKind
     PendingAction,
     Preparation,
     Recovery,
+    AgentBlockedRoute,
 }
 
 public readonly record struct VisualRenderMark(
@@ -81,6 +82,11 @@ public static class VisualGrammar
             [(WorldSubjects.HearthResonatorArchetype, "destroyed")] = "source.hearth-resonator.destroyed",
             [(WorldSubjects.HearthResonatorArchetype, "rebuilding")] = "source.hearth-resonator.rebuilding",
             [(WorldSubjects.HearthResonatorSiteArchetype, WorldSubjects.Ready)] = "emphasis.home-source-site",
+            [(WorldSubjects.WayfarerListenerArchetype, WorldSubjects.Approaching)] = "agent.wayfarer-listener.approaching",
+            [(WorldSubjects.WayfarerListenerArchetype, WorldSubjects.Waiting)] = "agent.wayfarer-listener.waiting",
+            [(WorldSubjects.WayfarerListenerArchetype, WorldSubjects.WelcomeOffered)] = "agent.wayfarer-listener.welcome-offered",
+            [(WorldSubjects.WayfarerListenerArchetype, WorldSubjects.Guest)] = "agent.wayfarer-listener.guest",
+            [(WorldSubjects.WayfarerRoadRollArchetype, WorldSubjects.Laid)] = "place.wayfarer-road-roll.laid",
         };
 
     private static readonly IReadOnlyDictionary<WorldSubjectMark, string> SubjectMarkVisuals =
@@ -383,6 +389,7 @@ public static class VisualGrammar
             VisualPresentationEmphasisKind.PendingAction => "emphasis.action.pending",
             VisualPresentationEmphasisKind.Preparation => "emphasis.action.preparation",
             VisualPresentationEmphasisKind.Recovery => "emphasis.action.recovery",
+            VisualPresentationEmphasisKind.AgentBlockedRoute => "emphasis.agent.blocked-route",
             _ => throw new ArgumentOutOfRangeException(nameof(kind)),
         };
 

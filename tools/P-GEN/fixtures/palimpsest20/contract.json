@@ -1,12 +1,12 @@
 {
   "cellSize": 20,
   "atlasWidth": 160,
-  "atlasHeight": 700,
+  "atlasHeight": 720,
   "anchor": {
     "x": 10,
     "y": 10
   },
-  "definitionCount": 276,
+  "definitionCount": 282,
   "definitions": [
     {
       "id": "actor.incarnation",
@@ -3662,6 +3662,60 @@
       "mask": null,
       "overviewPaletteIndex": 20,
       "paletteRoleIndexes": [12, 20, 20]
+    },
+    {
+      "id": "agent.wayfarer-listener.approaching",
+      "familyId": "agent.wayfarer-listener.approaching",
+      "variantOrdinal": 0,
+      "layer": "actor",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [22, 23, 25]
+    },
+    {
+      "id": "agent.wayfarer-listener.waiting",
+      "familyId": "agent.wayfarer-listener.waiting",
+      "variantOrdinal": 0,
+      "layer": "actor",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [22, 23, 20]
+    },
+    {
+      "id": "agent.wayfarer-listener.welcome-offered",
+      "familyId": "agent.wayfarer-listener.welcome-offered",
+      "variantOrdinal": 0,
+      "layer": "actor",
+      "mask": null,
+      "overviewPaletteIndex": 25,
+      "paletteRoleIndexes": [22, 23, 25]
+    },
+    {
+      "id": "agent.wayfarer-listener.guest",
+      "familyId": "agent.wayfarer-listener.guest",
+      "variantOrdinal": 0,
+      "layer": "actor",
+      "mask": null,
+      "overviewPaletteIndex": 21,
+      "paletteRoleIndexes": [22, 23, 21]
+    },
+    {
+      "id": "place.wayfarer-road-roll.laid",
+      "familyId": "place.wayfarer-road-roll.laid",
+      "variantOrdinal": 0,
+      "layer": "landmarkOrSubject",
+      "mask": null,
+      "overviewPaletteIndex": 20,
+      "paletteRoleIndexes": [22, 20, 24]
+    },
+    {
+      "id": "emphasis.agent.blocked-route",
+      "familyId": "emphasis.agent.blocked-route",
+      "variantOrdinal": 0,
+      "layer": "temporaryAction",
+      "mask": null,
+      "overviewPaletteIndex": 23,
+      "paletteRoleIndexes": [23]
     }
   ]
 }

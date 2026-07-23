@@ -57,6 +57,7 @@ public static class ManualVisualPack
         AddGoal4CSubjectsAndEmphasis(builder);
         AddGoal6AVisuals(builder);
         AddGoal6BVisuals(builder);
+        AddGoal7AVisuals(builder);
 
         return builder.Build(
             packId: "chronicle.gate3b.manual",
@@ -562,6 +563,108 @@ public static class ManualVisualPack
             primary,
             colors,
             paint);
+
+    private static void AddGoal7AVisuals(AtlasBuilder builder)
+    {
+        builder.Add(
+            "agent.wayfarer-listener.approaching",
+            "agent.wayfarer-listener.approaching",
+            0,
+            VisualLayerClass.Actor,
+            Cyan,
+            [ActorDark, Actor, ActorLight, Cyan],
+            canvas => PaintWayfarer(canvas, Cyan, WayfarerVisualState.Approaching));
+        builder.Add(
+            "agent.wayfarer-listener.waiting",
+            "agent.wayfarer-listener.waiting",
+            0,
+            VisualLayerClass.Actor,
+            Gold,
+            [ActorDark, Actor, ActorLight, Gold],
+            canvas => PaintWayfarer(canvas, Gold, WayfarerVisualState.Waiting));
+        builder.Add(
+            "agent.wayfarer-listener.welcome-offered",
+            "agent.wayfarer-listener.welcome-offered",
+            0,
+            VisualLayerClass.Actor,
+            Cyan,
+            [ActorDark, Actor, ActorLight, Cyan],
+            canvas => PaintWayfarer(canvas, Cyan, WayfarerVisualState.WelcomeOffered));
+        builder.Add(
+            "agent.wayfarer-listener.guest",
+            "agent.wayfarer-listener.guest",
+            0,
+            VisualLayerClass.Actor,
+            GoldBright,
+            [ActorDark, Actor, ActorLight, GoldBright],
+            canvas => PaintWayfarer(canvas, GoldBright, WayfarerVisualState.Guest));
+        builder.Add(
+            "place.wayfarer-road-roll.laid",
+            "place.wayfarer-road-roll.laid",
+            0,
+            VisualLayerClass.LandmarkOrSubject,
+            Gold,
+            [ActorDark, Gold, ActorLight],
+            PaintWayfarerRoadRoll);
+        builder.Add(
+            "emphasis.agent.blocked-route",
+            "emphasis.agent.blocked-route",
+            0,
+            VisualLayerClass.TemporaryAction,
+            Actor,
+            [Actor],
+            canvas => PaintCorners(canvas, Actor, inset: 1, arm: Math.Max(3, canvas.Size / 4)));
+    }
+
+    private enum WayfarerVisualState
+    {
+        Approaching,
+        Waiting,
+        WelcomeOffered,
+        Guest,
+    }
+
+    private static void PaintWayfarer(
+        PixelCanvas canvas,
+        byte accent,
+        WayfarerVisualState state)
+    {
+        var s = canvas.Size;
+        var center = s / 2;
+        canvas.Diamond(center, 4, Math.Max(2, s / 7), ActorDark);
+        canvas.Diamond(center, 4, Math.Max(1, s / 7 - 1), ActorLight);
+        canvas.Triangle(center - s / 4, s - 3, center, 7, center + s / 4, s - 3, ActorDark);
+        canvas.Triangle(center - s / 5, s - 4, center, 8, center + s / 5, s - 4, Actor);
+        canvas.Vertical(center, 8, s - 5, accent);
+
+        switch (state)
+        {
+            case WayfarerVisualState.Approaching:
+                canvas.Line(center - 2, s - 4, center - 5, s - 2, Actor);
+                canvas.Line(center + 2, s - 4, center + 5, s - 2, Actor);
+                canvas.Rect(center + 3, 9, 3, 4, accent);
+                break;
+            case WayfarerVisualState.Waiting:
+                canvas.Vertical(center + 6, 2, s - 2, accent);
+                break;
+            case WayfarerVisualState.WelcomeOffered:
+                PaintCorners(canvas, accent, inset: 1, arm: Math.Max(3, s / 4));
+                break;
+            case WayfarerVisualState.Guest:
+                canvas.Horizontal(center - 5, center + 5, s - 2, accent);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(state));
+        }
+    }
+
+    private static void PaintWayfarerRoadRoll(PixelCanvas canvas)
+    {
+        var center = canvas.Size / 2;
+        canvas.Diamond(center, center + 3, Math.Max(3, canvas.Size / 3), ActorDark);
+        canvas.Diamond(center, center + 3, Math.Max(2, canvas.Size / 3 - 2), Gold);
+        canvas.Horizontal(center - 4, center + 4, center + 3, ActorLight);
+    }
 
     private static void PaintSeam(PixelCanvas canvas, bool filled)
     {

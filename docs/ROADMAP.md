@@ -502,9 +502,10 @@ Decision record:
 
 ## Goal 7 — Home Has People
 
-**Status:** Next design gate; production not yet authorized. Goal 6 and its 6C
-consolidation are complete and player-accepted. No Goal 7 child slice may begin
-production without its separately approved bounded contract.
+**Status:** Goals 7A and 7B are complete and player-accepted as of 2026-07-22.
+Goal 7B passed its complete retained automated gate and both isolated player
+UAT journeys under its five approved bounded fixture decisions. Goal 7C and
+all later work remain unauthorized.
 
 ### 7A — Someone Comes Home
 
@@ -513,11 +514,33 @@ them identity, needs, relationships, and a material connection to one generated
 faction or piece of prior world history. They may reside, visit, or travel with
 an Incarnation but are never represented as a production slot.
 
+The active [Goal 7A contract](GOAL-7A-SOMEONE-COMES-HOME.md) selects one
+resident Guest and no Companion behavior. It treats this first person as a
+production-shaped proof of the reusable Agent category: deterministic latent
+possibilities, promotion to durable identity when consequential, a collection
+that can hold hundreds without eager world simulation, and one exact visible
+arrival/welcome/replacement journey. Its five bounded fixture decisions are
+approved and frozen. Its production implementation, historical strict-v8/WG6 migration,
+scale fixtures, Inspector parity, package isolation, and six rendered Godot
+proofs are green; the player passed both UAT journeys on 2026-07-22.
+
 ### 7B — A Directive, Not Unit Control
 
 Add the smallest social-language proof using Suggest and Command. One dangerous
 Directive requires Command to be admissible, but the Agent still interprets,
 delays, negotiates, or refuses according to its state.
+
+The implemented
+[Goal 7B contract](GOAL-7B-A-DIRECTIVE-NOT-UNIT-CONTROL.md) separates social
+Verb force, physical delivery, and Agent response. Its bounded fixture uses
+Suggest for one accepted safe intent and proves that Suggest cannot express one
+dangerous intent; Command admits that dangerous attempt, but Tamar refuses it
+without becoming a Companion or controlled unit. It also scopes the retained
+visible-cell inspection debt as a read-only presentation seam. Its five
+fixture decisions are approved and frozen; strict v9, unchanged WG6,
+deterministic replay/migration, packaged/manual parity, actual Godot input, and
+eight rendered HUD proofs are green. The player passed both UAT journeys on
+2026-07-22.
 
 ### 7C — Absence Produces History
 

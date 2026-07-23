@@ -14,6 +14,10 @@ Run("recovery, persistence, death, and replay", VerifyPersistenceDeathAndReplay)
 Run("strict v6 and literal predecessor migration", VerifyPersistenceAndMigration);
 Run("Goal 6B physical return, Attunement, loss, and rebuild", VerifyHoldingRules);
 Run("Goal 6B strict v7 replay, malformed state, and migration", VerifyGoal6BPersistenceAndReplay);
+Run("Goal 7A Agent grammar, promotion, and scale", VerifyAgentGrammarAndScale);
+Run("Goal 7A arrival, welcome, persistence, and replay", VerifyAgentJourneyAndPersistence);
+Run("Goal 7B social Words, Directive truth table, and agency", VerifyDirectiveRules);
+Run("Goal 7B persistence, replacement, scale, and migration", VerifyDirectivePersistenceAndMigration);
 Run("Core owns facts, not player-facing copy", VerifyCoreOwnsNoPresentationCopy);
 Run("authored Word effects extend without resolver edits", VerifyAuthoredWordEffects);
 Run("accepted pre-6C save bytes remain stable", VerifyHistoricalSaveOracle);
@@ -21,11 +25,13 @@ Run("accepted pre-6C save bytes remain stable", VerifyHistoricalSaveOracle);
 Console.WriteLine("RETAINED FOUNDATION MIGRATION PASS world-grammar=0-3 home=preserved bell=preserved cairn=preserved nouns=retired");
 Console.WriteLine("GOAL6A CORE ACCEPTANCE PASS retained grammar=4 combat=deterministic migration=v6-v1+pre-envelope");
 Console.WriteLine("GOAL6B CORE ACCEPTANCE PASS save=7 grammar=5 power-home=physical attunement=next-only replay=deterministic");
+Console.WriteLine("GOAL7A CORE ACCEPTANCE PASS save=8 grammar=6 agent=consequential welcome=autonomous replay=deterministic");
+Console.WriteLine("GOAL7B CORE ACCEPTANCE PASS save=9 grammar=6 directive=bounded agency=preserved replay=deterministic");
 
 static void VerifyAuthoredFixture()
 {
-    Assert(ChronicleSaveCodec.CurrentVersion == 7, "Goal 6B must write strict save envelope v7.");
-    Assert(ChronicleState.Begin(Seed).WorldGrammarVersion == 5, "New Chronicles must pin World Grammar v5.");
+    Assert(ChronicleSaveCodec.CurrentVersion == 9, "Goal 7B must write strict save envelope v9.");
+    Assert(ChronicleState.Begin(Seed).WorldGrammarVersion == 6, "New Chronicles must pin World Grammar v6.");
 
     var burn = WordCatalogue.Get(WordIds.Burn);
     var quickly = WordCatalogue.Get(WordIds.Quickly);
@@ -464,8 +470,8 @@ static void VerifyPersistenceAndMigration()
     var current = NewEncounter(WordIds.Quickly, openingWeapon: true);
     var json = ChronicleSaveCodec.Serialize(current.State);
     var node = JsonNode.Parse(json)!.AsObject();
-    Assert(node["Version"]!.GetValue<int>() == 7, "Current serialization must write envelope v7.");
-    Assert(node["Chronicle"]!["Combat"] is not null, "v7 must persist the bounded combat state.");
+    Assert(node["Version"]!.GetValue<int>() == 9, "Current serialization must write envelope v9.");
+    Assert(node["Chronicle"]!["Combat"] is not null, "v9 must persist the bounded combat state.");
     var successorChronicle = node["Chronicle"]!.AsObject();
     Assert(
         !successorChronicle.ContainsKey("Study") &&
@@ -474,18 +480,18 @@ static void VerifyPersistenceAndMigration()
         !successorChronicle.ContainsKey("BellAddress") &&
         !successorChronicle.ContainsKey("Home") &&
         !successorChronicle["Loadout"]!.AsObject().ContainsKey("Noun"),
-        "Fresh v7 must serialize only the successor Loadout shape, not predecessor Study/Noun/FirstConflict fields.");
-    Assert(!json.Contains("RecentResults", StringComparison.Ordinal), "Message Log history must not enter v7 persistence.");
-    Assert(ChronicleSaveCodec.Deserialize(json) == current.State, "Strict v7 must round-trip exact durable successor state.");
+        "Fresh v9 must serialize only successor state, not predecessor Study/Noun/FirstConflict fields.");
+    Assert(!json.Contains("RecentResults", StringComparison.Ordinal), "Message Log history must not enter v9 persistence.");
+    Assert(ChronicleSaveCodec.Deserialize(json) == current.State, "Strict v9 must round-trip exact durable successor state.");
 
     node["Unexpected"] = true;
-    AssertThrows(() => ChronicleSaveCodec.Deserialize(node.ToJsonString()), "Strict v7 must reject unexpected envelope fields.");
+    AssertThrows(() => ChronicleSaveCodec.Deserialize(node.ToJsonString()), "Strict v9 must reject unexpected envelope fields.");
 
     var nounNode = JsonNode.Parse(json)!.AsObject();
     nounNode["Chronicle"]!["Codex"]!["Words"]!.AsArray().Add("word.stone");
     AssertThrows(
         () => ChronicleSaveCodec.Deserialize(nounNode.ToJsonString()),
-        "Strict v7 must reject predecessor Noun knowledge even though literal old-save readers still recognize it.");
+        "Strict v9 must reject predecessor Noun knowledge even though literal old-save readers still recognize it.");
 
     var fabricatedV5 = JsonNode.Parse(LiteralVersion5())!.AsObject();
     fabricatedV5["Chronicle"]!["WorldGrammarVersion"] = 4;
@@ -552,13 +558,13 @@ static void VerifyPersistenceAndMigration()
     var preEnvelope = ChronicleSaveCodec.Deserialize(LiteralPreEnvelope());
     Assert(
         preEnvelope.WorldGrammarVersion == 0 && preEnvelope.Combat is null &&
-        ChronicleSaveCodec.Serialize(preEnvelope).Contains("\"Version\": 7", StringComparison.Ordinal),
-        "Pre-envelope input must remain accepted and rewrite through strict v7 without a Brute.");
+        ChronicleSaveCodec.Serialize(preEnvelope).Contains("\"Version\": 9", StringComparison.Ordinal),
+        "Pre-envelope input must remain accepted and rewrite through strict v9 without a Brute.");
 }
 
 static void VerifyHoldingRules()
 {
-    var testingStart = new ChronicleSimulation(ChronicleState.Begin(Seed));
+    var testingStart = new ChronicleSimulation(LegacyGoal6BStart());
     Assert(testingStart.Apply(new ChooseHereIntent()).Applied,
         "The neutral testing start must retain Home without choosing a combat path.");
     var unreadPrimer = testingStart.PowerComesHomeContext;
@@ -1226,9 +1232,673 @@ static void VerifyGoal6BPersistenceAndReplay()
         "WG4 and older pins must never gain the WG5 Seam or Lode retroactively.");
 }
 
+static void VerifyAgentGrammarAndScale()
+{
+    var origin = HoldingFacts.SingingSeamAddress;
+    var lodeIdentity = HoldingRules.ResonantLodeIdentity(Seed);
+    var tamar = AgentGrammar.Generate(Seed, 6, lodeIdentity, origin, 0);
+    Assert(
+        tamar.DisplayName == "Tamar Venn" &&
+        tamar.Archetype == AgentGrammar.WayfarerListenerArchetype &&
+        tamar.ProvenanceIdentity == lodeIdentity &&
+        tamar.OriginAddress == origin,
+        "Seed 41337 plus the installed Resonant Lode provenance must freeze Tamar Venn without a singleton profile.");
+    Assert(
+        AgentGrammar.Generate(Seed, 6, lodeIdentity, origin with { X = origin.X + 1 }, 0).Identity !=
+            tamar.Identity &&
+        AgentGrammar.Generate(Seed, 7, lodeIdentity, origin, 0).Identity != tamar.Identity,
+        "Stable Agent identity must include origin and World Grammar version, not only a short provenance hash.");
+
+    var keys = Enumerable.Range(0, 512)
+        .Select(index => (Provenance: $"fixture.provenance.{index}", Ordinal: index % 7))
+        .ToArray();
+    var forward = keys.ToDictionary(
+        key => key,
+        key => AgentGrammar.Generate(
+            Seed,
+            6,
+            key.Provenance,
+            new WorldAddress(SurfacePatch.SurfaceStratum, 100 + key.Ordinal, indexY(key.Provenance)),
+            key.Ordinal));
+    var reverse = keys.Reverse().ToDictionary(
+        key => key,
+        key => AgentGrammar.Generate(
+            Seed,
+            6,
+            key.Provenance,
+            new WorldAddress(SurfacePatch.SurfaceStratum, 100 + key.Ordinal, indexY(key.Provenance)),
+            key.Ordinal));
+    var shuffledKeys = keys.OrderBy(key => DeterministicOrder(key.Provenance)).ToArray();
+    var shuffled = shuffledKeys.ToDictionary(
+        key => key,
+        key => AgentGrammar.Generate(
+            Seed,
+            6,
+            key.Provenance,
+            new WorldAddress(SurfacePatch.SurfaceStratum, 100 + key.Ordinal, indexY(key.Provenance)),
+            key.Ordinal));
+    Assert(
+        keys.All(key => forward[key] == reverse[key] && forward[key] == shuffled[key]) &&
+        forward.Values.Select(profile => profile.Identity).Distinct(StringComparer.Ordinal).Count() == 512 &&
+        forward.Values.All(profile => !string.IsNullOrWhiteSpace(profile.DisplayName) &&
+                                      profile.Archetype == AgentGrammar.WayfarerListenerArchetype),
+        "Agent possibility generation must be request-order independent, unique by stable key, and authored without mutating a Chronicle.");
+
+    var scaleAgents = Enumerable.Range(0, 256)
+        .Select(index =>
+        {
+            var provenance = $"scale.provenance.{index}";
+            var agentOrigin = new WorldAddress(SurfacePatch.SurfaceStratum, 2000 + index, 1000);
+            var profile = AgentGrammar.Generate(Seed, 6, provenance, agentOrigin, index);
+            var address = new WorldAddress(SurfacePatch.SurfaceStratum, 4000 + index * 3L, 2000);
+            return new AgentState(
+                profile,
+                address,
+                address,
+                AgentPresenceState.AtHome,
+                new AgentNeedState(AgentNeedKind.Refuge, AgentNeedStatus.Satisfied),
+                new AgentHomeRelationshipState("holding.home", AgentHomeRelationshipKind.Guest, 4, 1),
+                AgentIntentKind.RemainAtHome,
+                PromotedTick: 1,
+                ArrivalTick: 2,
+                WelcomeOfferedTick: 3,
+                RoadRollAddress: address with { X = address.X + 1 });
+        })
+        .ToArray();
+    var scaleState = ChronicleState.Begin(Seed) with
+    {
+        Tick = 10,
+        Agents = new AgentCollectionState(scaleAgents),
+    };
+    var scaleLoaded = ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(scaleState));
+    Assert(
+        scaleLoaded.Agents.Count == 256 && scaleLoaded.Agents.SequenceEqual(scaleAgents),
+        "Strict v9 must round-trip 256 consequential Agent records and their personal subjects exactly.");
+
+    var duplicateIdentity = scaleState with
+    {
+        Agents = new AgentCollectionState([scaleAgents[0], scaleAgents[0] with
+        {
+            Address = scaleAgents[0].Address with { Y = 2100 },
+            WaitingAddress = scaleAgents[0].Address with { Y = 2100 },
+            RoadRollAddress = scaleAgents[0].Address with { X = scaleAgents[0].Address.X + 1, Y = 2100 },
+        }]),
+    };
+    AssertThrows(
+        () => ChronicleSaveCodec.Serialize(duplicateIdentity),
+        "Strict v9 must reject duplicate consequential Agent identities.");
+
+    var badProvenance = scaleState with
+    {
+        Agents = new AgentCollectionState([scaleAgents[0] with
+        {
+            Profile = scaleAgents[0].Profile with { ProvenanceIdentity = "fabricated.provenance" },
+        }]),
+    };
+    AssertThrows(
+        () => ChronicleSaveCodec.Serialize(badProvenance),
+        "Strict v9 must reject a generated profile that disagrees with its provenance.");
+
+    var second = scaleAgents[1] with
+    {
+        Address = scaleAgents[0].Address,
+        WaitingAddress = scaleAgents[0].Address,
+    };
+    AssertThrows(
+        () => ChronicleSaveCodec.Serialize(scaleState with
+        {
+            Agents = new AgentCollectionState([scaleAgents[0], second]),
+        }),
+        "Strict v9 must reject duplicate exclusive Agent occupancy.");
+
+    AssertThrows(
+        () => ChronicleSaveCodec.Serialize(scaleState with
+        {
+            Agents = new AgentCollectionState([scaleAgents[0] with
+            {
+                Need = new AgentNeedState((AgentNeedKind)99, AgentNeedStatus.Satisfied),
+            }]),
+        }),
+        "Strict v9 must reject unknown authored need values.");
+
+    AssertThrows(
+        () => ChronicleSaveCodec.Serialize(scaleState with
+        {
+            Agents = new AgentCollectionState([scaleAgents[0] with
+            {
+                Presence = AgentPresenceState.WaitingAtHome,
+                Need = new AgentNeedState(AgentNeedKind.Refuge, AgentNeedStatus.Seeking),
+                HomeRelationship = new AgentHomeRelationshipState(
+                    "holding.home",
+                    AgentHomeRelationshipKind.Unfamiliar),
+                Intent = AgentIntentKind.WaitForWelcome,
+                WelcomeOfferedTick = null,
+            }]),
+        }),
+        "Strict v9 must reject an orphaned personal road-roll.");
+
+    static long indexY(string provenance) =>
+        long.Parse(provenance[(provenance.LastIndexOf('.') + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+    static uint DeterministicOrder(string value) =>
+        value.Aggregate(2166136261u, (hash, character) => unchecked((hash ^ character) * 16777619u));
+}
+
+static void VerifyAgentJourneyAndPersistence()
+{
+    var promoted = CompleteGoal7AResonator();
+    var tamar = promoted.AgentContext.PrimaryAgent;
+    Assert(
+        promoted.State.Agents.Count == 1 &&
+        tamar is
+        {
+            DisplayName: "Tamar Venn",
+            Presence: AgentPresenceState.ApproachingHome,
+            Need: { Kind: AgentNeedKind.Refuge, Status: AgentNeedStatus.Seeking },
+            HomeRelationship.Kind: AgentHomeRelationshipKind.Unfamiliar,
+            Intent: AgentIntentKind.ApproachHome,
+        } &&
+        tamar.Address == AgentRules.ResonanceListenerStartAddress(promoted.State) &&
+        tamar.WaitingAddress == AgentRules.ResonanceListenerWaitingAddress(promoted.State),
+        "Completing the first intact Resonator must promote exactly one Tamar at the three-step route start.");
+
+    var sourceHistory = promoted.State;
+    Assert(promoted.Apply(new BeginPowerCommitment(PowerCommitmentKind.Dismantle)).Applied,
+        "The post-promotion fixture must be able to dismantle its Source.");
+    AdvanceActive(promoted, 2);
+    Assert(
+        promoted.State.PowerHome!.Resonator?.Phase == HearthResonatorPhase.Destroyed &&
+        promoted.State.Agents.Count == 1 &&
+        promoted.State.Agents[0].Profile == sourceHistory.Agents[0].Profile &&
+        promoted.State.Agents[0].Address.X == sourceHistory.Agents[0].Address.X + 2,
+        "Destroying the Source must remove future Load capacity without unmaking or redirecting its historical Agent.");
+
+    var paused = new ChronicleSimulation(sourceHistory with { Speed = ChronicleSpeed.Paused });
+    paused.AdvanceOneTick();
+    Assert(paused.State == sourceHistory with { Speed = ChronicleSpeed.Paused },
+        "Pause must freeze Agent motion and intent.");
+
+    var blockedDestination = sourceHistory.Agents[0].Address with { X = sourceHistory.Agents[0].Address.X + 1 };
+    var blocked = new ChronicleSimulation(sourceHistory with
+    {
+        Address = blockedDestination,
+        Speed = ChronicleSpeed.Slow,
+    });
+    blocked.AdvanceOneTick();
+    Assert(
+        blocked.State.Agents[0].Address == sourceHistory.Agents[0].Address &&
+        blocked.AgentContext.RecentEvents.Last().Kind == AgentEventKind.Blocked &&
+        blocked.AgentContext.RecentEvents.Last().Blocker == AgentBlockerKind.Incarnation,
+        "A blocked arrival step must delay in place with an inspectable cause and no overlap.");
+    blocked = new ChronicleSimulation(blocked.State with
+    {
+        Address = ChronicleState.AcceptedHomeFixtureAddress,
+        Speed = ChronicleSpeed.Slow,
+    });
+    blocked.AdvanceOneTick();
+    Assert(blocked.State.Agents[0].Address == blockedDestination,
+        "Clearing a blocked route must advance only the current Heartbeat, never a catch-up step.");
+
+    var arrival = new ChronicleSimulation(sourceHistory with { Speed = ChronicleSpeed.Slow });
+    arrival.AdvanceOneTick();
+    var afterOne = arrival.State.Agents[0].Address;
+    arrival.AdvanceOneTick();
+    var afterTwo = arrival.State.Agents[0].Address;
+    arrival.AdvanceOneTick();
+    var arrived = arrival.State.Agents[0];
+    Assert(
+        afterOne.X == sourceHistory.Agents[0].Address.X + 1 &&
+        afterTwo.X == afterOne.X + 1 &&
+        arrived.Address == arrived.WaitingAddress &&
+        arrived.Presence == AgentPresenceState.WaitingAtHome &&
+        arrived.ArrivalTick == arrival.State.Tick &&
+        arrival.State.Speed == ChronicleSpeed.Paused,
+        "Tamar must move exactly one cardinal cell per active Heartbeat and pause once on arrival.");
+    var arrivalTick = arrival.State.Tick;
+    arrival.AdvanceOneTick();
+    Assert(arrival.State.Tick == arrivalTick && arrival.State.Agents[0] == arrived,
+        "The arrival interruption must remain frozen until explicitly resumed.");
+    AdvanceActive(arrival, 1);
+    Assert(arrival.State.Tick == arrivalTick + 1 && arrival.State.Speed == ChronicleSpeed.Slow &&
+           arrival.State.Agents[0] == arrived,
+        "Clearing arrival pause must advance normally without another pause or queued Agent step.");
+
+    var distant = new ChronicleSimulation(arrival.State with
+    {
+        Address = new WorldAddress(SurfacePatch.SurfaceStratum, 3, 3),
+        Speed = ChronicleSpeed.Paused,
+    });
+    Assert(!distant.Apply(new OfferWelcome(arrived.Profile.Identity)).Applied,
+        "Offering welcome outside physical interaction reach must reject atomically.");
+
+    var sameCell = new ChronicleSimulation(arrival.State with
+    {
+        Address = arrived.Address,
+        Speed = ChronicleSpeed.Paused,
+    });
+    Assert(sameCell.Apply(new OfferWelcome(arrived.Profile.Identity)).Applied,
+        "Standing on an Agent's cell must remain valid for interaction.");
+
+    var welcome = new ChronicleSimulation(arrival.State with
+    {
+        Address = ChronicleState.AcceptedHomeFixtureAddress,
+        Speed = ChronicleSpeed.Paused,
+    });
+    var offeredAt = welcome.State.Tick;
+    Assert(welcome.Apply(new OfferWelcome(arrived.Profile.Identity)).Applied &&
+           welcome.State.Agents[0] is
+           {
+               Need.Status: AgentNeedStatus.Offered,
+               HomeRelationship.Kind: AgentHomeRelationshipKind.WelcomeOffered,
+               Intent: AgentIntentKind.ConsiderWelcome,
+               WelcomeOfferedTick: var offerTick,
+           } && offerTick == offeredAt &&
+           welcome.AgentContext.Actions.Single(action => action.Kind == AgentActionKind.OfferWelcome)
+               .AvailabilityReason == AgentActionAvailabilityReason.AnotherWelcomeIsOpen,
+        "A cardinal-neighbor welcome must open one pending autonomous answer for the next active Heartbeat.");
+    welcome.AdvanceOneTick();
+    Assert(welcome.State.Tick == offeredAt &&
+           welcome.State.Agents[0].HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered,
+        "A paused open welcome must remain visibly pending.");
+    Assert(welcome.Apply(new WithdrawWelcome(arrived.Profile.Identity)).Applied &&
+           welcome.State.Agents[0].HomeRelationship.Kind == AgentHomeRelationshipKind.Unfamiliar,
+        "The Incarnation must be able to withdraw the welcome before its resolving Heartbeat.");
+    Assert(welcome.Apply(new OfferWelcome(arrived.Profile.Identity)).Applied,
+        "A withdrawn welcome must be offerable again while physical facts remain valid.");
+    AdvanceActive(welcome, 1);
+    var guest = welcome.State.Agents[0];
+    Assert(
+        guest is
+        {
+            Presence: AgentPresenceState.AtHome,
+            Need.Status: AgentNeedStatus.Satisfied,
+            HomeRelationship:
+            {
+                Kind: AgentHomeRelationshipKind.Guest,
+                WelcomingIncarnationId: 1,
+                EstablishedTick: var established,
+            },
+            Intent: AgentIntentKind.RemainAtHome,
+            RoadRollAddress: var roll,
+        } &&
+        established == welcome.State.Tick &&
+        roll == AgentRules.ResonanceListenerRoadRollAddress(welcome.State) &&
+        welcome.State.Speed == ChronicleSpeed.Paused,
+        "The next active Heartbeat must satisfy Refuge, establish Guest history, place Tamar's road-roll, and pause once.");
+    Assert(!welcome.Apply(new OfferWelcome(guest.Profile.Identity)).Applied,
+        "A Guest must reject a repeated welcome.");
+
+    var local = WorldArea.Generate(
+        welcome.State,
+        SurfacePatch.SurfaceStratum,
+        new WorldRectangle(-2, 2, 4, 4));
+    Assert(
+        local.Cells.Single(cell => cell.Address == guest.Address).Subject(WorldSubjectKind.Agent) is
+        {
+            Identity: var agentIdentity,
+            Condition: WorldSubjects.Guest,
+        } && agentIdentity == guest.Profile.Identity &&
+        local.Cells.Single(cell => cell.Address == guest.RoadRollAddress)
+            .Subject(WorldSubjectKind.PersonalPlace) is
+        {
+            OwnerIdentity: var owner,
+            Condition: WorldSubjects.Laid,
+        } && owner == guest.Profile.Identity,
+        "World Grammar must expose Tamar and the owned road-roll as linked durable WorldSubjects.");
+
+    var acceptedEventCount = welcome.AgentContext.RecentEvents.Count(@event =>
+        @event.Kind == AgentEventKind.WelcomeAccepted);
+    AdvanceActive(welcome, 1);
+    Assert(
+        welcome.State.Speed == ChronicleSpeed.Slow &&
+        welcome.State.Agents[0] == guest &&
+        welcome.AgentContext.RecentEvents.Count(@event => @event.Kind == AgentEventKind.WelcomeAccepted) == acceptedEventCount,
+        "Acceptance must release its pause ownership without re-answering or latching auto-pause.");
+
+    AssertRoundTrip(welcome.State, "accepted Guest and road-roll");
+    var restored = new ChronicleSimulation(
+        ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(welcome.State)));
+    var departedArea = WorldArea.Generate(
+        restored.State,
+        SurfacePatch.SurfaceStratum,
+        new WorldRectangle(20, 20, 3, 3));
+    Assert(departedArea.Cells.All(cell => !cell.Has(WorldSubjectKind.Agent)),
+        "Leaving the local viewport must not eagerly render distant consequential Agents.");
+
+    restored = new ChronicleSimulation(restored.State with
+    {
+        Address = restored.State.CurrentBellAddress,
+        Speed = ChronicleSpeed.Paused,
+    });
+    Assert(restored.Apply(new EndIncarnationAtBell()).Applied &&
+           restored.State.Agents[0] == guest,
+        "Incarnation death must not reset Tamar, Refuge, the Guest relationship, or road-roll.");
+    Assert(restored.Apply(new CreateReplacementIncarnation()).Applied &&
+           restored.State.IncarnationId == 2 && restored.State.Agents[0] == guest,
+        "Replacement must preserve the same Agent and the prior welcoming Incarnation cause.");
+    Assert(restored.Apply(new MoveIncarnation(0, 1)).Applied &&
+           restored.Apply(new MoveIncarnation(0, 1)).Applied &&
+           restored.Apply(new MoveIncarnation(0, 1)).Applied &&
+           restored.State.Address == ChronicleState.AcceptedHomeFixtureAddress,
+        "A replacement must return physically to Home to encounter the continuing Guest.");
+    AssertRoundTrip(restored.State, "replacement return to the same Guest");
+
+    var replayA = CompleteGoal7AWelcome();
+    var replayB = CompleteGoal7AWelcome();
+    Assert(
+        ChronicleSaveCodec.Serialize(replayA.State) == ChronicleSaveCodec.Serialize(replayB.State) &&
+        replayA.AgentContext.Agents.SequenceEqual(replayB.AgentContext.Agents) &&
+        replayA.AgentContext.RecentEvents.SequenceEqual(replayB.AgentContext.RecentEvents),
+        "The exact Goal 7A command and Heartbeat stream must replay to byte-equal state and ordered Agent snapshots.");
+
+    var v7 = ChronicleSaveCodec.Deserialize(
+        ChronicleSaveCodec.SerializeVersion7ForVerification(LegacyGoal6BStart()));
+    Assert(v7.WorldGrammarVersion == 5 && v7.Agents.Count == 0,
+        "Literal v7 must migrate to strict v9 with no retroactive Agent and its WG5 pin intact.");
+
+    var malformed = JsonNode.Parse(ChronicleSaveCodec.Serialize(welcome.State))!.AsObject();
+    malformed["Chronicle"]!["Agents"]![0]!["Profile"]!["DisplayName"] = "Not Tamar";
+    AssertThrows(() => ChronicleSaveCodec.Deserialize(malformed.ToJsonString()),
+        "Strict v9 must reject a profile whose stored presentation identity disagrees with stable generation.");
+}
+
+static ChronicleSimulation CompleteGoal7AResonator()
+{
+    var simulation = new ChronicleSimulation(ChronicleState.Begin(Seed));
+    Assert(simulation.Apply(new ChooseHereIntent()).Applied, "Goal 7A uses the neutral test start.");
+    Assert(simulation.Apply(new ReadBurnPrimer()).Applied, "Goal 7A retains the nearby Burn Primer.");
+    simulation = At(simulation, new WorldAddress(SurfacePatch.SurfaceStratum, 7, 3));
+    Assert(simulation.Apply(new BeginPowerCommitment(PowerCommitmentKind.Extract)).Applied,
+        "Goal 7A must extract the historical Resonant Lode.");
+    AdvanceActive(simulation, 2);
+    Assert(simulation.Apply(new LiftResonantLode()).Applied,
+        "Goal 7A must carry the historical Lode physically.");
+    simulation = At(simulation, ChronicleState.AcceptedHomeFixtureAddress);
+    Assert(simulation.Apply(new BeginPowerCommitment(PowerCommitmentKind.Build)).Applied,
+        "Goal 7A must build the historical Load Source at Home.");
+    AdvanceActive(simulation, 3);
+    return simulation;
+}
+
+static ChronicleSimulation CompleteGoal7AWelcome()
+{
+    var simulation = CompleteGoal7AResonator();
+    AdvanceActive(simulation, 3);
+    var identity = simulation.State.Agents[0].Profile.Identity;
+    Assert(simulation.Apply(new OfferWelcome(identity)).Applied,
+        "The deterministic replay must offer Tamar welcome.");
+    AdvanceActive(simulation, 1);
+    return simulation;
+}
+
+static void VerifyDirectiveRules()
+{
+    var suggest = WordCatalogue.Get(WordIds.Suggest);
+    var command = WordCatalogue.Get(WordIds.Command);
+    Assert(
+        suggest.Kind == WordKind.Verb && suggest.Load == 1 && suggest.SupportedVerbs.Count == 0 &&
+        command.Kind == WordKind.Verb && command.Load == 3 && command.SupportedVerbs.Count == 0,
+        "Suggest and Command must retain their bounded authored identities, Loads, and no compatible Modifiers.");
+
+    var simulation = Goal7BSocialFixture(WordIds.Suggest);
+    var tamar = simulation.State.Agents[0];
+    var safe = DirectiveRules.Action(simulation.State, tamar.Profile.Identity, 0, DirectiveKind.RestByRoadRoll);
+    var dangerous = DirectiveRules.Action(simulation.State, tamar.Profile.Identity, 0, DirectiveKind.ApproachMireBrute);
+    Assert(
+        safe is { Available: true, ActiveForce: SocialVerbForce.Suggest, MinimumForce: SocialVerbForce.Suggest } &&
+        dangerous is { Available: false, AvailabilityReason: DirectiveAvailabilityReason.InsufficientForce,
+            ActiveForce: SocialVerbForce.Suggest, MinimumForce: SocialVerbForce.Command },
+        "Suggest must be enough for the safe request and visibly insufficient for the dangerous request.");
+
+    var alternateProfile = AgentGrammar.Generate(
+        Seed,
+        6,
+        "fixture.second-directive-recipient",
+        new WorldAddress(SurfacePatch.SurfaceStratum, 90, 90),
+        0);
+    var alternate = tamar with { Profile = alternateProfile };
+    var alternateState = simulation.State with
+    {
+        Agents = new AgentCollectionState([alternate]),
+    };
+    Assert(
+        DirectiveRules.Action(alternateState, alternateProfile.Identity, 0, DirectiveKind.RestByRoadRoll).Available &&
+        DirectiveRules.Action(alternateState, alternateProfile.Identity, 0, DirectiveKind.ApproachMireBrute)
+            .AvailabilityReason == DirectiveAvailabilityReason.InsufficientForce,
+        "Directive admissibility must follow equivalent Agent facts, never Tamar's name, seed-derived identity, or UI label.");
+
+    var deadBrute = simulation.State.Combat!.MireBrute with { HitPoints = 0 };
+    var missingObjective = simulation.State with
+    {
+        Combat = simulation.State.Combat with { MireBrute = deadBrute },
+    };
+    Assert(
+        DirectiveRules.Action(missingObjective, tamar.Profile.Identity, 0, DirectiveKind.ApproachMireBrute)
+            .AvailabilityReason == DirectiveAvailabilityReason.ObjectiveUnavailable,
+        "A dead or missing dangerous objective must reject before Agent consideration.");
+
+    var rejectedState = simulation.State;
+    Assert(!simulation.Apply(new DeliverDirective(0, tamar.Profile.Identity, DirectiveKind.ApproachMireBrute)).Applied &&
+           simulation.State == rejectedState && tamar.DirectiveMemories.Count == 0,
+        "An insufficient Suggest must reject atomically without pending intent, movement, or memory.");
+
+    var sameCell = simulation.State with { Address = tamar.Address };
+    Assert(DirectiveRules.Action(sameCell, tamar.Profile.Identity, 0, DirectiveKind.RestByRoadRoll).Available,
+        "Standing on Tamar's cell must be valid Directive reach.");
+    var distant = simulation.State with { Address = tamar.Address with { X = tamar.Address.X + 3 } };
+    Assert(DirectiveRules.Action(distant, tamar.Profile.Identity, 0, DirectiveKind.RestByRoadRoll)
+               .AvailabilityReason == DirectiveAvailabilityReason.RecipientOutOfReach,
+        "A distant Tamar must make delivery unavailable with an explicit reach reason.");
+
+    Assert(simulation.Apply(new DeliverDirective(0, tamar.Profile.Identity, DirectiveKind.RestByRoadRoll)).Applied &&
+           simulation.State.Speed == ChronicleSpeed.Paused &&
+           simulation.State.Agents[0].PendingDirective is { ResolvesAtTick: var resolvesAt } &&
+           resolvesAt == simulation.State.Tick + 1,
+        "Delivering a Directive must pause with one visible pending answer on the next active Heartbeat.");
+    var onePending = simulation.State;
+    Assert(!simulation.Apply(new DeliverDirective(0, tamar.Profile.Identity, DirectiveKind.RestByRoadRoll)).Applied &&
+           simulation.State == onePending,
+        "One recipient may retain only one pending Directive.");
+    AssertRoundTrip(simulation.State, "pending Suggest Directive");
+    Assert(simulation.Apply(new WithdrawDirective(tamar.Profile.Identity)).Applied &&
+           simulation.State.Agents[0] is { PendingDirective: null, Intent: AgentIntentKind.RemainAtHome } &&
+           simulation.State.Agents[0].DirectiveMemories.Count == 0,
+        "The original issuer must be able to withdraw before resolution without creating history.");
+
+    Assert(simulation.Apply(new DeliverDirective(0, tamar.Profile.Identity, DirectiveKind.RestByRoadRoll)).Applied,
+        "A withdrawn safe Directive must remain deliverable.");
+    AdvanceActive(simulation, 1);
+    var accepted = simulation.State.Agents[0];
+    Assert(
+        accepted.Address == accepted.RoadRollAddress &&
+        accepted.PendingDirective is null &&
+        accepted.DirectiveMemories.Single() is
+        {
+            Verb: var acceptedVerb,
+            Directive: DirectiveKind.RestByRoadRoll,
+            Response: DirectiveResponseKind.Accepted,
+            Reason: DirectiveResponseReason.RestAccepted,
+            IssuingIncarnationId: 1,
+        } && acceptedVerb == WordIds.Suggest &&
+        simulation.State.Speed == ChronicleSpeed.Paused,
+        "Tamar must autonomously accept the safe Suggest, move one bounded step, remember it, and pause once.");
+    var memoryCount = accepted.DirectiveMemories.Count;
+    AdvanceActive(simulation, 1);
+    Assert(simulation.State.Agents[0].DirectiveMemories.Count == memoryCount &&
+           simulation.State.Speed == ChronicleSpeed.Slow,
+        "A resolved answer must release pause ownership without invisible retry or repeated memory.");
+
+    var blocked = Goal7BSocialFixture(WordIds.Suggest);
+    var blockedTamar = blocked.State.Agents[0];
+    blocked = new ChronicleSimulation(blocked.State with
+    {
+        Address = blockedTamar.RoadRollAddress!.Value,
+        Speed = ChronicleSpeed.Paused,
+    });
+    Assert(blocked.Apply(new DeliverDirective(0, blockedTamar.Profile.Identity, DirectiveKind.RestByRoadRoll)).Applied,
+        "The safe Directive must be deliverable while the Incarnation physically blocks its objective.");
+    AdvanceActive(blocked, 1);
+    var delayed = blocked.State.Agents[0];
+    Assert(
+        delayed.Address == delayed.WaitingAddress && delayed.PendingDirective is null &&
+        delayed.DirectiveMemories.Single() is
+        {
+            Response: DirectiveResponseKind.Delayed,
+            Reason: DirectiveResponseReason.DestinationBlocked,
+            Blocker: AgentBlockerKind.Incarnation,
+        },
+        "A blocked objective must produce one Delayed answer in place and no hidden retry queue.");
+    AssertRoundTrip(blocked.State, "delayed blocked Directive");
+    blocked = new ChronicleSimulation(blocked.State with
+    {
+        Address = ChronicleState.AcceptedHomeFixtureAddress,
+        Speed = ChronicleSpeed.Paused,
+    });
+    Assert(blocked.Apply(new DeliverDirective(0, delayed.Profile.Identity, DirectiveKind.RestByRoadRoll)).Applied,
+        "Clearing the objective must still require a newly delivered Directive.");
+    AdvanceActive(blocked, 1);
+    Assert(blocked.State.Agents[0].Address == delayed.RoadRollAddress &&
+           blocked.State.Agents[0].DirectiveMemories.Count == 2,
+        "The explicit retry may then be accepted once, without catch-up movement.");
+
+    var commanded = Goal7BSocialFixture(WordIds.Command);
+    var commandedTamar = commanded.State.Agents[0];
+    Assert(
+        DirectiveRules.Action(commanded.State, commandedTamar.Profile.Identity, 0, DirectiveKind.RestByRoadRoll).Available &&
+        DirectiveRules.Action(commanded.State, commandedTamar.Profile.Identity, 0, DirectiveKind.ApproachMireBrute).Available,
+        "Command must satisfy both safe and dangerous delivery thresholds without guaranteeing obedience.");
+    var bruteBefore = commanded.State.Combat!.MireBrute;
+    Assert(commanded.Apply(new DeliverDirective(0, commandedTamar.Profile.Identity, DirectiveKind.ApproachMireBrute)).Applied,
+        "Command must allow delivery of the dangerous Directive.");
+    AdvanceActive(commanded, 1);
+    Assert(
+        commanded.State.Agents[0].Address == commandedTamar.Address &&
+        commanded.State.Combat.MireBrute == bruteBefore &&
+        commanded.State.Agents[0].DirectiveMemories.Single() is
+        {
+            Response: DirectiveResponseKind.Refused,
+            Reason: DirectiveResponseReason.GuestHasNoViolentCommitment,
+        },
+        "Tamar must autonomously refuse violence; Command is permission to ask, never unit control.");
+    AssertRoundTrip(commanded.State, "refused dangerous Directive");
+}
+
+static void VerifyDirectivePersistenceAndMigration()
+{
+    var pending = Goal7BSocialFixture(WordIds.Suggest);
+    var identity = pending.State.Agents[0].Profile.Identity;
+    Assert(pending.Apply(new DeliverDirective(0, identity, DirectiveKind.RestByRoadRoll)).Applied,
+        "The persistence fixture must open a pending Directive.");
+    var pendingLoaded = ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(pending.State));
+    Assert(pendingLoaded == pending.State && pendingLoaded.Agents[0].PendingDirective is not null,
+        "Strict v9 must preserve a pending Directive exactly.");
+
+    var replaced = new ChronicleSimulation(pendingLoaded with
+    {
+        Address = pendingLoaded.CurrentBellAddress,
+        Speed = ChronicleSpeed.Paused,
+    });
+    Assert(replaced.Apply(new EndIncarnationAtBell()).Applied &&
+           replaced.Apply(new CreateReplacementIncarnation()).Applied &&
+           replaced.State.IncarnationId == 2,
+        "Death and replacement must not erase a pending Directive from the prior Incarnation.");
+    var replacementPending = replaced.State;
+    Assert(!replaced.Apply(new WithdrawDirective(identity)).Applied && replaced.State == replacementPending,
+        "A replacement Incarnation must not withdraw the prior body's pending Directive.");
+    AdvanceActive(replaced, 1);
+    Assert(replaced.State.Agents[0].DirectiveMemories.Single().IssuingIncarnationId == 1,
+        "Resolution after replacement must preserve attribution to the dead issuing Incarnation.");
+    AssertRoundTrip(replaced.State, "resolved Directive after replacement");
+
+    var replayA = Goal7BSocialFixture(WordIds.Command);
+    var replayB = Goal7BSocialFixture(WordIds.Command);
+    foreach (var replay in new[] { replayA, replayB })
+    {
+        Assert(replay.Apply(new DeliverDirective(0, replay.State.Agents[0].Profile.Identity,
+                DirectiveKind.ApproachMireBrute)).Applied,
+            "The replay fixture must deliver the dangerous Directive.");
+        AdvanceActive(replay, 1);
+    }
+    Assert(ChronicleSaveCodec.Serialize(replayA.State) == ChronicleSaveCodec.Serialize(replayB.State) &&
+           replayA.DirectiveContext.RecentEvents.SequenceEqual(replayB.DirectiveContext.RecentEvents) &&
+           replayA.AgentContext.Agents.SequenceEqual(replayB.AgentContext.Agents),
+        "The exact Directive command and Heartbeat stream must replay to byte-equal state, Agent snapshots, and ordered events.");
+
+    var scaleBase = ChronicleState.Begin(Seed);
+    var scaleAgents = Enumerable.Range(0, 256).Select(index =>
+    {
+        var provenance = $"directive.scale.{index}";
+        var origin = new WorldAddress(SurfacePatch.SurfaceStratum, 5000 + index, 1000);
+        var profile = AgentGrammar.Generate(Seed, 6, provenance, origin, index);
+        var address = new WorldAddress(SurfacePatch.SurfaceStratum, 7000 + index * 3L, 2000);
+        var objective = address with { X = address.X + 1 };
+        var memories = new DirectiveMemoryCollectionState([
+            new DirectiveMemoryState(profile.Identity, 1, WordIds.Suggest, DirectiveKind.RestByRoadRoll,
+                AgentRules.RoadRollIdentity(profile.Identity), objective, 2, 3,
+                DirectiveResponseKind.Accepted, DirectiveResponseReason.RestAccepted,
+                AgentBlockerKind.None, objective),
+            new DirectiveMemoryState(profile.Identity, 1, WordIds.Command, DirectiveKind.ApproachMireBrute,
+                "creature.historical-brute", objective with { Y = objective.Y + 1 }, 4, 5,
+                DirectiveResponseKind.Refused, DirectiveResponseReason.GuestHasNoViolentCommitment,
+                AgentBlockerKind.None, objective),
+        ]);
+        return new AgentState(profile, address, address, AgentPresenceState.AtHome,
+            new AgentNeedState(AgentNeedKind.Refuge, AgentNeedStatus.Satisfied),
+            new AgentHomeRelationshipState("holding.home", AgentHomeRelationshipKind.Guest, 4, 1),
+            AgentIntentKind.RemainAtHome, 1, 2, 3, objective, null, memories);
+    }).ToArray();
+    var scaleState = scaleBase with
+    {
+        Tick = 10,
+        Agents = new AgentCollectionState(scaleAgents),
+    };
+    var scaleLoaded = ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(scaleState));
+    Assert(scaleLoaded.Agents.Count == 256 &&
+           scaleLoaded.Agents.Sum(agent => agent.DirectiveMemories.Count) == 512 &&
+           scaleLoaded.Agents.SequenceEqual(scaleAgents),
+        "Strict v9 must round-trip 256 consequential Agents and 512 ordered Directive memories exactly.");
+
+    var v8Source = CompleteGoal7AWelcome().State;
+    var v8Bytes = Encoding.UTF8.GetBytes(ChronicleSaveCodec.SerializeVersion8ForVerification(v8Source));
+    var v8Digest = Convert.ToHexString(SHA256.HashData(v8Bytes)).ToLowerInvariant();
+    Assert(
+        v8Digest == "73195f641365eb8ef3bb39d585bc58a8c0c8d16eb86e3ce61dc74fb7ee161c7a",
+        $"The accepted Goal 7A canonical v8 fixture must remain byte-identical; actual {v8Digest}.");
+    var migrated = ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.SerializeVersion8ForVerification(v8Source));
+    Assert(
+        migrated.WorldGrammarVersion == 6 && migrated.Agents.Count == 1 &&
+        migrated.Agents[0].PendingDirective is null && migrated.Agents[0].DirectiveMemories.Count == 0 &&
+        !migrated.Codex.Contains(WordIds.Suggest) && !migrated.Codex.Contains(WordIds.Command),
+        "Literal v8 must migrate once to v9 without retroactive social Words, pending intent, or Directive history.");
+
+    var accepted = Goal7BSocialFixture(WordIds.Suggest);
+    Assert(accepted.Apply(new DeliverDirective(0, accepted.State.Agents[0].Profile.Identity,
+            DirectiveKind.RestByRoadRoll)).Applied,
+        "The malformed-state fixture must deliver a safe Directive.");
+    AdvanceActive(accepted, 1);
+    var malformed = JsonNode.Parse(ChronicleSaveCodec.Serialize(accepted.State))!.AsObject();
+    malformed["Chronicle"]!["Agents"]![0]!["DirectiveMemories"]![0]!["Reason"] = 3;
+    AssertThrows(() => ChronicleSaveCodec.Deserialize(malformed.ToJsonString()),
+        "Strict v9 must reject a Directive response whose reason disagrees with its result.");
+}
+
+static ChronicleSimulation Goal7BSocialFixture(WordId activeVerb)
+{
+    var accepted = CompleteGoal7AWelcome();
+    var learned = accepted.State with
+    {
+        Codex = accepted.State.Codex.Learn(WordIds.Suggest).Learn(WordIds.Command),
+        Speed = ChronicleSpeed.Paused,
+    };
+    var simulation = new ChronicleSimulation(learned);
+    Assert(simulation.Apply(new AttuneExpression(activeVerb, [])).Applied,
+        $"The Goal 7B fixture must attune authored social Verb {activeVerb.Value} while safe.");
+    return simulation;
+}
+
 static void VerifyHistoricalSaveOracle()
 {
-    var bytes = Encoding.UTF8.GetBytes(ChronicleSaveCodec.Serialize(ChronicleState.Begin(Seed)));
+    var bytes = Encoding.UTF8.GetBytes(
+        ChronicleSaveCodec.SerializeVersion7ForVerification(LegacyGoal6BStart()));
     var digest = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     Assert(
         digest == "8adb027068df2ccb5ebf69ff5a6e7e66b75ba88fff4af28e03293689d2d6f5c1",
@@ -1237,13 +1907,19 @@ static void VerifyHistoricalSaveOracle()
 
 static ChronicleSimulation NewGoal6BFixture()
 {
-    var simulation = new ChronicleSimulation(ChronicleState.Begin(Seed));
+    var simulation = new ChronicleSimulation(LegacyGoal6BStart());
     Assert(simulation.Apply(new ChooseHereIntent()).Applied,
         "The WG5 acceptance Chronicle must use the neutral Home testing start.");
     Assert(simulation.Apply(new ReadBurnPrimer()).Applied,
         "The WG5 acceptance Chronicle must acquire Burn from the physical Primer, not an opening path.");
     return simulation;
 }
+
+static ChronicleState LegacyGoal6BStart() => ChronicleState.Begin(Seed) with
+{
+    WorldGrammarVersion = 5,
+    Agents = default,
+};
 
 static ChronicleSimulation At(ChronicleSimulation simulation, WorldAddress address) =>
     new(simulation.State with { Address = address, Speed = ChronicleSpeed.Paused });
@@ -1262,7 +1938,7 @@ static void AdvanceActive(ChronicleSimulation simulation, int ticks)
 static void AssertRoundTrip(ChronicleState state, string phase)
 {
     Assert(ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(state)) == state,
-        $"Strict v7 must round-trip {phase} exactly.");
+        $"Strict v9 must round-trip {phase} exactly.");
 }
 
 static void AssertObjective(

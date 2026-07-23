@@ -1127,6 +1127,8 @@ public partial class WorldAtlasInspector : Node
         Verify(_nodeCount <= 48, "Visual preview must remain a bounded raster, not Nodes per address.");
         CaptureGate3BSurfaceReviewSet();
         VerifyGoal6BInspectorParity();
+        VerifyGoal7AInspectorParity();
+        VerifyGoal7BInspectorParity();
 
         GD.Print(
             $"GATE3B SHARED COMPOSER PLAN PASS pack={_visualPack.PackId} " +
@@ -1261,6 +1263,342 @@ public partial class WorldAtlasInspector : Node
         }
 
         GD.Print($"GOAL6B INSPECTOR PARITY PASS states={stages.Length} pack={_visualPack.PackId} size={_visualCellSize}");
+    }
+
+    private void VerifyGoal7AInspectorParity()
+    {
+        var approachingSimulation = CompleteGoal7AResonator();
+        var approaching = approachingSimulation.State;
+        var primary = approachingSimulation.AgentContext.PrimaryAgent
+            ?? throw new InvalidOperationException("Goal 7A Inspector parity requires one consequential Agent.");
+        var blocked = approaching with
+        {
+            Address = primary.NextAddress
+                ?? throw new InvalidOperationException("Approaching Tamar must expose a next Address."),
+            Speed = ChronicleSpeed.Paused,
+        };
+
+        var waitingSimulation = new ChronicleSimulation(approaching with { Speed = ChronicleSpeed.Slow });
+        for (var index = 0; index < 3; index++)
+        {
+            waitingSimulation.AdvanceOneTick();
+        }
+        var waiting = waitingSimulation.State;
+        var identity = waitingSimulation.AgentContext.PrimaryAgent!.Identity;
+        Verify(
+            waitingSimulation.Apply(new OfferWelcome(identity)).Applied,
+            "Goal 7A Inspector parity could not open the welcome fixture.");
+        var offered = waitingSimulation.State;
+        Verify(
+            waitingSimulation.Apply(new SetChronicleSpeed(ChronicleSpeed.Slow)).Applied,
+            "Goal 7A Inspector parity could not resume the welcome fixture.");
+        waitingSimulation.AdvanceOneTick();
+        var guest = waitingSimulation.State;
+        var restored = ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(guest));
+
+        var stages = new (string Name, ChronicleState State, string VisualId, bool Blocked)[]
+        {
+            ("approaching", approaching, "agent.wayfarer-listener.approaching", false),
+            ("blocked", blocked, "agent.wayfarer-listener.approaching", true),
+            ("waiting", waiting, "agent.wayfarer-listener.waiting", false),
+            ("open-offer", offered, "agent.wayfarer-listener.welcome-offered", false),
+            ("guest", guest, "agent.wayfarer-listener.guest", false),
+            ("restored-guest", restored, "agent.wayfarer-listener.guest", false),
+        };
+        var visibleBounds = new WorldRectangle(-6, 0, 12, 8);
+        var pgen = PackagedVisualPackLoader.Load([], 20);
+        var manual = ManualVisualPack.CreateGate3B(20);
+
+        foreach (var stage in stages)
+        {
+            var simulation = new ChronicleSimulation(stage.State);
+            var agent = simulation.AgentContext.PrimaryAgent
+                ?? throw new InvalidOperationException($"Goal 7A Inspector '{stage.Name}' lost its Agent.");
+            var semanticArea = WorldArea.Generate(
+                stage.State,
+                SurfacePatch.SurfaceStratum,
+                VisualViewportBounds.WithOneCellSemanticHalo(visibleBounds));
+            var agentSubject = semanticArea.Cells.Single(cell => cell.Address == agent.Address)
+                .Subject(WorldSubjectKind.Agent);
+            Verify(
+                agentSubject is not null &&
+                string.Equals(agentSubject.Identity, agent.Identity, StringComparison.Ordinal),
+                $"Goal 7A Inspector '{stage.Name}' must use the shared WorldSubject Agent path.");
+
+            var emphases = stage.Blocked && agent.NextAddress is { } blockedAddress
+                ? new[]
+                {
+                    new VisualPresentationEmphasis(
+                        blockedAddress,
+                        VisualPresentationEmphasisKind.AgentBlockedRoute),
+                }
+                : [];
+            var input = new VisualCompositionInput(
+                semanticArea,
+                visibleBounds,
+                InitialSeed,
+                pgen,
+                pgen.StyleVersion,
+                stage.State.HasLivingIncarnation ? stage.State.Address : null,
+                TargetAddresses: [],
+                SelectedAddresses: [],
+                ActionEmphases: emphases);
+            var pgenPlan = VisualGrammar.Compose(input);
+            var manualPlan = VisualGrammar.Compose(input with
+            {
+                Pack = manual,
+                VisualStyleVersion = manual.StyleVersion,
+            });
+            Verify(
+                pgenPlan.Marks.Select(MarkProjection).SequenceEqual(
+                    manualPlan.Marks.Select(MarkProjection)) &&
+                pgenPlan.Marks.Any(mark =>
+                    mark.Address == agent.Address &&
+                    string.Equals(mark.VisualId, stage.VisualId, StringComparison.Ordinal)) &&
+                (!stage.Blocked || pgenPlan.Marks.Any(mark =>
+                    string.Equals(mark.VisualId, "emphasis.agent.blocked-route", StringComparison.Ordinal))),
+                $"Goal 7A Inspector '{stage.Name}' must preserve packaged/manual semantic render-plan parity.");
+            if (agent.RoadRollAddress is { } roadRoll)
+            {
+                Verify(
+                    pgenPlan.Marks.Any(mark =>
+                        mark.Address == roadRoll &&
+                        string.Equals(mark.VisualId, "place.wayfarer-road-roll.laid", StringComparison.Ordinal)),
+                    $"Goal 7A Inspector '{stage.Name}' must render Tamar's owned road-roll.");
+            }
+
+            var selectedPlan = string.Equals(_visualPack.PackId, pgen.PackId, StringComparison.Ordinal)
+                ? pgenPlan
+                : manualPlan;
+            var raster = VisualPackGodotAdapter.RasterizeNative(_visualPack, selectedPlan);
+            Verify(
+                raster.GetWidth() == visibleBounds.Width * _visualCellSize &&
+                raster.GetHeight() == visibleBounds.Height * _visualCellSize,
+                $"Goal 7A Inspector '{stage.Name}' must rasterize through the selected runtime pack.");
+        }
+
+        GD.Print($"GOAL7A INSPECTOR PARITY PASS states={stages.Length} pack={_visualPack.PackId} size={_visualCellSize}");
+
+        static (WorldAddress Address, string VisualId, VisualLayerClass Layer, int Column, int Row) MarkProjection(
+            VisualRenderMark mark) =>
+            (mark.Address, mark.VisualId, mark.Layer, mark.Column, mark.Row);
+    }
+
+    private void VerifyGoal7BInspectorParity()
+    {
+        var guest = CompleteGoal7AResonator();
+        AdvanceDirective(guest, 3);
+        var identity = guest.State.Agents[0].Profile.Identity;
+        VerifyApplied(guest, new OfferWelcome(identity), "offer Goal 7B fixture welcome");
+        AdvanceDirective(guest, 1);
+
+        ChronicleSimulation Social(WordId verb)
+        {
+            var learned = guest.State with
+            {
+                Codex = guest.State.Codex.Learn(WordIds.Suggest).Learn(WordIds.Command),
+                Speed = ChronicleSpeed.Paused,
+            };
+            var simulation = new ChronicleSimulation(learned);
+            VerifyApplied(simulation, new AttuneExpression(verb, []), $"attune {verb.Value}");
+            return simulation;
+        }
+
+        var suggest = Social(WordIds.Suggest);
+        var suggestAgent = suggest.State.Agents[0];
+        var safePending = new ChronicleSimulation(suggest.State);
+        VerifyApplied(
+            safePending,
+            new DeliverDirective(0, identity, DirectiveKind.RestByRoadRoll),
+            "deliver safe Inspector Suggestion");
+        var safeAccepted = new ChronicleSimulation(safePending.State);
+        AdvanceDirective(safeAccepted, 1);
+
+        var blocked = new ChronicleSimulation(suggest.State with
+        {
+            Address = suggestAgent.RoadRollAddress!.Value,
+            Speed = ChronicleSpeed.Paused,
+        });
+        VerifyApplied(
+            blocked,
+            new DeliverDirective(0, identity, DirectiveKind.RestByRoadRoll),
+            "deliver blocked Inspector Suggestion");
+        AdvanceDirective(blocked, 1);
+
+        var command = Social(WordIds.Command);
+        var dangerousPending = new ChronicleSimulation(command.State);
+        VerifyApplied(
+            dangerousPending,
+            new DeliverDirective(0, identity, DirectiveKind.ApproachMireBrute),
+            "deliver dangerous Inspector Command");
+        var refused = new ChronicleSimulation(dangerousPending.State);
+        AdvanceDirective(refused, 1);
+        var restored = new ChronicleSimulation(
+            ChronicleSaveCodec.Deserialize(ChronicleSaveCodec.Serialize(refused.State)));
+        var replacement = new ChronicleSimulation(restored.State with
+        {
+            Address = restored.State.CurrentBellAddress,
+            Speed = ChronicleSpeed.Paused,
+        });
+        VerifyApplied(replacement, new EndIncarnationAtBell(), "end Inspector issuing body");
+        VerifyApplied(replacement, new CreateReplacementIncarnation(), "create Inspector replacement body");
+
+        var roadRoll = suggestAgent.RoadRollAddress!.Value;
+        var brute = suggest.State.Combat!.MireBrute!.Address;
+        var stages = new[]
+        {
+            (Name: "inspect-road-roll", State: suggest.State,
+                Selections: new[] { roadRoll }, Emphases: Array.Empty<VisualPresentationEmphasis>()),
+            (Name: "safe-preview", State: suggest.State,
+                Selections: new[] { suggestAgent.Address, roadRoll }, Emphases: Array.Empty<VisualPresentationEmphasis>()),
+            (Name: "safe-pending", State: safePending.State,
+                Selections: Array.Empty<WorldAddress>(), Emphases: new[]
+                {
+                    new VisualPresentationEmphasis(suggestAgent.Address, VisualPresentationEmphasisKind.PendingAction),
+                    new VisualPresentationEmphasis(roadRoll, VisualPresentationEmphasisKind.PendingAction),
+                }),
+            (Name: "safe-accepted", State: safeAccepted.State,
+                Selections: new[] { roadRoll }, Emphases: Array.Empty<VisualPresentationEmphasis>()),
+            (Name: "blocked-delayed", State: blocked.State,
+                Selections: new[] { roadRoll }, Emphases: new[]
+                {
+                    new VisualPresentationEmphasis(roadRoll, VisualPresentationEmphasisKind.AgentBlockedRoute),
+                }),
+            (Name: "dangerous-command-pending", State: dangerousPending.State,
+                Selections: new[] { brute }, Emphases: new[]
+                {
+                    new VisualPresentationEmphasis(suggestAgent.Address, VisualPresentationEmphasisKind.PendingAction),
+                    new VisualPresentationEmphasis(brute, VisualPresentationEmphasisKind.PendingAction),
+                }),
+            (Name: "refused", State: refused.State,
+                Selections: new[] { suggestAgent.Address, brute }, Emphases: Array.Empty<VisualPresentationEmphasis>()),
+            (Name: "restored-refusal", State: restored.State,
+                Selections: new[] { suggestAgent.Address }, Emphases: Array.Empty<VisualPresentationEmphasis>()),
+            (Name: "replacement-memory", State: replacement.State,
+                Selections: new[] { suggestAgent.Address }, Emphases: Array.Empty<VisualPresentationEmphasis>()),
+        };
+        var visibleBounds = new WorldRectangle(-6, -1, 16, 10);
+        var pgen = PackagedVisualPackLoader.Load([], 20);
+        var manual = ManualVisualPack.CreateGate3B(20);
+
+        foreach (var stage in stages)
+        {
+            var semantic = WorldArea.Generate(
+                stage.State,
+                SurfacePatch.SurfaceStratum,
+                VisualViewportBounds.WithOneCellSemanticHalo(visibleBounds));
+            var agent = stage.State.Agents[0];
+            Verify(
+                semantic.Cells.Single(cell => cell.Address == agent.Address)
+                    .Subject(WorldSubjectKind.Agent)?.Identity == agent.Profile.Identity &&
+                semantic.Cells.Single(cell => cell.Address == agent.RoadRollAddress)
+                    .Subject(WorldSubjectKind.PersonalPlace)?.OwnerIdentity == agent.Profile.Identity,
+                $"Goal 7B Inspector '{stage.Name}' must read Agent and owned-place facts from shared WorldSubjects.");
+            var input = new VisualCompositionInput(
+                semantic,
+                visibleBounds,
+                InitialSeed,
+                pgen,
+                pgen.StyleVersion,
+                stage.State.HasLivingIncarnation ? stage.State.Address : null,
+                [brute],
+                stage.Selections,
+                [],
+                stage.Emphases);
+            var packaged = VisualGrammar.Compose(input);
+            var golden = VisualGrammar.Compose(input with
+            {
+                Pack = manual,
+                VisualStyleVersion = manual.StyleVersion,
+            });
+            Verify(
+                packaged.Marks.Select(MarkProjection).SequenceEqual(golden.Marks.Select(MarkProjection)) &&
+                packaged.Marks.Any(mark => mark.Address == agent.Address &&
+                    mark.VisualId == "agent.wayfarer-listener.guest") &&
+                packaged.Marks.Any(mark => mark.Address == agent.RoadRollAddress &&
+                    mark.VisualId == "place.wayfarer-road-roll.laid"),
+                $"Goal 7B Inspector '{stage.Name}' must preserve packaged/manual render-plan parity.");
+            var selectedPlan = string.Equals(_visualPack.PackId, pgen.PackId, StringComparison.Ordinal)
+                ? packaged
+                : golden;
+            var raster = VisualPackGodotAdapter.RasterizeNative(_visualPack, selectedPlan);
+            Verify(
+                raster.GetWidth() == visibleBounds.Width * _visualCellSize &&
+                raster.GetHeight() == visibleBounds.Height * _visualCellSize,
+                $"Goal 7B Inspector '{stage.Name}' must rasterize through the selected runtime pack.");
+        }
+
+        GD.Print($"GOAL7B INSPECTOR PARITY PASS states={stages.Length} pack={_visualPack.PackId} size={_visualCellSize}");
+
+        static (WorldAddress Address, string VisualId, VisualLayerClass Layer, int Column, int Row) MarkProjection(
+            VisualRenderMark mark) =>
+            (mark.Address, mark.VisualId, mark.Layer, mark.Column, mark.Row);
+
+        static void AdvanceDirective(ChronicleSimulation simulation, int ticks)
+        {
+            if (simulation.State.Speed != ChronicleSpeed.Slow)
+            {
+                VerifyApplied(simulation, new SetChronicleSpeed(ChronicleSpeed.Slow), "resume Directive fixture");
+            }
+
+            for (var index = 0; index < ticks; index++)
+            {
+                simulation.AdvanceOneTick();
+            }
+        }
+    }
+
+    private static ChronicleSimulation CompleteGoal7AResonator()
+    {
+        var simulation = new ChronicleSimulation(ChronicleState.Begin(InitialSeed));
+        VerifyApplied(simulation, new ChooseHereIntent(), "choose neutral start");
+        VerifyApplied(simulation, new ReadBurnPrimer(), "read Burn Primer");
+        simulation = new ChronicleSimulation(simulation.State with
+        {
+            Address = new WorldAddress(SurfacePatch.SurfaceStratum, 7, 3),
+            Speed = ChronicleSpeed.Paused,
+        });
+        VerifyApplied(
+            simulation,
+            new BeginPowerCommitment(PowerCommitmentKind.Extract),
+            "begin Lode extraction");
+        AdvanceActive(simulation, 2);
+        VerifyApplied(simulation, new LiftResonantLode(), "lift Resonant Lode");
+        simulation = new ChronicleSimulation(simulation.State with
+        {
+            Address = ChronicleState.AcceptedHomeFixtureAddress,
+            Speed = ChronicleSpeed.Paused,
+        });
+        VerifyApplied(
+            simulation,
+            new BeginPowerCommitment(PowerCommitmentKind.Build),
+            "begin Resonator construction");
+        AdvanceActive(simulation, 3);
+        return simulation;
+
+        static void AdvanceActive(ChronicleSimulation active, int ticks)
+        {
+            if (active.State.Speed != ChronicleSpeed.Slow)
+            {
+                VerifyApplied(active, new SetChronicleSpeed(ChronicleSpeed.Slow), "resume Chronicle");
+            }
+
+            for (var index = 0; index < ticks; index++)
+            {
+                active.AdvanceOneTick();
+            }
+        }
+    }
+
+    private static void VerifyApplied(
+        ChronicleSimulation simulation,
+        ChronicleCommand command,
+        string step)
+    {
+        if (!simulation.Apply(command).Applied)
+        {
+            throw new InvalidOperationException($"Goal 7A Inspector parity could not {step}.");
+        }
     }
 
     private void CaptureGate3BSurfaceReviewSet()

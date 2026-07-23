@@ -262,6 +262,232 @@ public static partial class ChronicleSaveCodec
         ValidateV6RetainedDurables(chronicle.GetProperty("RetainedDurables"));
     }
 
+    private static void ValidateVersion8Document(JsonElement chronicle)
+    {
+        RequireExactObjectWithProperties(
+            chronicle,
+            "Version 8 Chronicle",
+            "Seed", "Tick", "Address", "Speed", "Intent", "Codex", "Loadout",
+            "Attunement", "IncarnationId", "IncarnationLife", "WorldGrammarVersion",
+            "Combat", "PowerHome", "RetainedDurables", "Agents");
+        ValidateV6Address(chronicle.GetProperty("Address"), "Chronicle Address");
+
+        var codex = chronicle.GetProperty("Codex");
+        RequireExactObjectWithProperties(codex, "Codex", "Words");
+        ValidateCodexWords(codex.GetProperty("Words"));
+        foreach (var wordElement in codex.GetProperty("Words").EnumerateArray())
+        {
+            var word = ReadKnownWordId(wordElement, "Version 8 Codex Word");
+            if (WordCatalogue.Get(word).Kind == WordKind.Noun ||
+                word == WordIds.Suggest || word == WordIds.Command)
+            {
+                throw new InvalidOperationException(
+                    $"Version 8 Codex cannot retain Word '{word}'.");
+            }
+        }
+
+        var loadout = chronicle.GetProperty("Loadout");
+        RequireExactObjectWithProperties(loadout, "Version 8 Loadout", "Verb", "Modifiers");
+        if (loadout.GetProperty("Verb").ValueKind != JsonValueKind.Null)
+        {
+            var verb = ReadKnownWordId(loadout.GetProperty("Verb"), "Version 8 Loadout Verb");
+            if (verb == WordIds.Suggest || verb == WordIds.Command)
+            {
+                throw new InvalidOperationException("Version 8 Loadout cannot contain a Goal 7B social Verb.");
+            }
+        }
+        RequireArray(loadout.GetProperty("Modifiers"), "Version 8 Loadout Modifiers");
+        if (loadout.GetProperty("Modifiers").GetArrayLength() > 2)
+        {
+            throw new InvalidOperationException("Version 8 Loadout supports at most two Modifiers.");
+        }
+
+        var modifierIds = loadout.GetProperty("Modifiers")
+            .EnumerateArray()
+            .Select(element => ReadKnownWordId(element, "Version 8 Loadout Modifier"))
+            .ToArray();
+        if (modifierIds.Any(id => WordCatalogue.Get(id).Kind != WordKind.Modifier) ||
+            modifierIds.Distinct().Count() != modifierIds.Length ||
+            !WordCatalogue.Canonicalize(modifierIds).SequenceEqual(modifierIds))
+        {
+            throw new InvalidOperationException(
+                "Version 8 Loadout Modifiers must be known, unique, and in canonical order.");
+        }
+
+        var attunement = chronicle.GetProperty("Attunement");
+        if (attunement.ValueKind != JsonValueKind.Null)
+        {
+            RequireExactObjectWithProperties(attunement, "Attunement", "Capacity", "Tick");
+        }
+
+        ValidateV6Combat(chronicle.GetProperty("Combat"), expressionHasSecondModifier: true);
+        ValidateV7PowerHome(chronicle.GetProperty("PowerHome"));
+        ValidateV6RetainedDurables(chronicle.GetProperty("RetainedDurables"));
+        ValidateV8Agents(chronicle.GetProperty("Agents"));
+    }
+
+    private static void ValidateVersion9Document(JsonElement chronicle)
+    {
+        RequireExactObjectWithProperties(
+            chronicle,
+            "Version 9 Chronicle",
+            "Seed", "Tick", "Address", "Speed", "Intent", "Codex", "Loadout",
+            "Attunement", "IncarnationId", "IncarnationLife", "WorldGrammarVersion",
+            "Combat", "PowerHome", "RetainedDurables", "Agents");
+        ValidateV6Address(chronicle.GetProperty("Address"), "Chronicle Address");
+
+        var codex = chronicle.GetProperty("Codex");
+        RequireExactObjectWithProperties(codex, "Codex", "Words");
+        ValidateCodexWords(codex.GetProperty("Words"));
+        foreach (var wordElement in codex.GetProperty("Words").EnumerateArray())
+        {
+            var word = ReadKnownWordId(wordElement, "Version 9 Codex Word");
+            if (WordCatalogue.Get(word).Kind == WordKind.Noun)
+            {
+                throw new InvalidOperationException(
+                    $"Version 9 Codex cannot retain predecessor Noun '{word}'.");
+            }
+        }
+
+        var loadout = chronicle.GetProperty("Loadout");
+        RequireExactObjectWithProperties(loadout, "Version 9 Loadout", "Verb", "Modifiers");
+        RequireArray(loadout.GetProperty("Modifiers"), "Version 9 Loadout Modifiers");
+        if (loadout.GetProperty("Modifiers").GetArrayLength() > 2)
+        {
+            throw new InvalidOperationException("Version 9 Loadout supports at most two Modifiers.");
+        }
+
+        var modifierIds = loadout.GetProperty("Modifiers")
+            .EnumerateArray()
+            .Select(element => ReadKnownWordId(element, "Version 9 Loadout Modifier"))
+            .ToArray();
+        if (modifierIds.Any(id => WordCatalogue.Get(id).Kind != WordKind.Modifier) ||
+            modifierIds.Distinct().Count() != modifierIds.Length ||
+            !WordCatalogue.Canonicalize(modifierIds).SequenceEqual(modifierIds))
+        {
+            throw new InvalidOperationException(
+                "Version 9 Loadout Modifiers must be known, unique, and in canonical order.");
+        }
+
+        var attunement = chronicle.GetProperty("Attunement");
+        if (attunement.ValueKind != JsonValueKind.Null)
+        {
+            RequireExactObjectWithProperties(attunement, "Attunement", "Capacity", "Tick");
+        }
+
+        ValidateV6Combat(chronicle.GetProperty("Combat"), expressionHasSecondModifier: true);
+        ValidateV7PowerHome(chronicle.GetProperty("PowerHome"));
+        ValidateV6RetainedDurables(chronicle.GetProperty("RetainedDurables"));
+        ValidateV9Agents(chronicle.GetProperty("Agents"));
+    }
+
+    private static void ValidateV8Agents(JsonElement agents)
+    {
+        RequireArray(agents, "Version 8 Agents");
+        foreach (var agent in agents.EnumerateArray())
+        {
+            RequireExactObjectWithProperties(
+                agent,
+                "Version 8 Agent",
+                "Profile", "Address", "WaitingAddress", "Presence", "Need",
+                "HomeRelationship", "Intent", "PromotedTick", "ArrivalTick",
+                "WelcomeOfferedTick", "RoadRollAddress");
+            var profile = agent.GetProperty("Profile");
+            RequireExactObjectWithProperties(
+                profile,
+                "Version 8 Agent profile",
+                "Identity", "DisplayName", "Archetype", "ProvenanceIdentity",
+                "OriginAddress", "Ordinal", "WorldGrammarVersion");
+            ValidateV6Address(profile.GetProperty("OriginAddress"), "Agent origin Address");
+            ValidateV6Address(agent.GetProperty("Address"), "Agent Address");
+            ValidateV6Address(agent.GetProperty("WaitingAddress"), "Agent waiting Address");
+            RequireExactObjectWithProperties(
+                agent.GetProperty("Need"),
+                "Version 8 Agent need",
+                "Kind", "Status");
+            RequireExactObjectWithProperties(
+                agent.GetProperty("HomeRelationship"),
+                "Version 8 Agent Home relationship",
+                "HomeIdentity", "Kind", "EstablishedTick", "WelcomingIncarnationId");
+            var roadRoll = agent.GetProperty("RoadRollAddress");
+            if (roadRoll.ValueKind != JsonValueKind.Null)
+            {
+                ValidateV6Address(roadRoll, "Agent road-roll Address");
+            }
+        }
+    }
+
+    private static void ValidateV9Agents(JsonElement agents)
+    {
+        RequireArray(agents, "Version 9 Agents");
+        foreach (var agent in agents.EnumerateArray())
+        {
+            RequireExactObjectWithProperties(
+                agent,
+                "Version 9 Agent",
+                "Profile", "Address", "WaitingAddress", "Presence", "Need",
+                "HomeRelationship", "Intent", "PromotedTick", "ArrivalTick",
+                "WelcomeOfferedTick", "RoadRollAddress", "PendingDirective",
+                "DirectiveMemories");
+            var profile = agent.GetProperty("Profile");
+            RequireExactObjectWithProperties(
+                profile,
+                "Version 9 Agent profile",
+                "Identity", "DisplayName", "Archetype", "ProvenanceIdentity",
+                "OriginAddress", "Ordinal", "WorldGrammarVersion");
+            ValidateV6Address(profile.GetProperty("OriginAddress"), "Agent origin Address");
+            ValidateV6Address(agent.GetProperty("Address"), "Agent Address");
+            ValidateV6Address(agent.GetProperty("WaitingAddress"), "Agent waiting Address");
+            RequireExactObjectWithProperties(
+                agent.GetProperty("Need"),
+                "Version 9 Agent need",
+                "Kind", "Status");
+            RequireExactObjectWithProperties(
+                agent.GetProperty("HomeRelationship"),
+                "Version 9 Agent Home relationship",
+                "HomeIdentity", "Kind", "EstablishedTick", "WelcomingIncarnationId");
+            var roadRoll = agent.GetProperty("RoadRollAddress");
+            if (roadRoll.ValueKind != JsonValueKind.Null)
+            {
+                ValidateV6Address(roadRoll, "Agent road-roll Address");
+            }
+
+            var pending = agent.GetProperty("PendingDirective");
+            if (pending.ValueKind != JsonValueKind.Null)
+            {
+                ValidateV9PendingDirective(pending);
+            }
+
+            var memories = agent.GetProperty("DirectiveMemories");
+            RequireArray(memories, "Version 9 Directive memories");
+            foreach (var memory in memories.EnumerateArray())
+            {
+                RequireExactObjectWithProperties(
+                    memory,
+                    "Version 9 Directive memory",
+                    "AgentIdentity", "IssuingIncarnationId", "Verb", "Directive",
+                    "ObjectiveIdentity", "ObjectiveAddress", "IssuedTick", "ResolvedTick",
+                    "Response", "Reason", "Blocker", "ResultingAddress");
+                ReadKnownWordId(memory.GetProperty("Verb"), "Version 9 Directive memory Verb");
+                ValidateV6Address(memory.GetProperty("ObjectiveAddress"), "Directive objective Address");
+                ValidateV6Address(memory.GetProperty("ResultingAddress"), "Directive resulting Address");
+            }
+        }
+    }
+
+    private static void ValidateV9PendingDirective(JsonElement pending)
+    {
+        RequireExactObjectWithProperties(
+            pending,
+            "Version 9 pending Directive",
+            "AgentIdentity", "IssuingIncarnationId", "Verb", "Directive",
+            "ObjectiveIdentity", "ObjectiveAddress", "IssuedTick", "ResolvesAtTick",
+            "DeliveryAddress");
+        ReadKnownWordId(pending.GetProperty("Verb"), "Version 9 pending Directive Verb");
+        ValidateV6Address(pending.GetProperty("ObjectiveAddress"), "Directive objective Address");
+        ValidateV6Address(pending.GetProperty("DeliveryAddress"), "Directive delivery Address");
+    }
+
     private static void ValidateV7PowerHome(JsonElement power)
     {
         if (power.ValueKind == JsonValueKind.Null)

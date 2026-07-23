@@ -48,7 +48,8 @@ public sealed record ChronicleState(
     WorldAddress? BellAddress = null,
     CombatState? Combat = null,
     PowerHomeState? PowerHome = null,
-    LoadAttunementState? Attunement = null)
+    LoadAttunementState? Attunement = null,
+    AgentCollectionState Agents = default)
 {
     public static readonly WorldAddress InitialLooseStoneAddress =
         new(SurfacePatch.SurfaceStratum, 1, 0);
@@ -85,7 +86,7 @@ public sealed record ChronicleState(
         LooseStoneAddress: InitialLooseStoneAddress,
         IncarnationId: 1,
         IncarnationLife: IncarnationLifeState.Alive,
-        WorldGrammarVersion: 5,
+        WorldGrammarVersion: 6,
         Home: new HomeState(
             "holding.home",
             "The First Hearth",
@@ -177,12 +178,12 @@ public sealed record ChronicleState(
         {
             OpeningIntent.Up => WordIds.Fly,
             OpeningIntent.Here => WordIds.Found,
-            OpeningIntent.Against when WorldGrammarVersion is 4 or 5 => WordIds.Burn,
+            OpeningIntent.Against when WorldGrammarVersion is 4 or 5 or 6 => WordIds.Burn,
             OpeningIntent.Against => WordIds.Smash,
             _ => null,
         };
         var codex = firstVerb is { } word ? Codex.Learn(word) : Codex;
-        if (intent == OpeningIntent.Against && WorldGrammarVersion is 4 or 5)
+        if (intent == OpeningIntent.Against && WorldGrammarVersion is 4 or 5 or 6)
         {
             codex = codex.Learn(WordIds.Quickly).Learn(WordIds.Lasting);
         }
@@ -267,7 +268,7 @@ public sealed record ChronicleState(
 
     internal ChronicleState MigrateAndValidate()
     {
-        if (WorldGrammarVersion is not (0 or 1 or 2 or 3 or 4 or 5))
+        if (WorldGrammarVersion is not (0 or 1 or 2 or 3 or 4 or 5 or 6))
         {
             throw new InvalidOperationException($"Unsupported World Grammar version '{WorldGrammarVersion}'.");
         }
@@ -281,7 +282,7 @@ public sealed record ChronicleState(
         {
             OpeningIntent.Up => Codex.Learn(WordIds.Fly),
             OpeningIntent.Here => Codex.Learn(WordIds.Found),
-            OpeningIntent.Against when WorldGrammarVersion is 4 or 5 => Codex
+            OpeningIntent.Against when WorldGrammarVersion is 4 or 5 or 6 => Codex
                 .Learn(WordIds.Burn)
                 .Learn(WordIds.Quickly)
                 .Learn(WordIds.Lasting),
@@ -325,7 +326,7 @@ public sealed record ChronicleState(
         }
 
         var loadout = Loadout ?? LoadoutState.InitialFor(codex);
-        if (WorldGrammarVersion is not (4 or 5))
+        if (WorldGrammarVersion is not (4 or 5 or 6))
         {
             (codex, study, loadout) = RetirePredecessorNouns(codex, study, loadout);
         }
@@ -354,22 +355,23 @@ public sealed record ChronicleState(
             LooseStoneAddress = looseStoneAddress,
             BellAddress = bellAddress,
             IncarnationId = IncarnationId <= 0 ? 1 : IncarnationId,
-            FirstConflict = WorldGrammarVersion is 4 or 5
+            FirstConflict = WorldGrammarVersion is 4 or 5 or 6
                 ? null
                 : FirstConflict is { Outcome: FirstConflictOutcome.Shattered }
                     ? FirstConflict
                     : null,
-            Combat = WorldGrammarVersion is 4 or 5
+            Combat = WorldGrammarVersion is 4 or 5 or 6
                 ? Combat ?? CombatState.Create(Seed)
                 : null,
-            PowerHome = WorldGrammarVersion == 5
+            PowerHome = WorldGrammarVersion is 5 or 6
                 ? PowerHome ?? HoldingRules.Create(Seed)
                 : null,
-            Attunement = WorldGrammarVersion == 5
+            Attunement = WorldGrammarVersion is 5 or 6
                 ? Attunement
                 : Attunement ?? new LoadAttunementState(
                     HoldingFacts.InherentLoadCapacity,
                     Tick: 0),
+            Agents = WorldGrammarVersion == 6 ? Agents : default,
         };
     }
 

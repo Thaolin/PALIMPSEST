@@ -37,6 +37,7 @@ public sealed record ChronicleHudSnapshot(
     string PowerCapacity,
     string PowerDecision,
     bool ShowsCombatContext,
+    bool ShowsAgentContext,
     bool AwaitingReplacement,
     string ReplacementStatus,
     bool IsPaused);
@@ -128,6 +129,7 @@ public sealed partial class ChronicleHud : Control
     public Label PowerDecision => _powerDecision;
     public Label ClockReadout => _clock;
     public Label PlaceReadout => _place;
+    public Label ReplacementReadout => _replacement;
 
     public void ConfigureVisualPack(CompiledVisualPack visualPack)
     {
@@ -302,15 +304,21 @@ public sealed partial class ChronicleHud : Control
         _powerStatus.Text = snapshot.PowerStatus;
         _powerCapacity.Text = snapshot.PowerCapacity;
         _powerDecision.Text = snapshot.PowerDecision;
-        _contextSectionHeading.Text = snapshot.ShowsCombatContext
-            ? "TARGET · [T] CYCLE"
-            : "MATERIAL STATE";
-        _consequenceSectionHeading.Text = snapshot.ShowsCombatContext
-            ? "CONSEQUENCE"
-            : "DECISION";
-        _forecastSectionHeading.Text = snapshot.ShowsCombatContext
-            ? "FORECAST · NEXT FOUR"
-            : "NEXT CHANGE";
+        _contextSectionHeading.Text = snapshot.ShowsAgentContext
+            ? "AGENT · IDENTITY AND NEED"
+            : snapshot.ShowsCombatContext
+                ? "TARGET · [T] CYCLE"
+                : "MATERIAL STATE";
+        _consequenceSectionHeading.Text = snapshot.ShowsAgentContext
+            ? "WELCOME DECISION"
+            : snapshot.ShowsCombatContext
+                ? "CONSEQUENCE"
+                : "DECISION";
+        _forecastSectionHeading.Text = snapshot.ShowsAgentContext
+            ? "AGENT · NEXT CHANGE"
+            : snapshot.ShowsCombatContext
+                ? "FORECAST · NEXT FOUR"
+                : "NEXT CHANGE";
         _targetHeading.Text = snapshot.TargetHeading;
         _targetHeading.AddThemeColorOverride(
             "font_color",

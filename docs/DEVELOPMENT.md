@@ -4,9 +4,9 @@ The game project lives at `src/Chronicle.Godot`; its deterministic rules live
 at `src/Chronicle.Core`. Local tool installations and generated state are
 ignored under `.tools/` and `.godot/`.
 
-This guide describes the strict v6 Goal 6A runtime: one active Verb, linked
-Modifier knowledge, contextual Chronicle Targets, and the generated Mire Brute
-encounter. Literal v5 and older shapes remain migration inputs only; their
+This guide describes the strict v9 Goal 7B runtime: retained combat and
+Home-power loops plus consequential Agents, owned personal places, bounded
+Directives, response memory, and visible-cell inspection. Literal v8 and older shapes remain migration inputs only; their
 `Fly[Stone]`/`Fly[Bell]` journeys are retained historical proof rather than a
 parallel gameplay path. Follow the [active Handoff](HANDOFF.md) for the current
 authorization boundary.
@@ -63,12 +63,37 @@ Use a named profile to keep a custom Chronicle isolated under
 `.tools/play-profiles/<name>/`:
 
 ```powershell
-& .\play.ps1 -Profile goal6a-quickly-uat
+& .\play.ps1 -Profile goal7a-welcome-uat
 ```
 
 The first launch of a profile starts without a save. Later launches with the
 same name continue that profile. Profile names may contain letters, numbers,
 dots, underscores, and hyphens.
+
+The two Goal 7A review profiles have bounded first-launch preparation:
+
+```powershell
+& .\play.ps1 -Profile goal7a-welcome-uat
+& .\play.ps1 -Profile goal7a-replacement-uat
+```
+
+The first creates Tamar at the accepted post-Resonator approach boundary. The
+second creates the continuing Guest state with the first Incarnation already
+ended away from Home. Preparation runs only when that profile has no save;
+relaunching restores the same Chronicle for persistence UAT.
+
+The two Goal 7B review profiles prepare the same accepted Guest/world facts,
+inject Suggest and Command only into the isolated test Codex, and attune one:
+
+```powershell
+& .\play.ps1 -Profile goal7b-suggest-uat
+& .\play.ps1 -Profile goal7b-command-uat
+```
+
+Both start three traversable cells north of Home so `I`/mouse inspection can
+select Tamar remotely before the player moves south into physical delivery
+reach. Preparation runs only when the named profile has no save; relaunching
+restores pending or resolved Directive state normally.
 
 For a guaranteed new Chronicle, let the launcher create a unique profile:
 
@@ -104,15 +129,16 @@ Run the complete fail-fast gate from the repository root:
 ```
 
 It verifies P-GEN first, then restores and builds Core, VisualPack, Visuals,
-and Godot. Core checks cover the deterministic Goal 6A encounter, strict v6
-round trip, and literal predecessor migration. Visual checks cover the v2
-combat vocabulary and retained composition proof. The gate then validates the
-exact four-file packaged artifact, World Grammar v4 through the developer
-Inspector, clean startup/restart, and both scripted Goal 6A HUD journeys:
-Quickly through victory/reload and Lasting through interruption, death,
-replacement, victory, and reload. All Godot launches use temporary isolated
-application-data directories, so verification neither opens a window nor
-touches an interactive save.
+and Godot. Core checks cover strict v9, literal migration, retained combat and
+Home-power rules, deterministic Agent generation/promotion, scale, welcome,
+Directive force/response/memory, death/replacement, and replay. Visual checks
+cover combat, material, Agent, road-roll, inspection selection, and Directive
+emphasis. The gate validates the exact four-file
+package, packaged/manual Inspector parity, clean startup/restart, retained Goal
+6A/6B/7A Godot journeys, and Goal 7B's eight `1600 × 900` captures including
+keyboard/mouse inspection and focused-Space safety. All Godot launches use temporary isolated application-data
+directories, so verification neither opens a window nor touches an interactive
+save.
 
 E5 also exercises the explicit manual 20-pixel golden comparison in both
 player and Inspector. To launch that comparison interactively without changing
@@ -386,7 +412,8 @@ Target/HP and decision block, four-event forecast, and enlarged Message Log
 their own hierarchy. The retained visual comparison remains documented in
 [Gate 3B Visual UAT](GATE-3B-VISUAL-UAT.md).
 
-Choose a Starting Vector with `1`/`2`/`3`. Use WASD to move, `T` to cycle
+Choose a Starting Vector with `1`/`2`/`3`. Use WASD to move, `I` or a map click
+to inspect visible cells, WASD/Enter/Escape to operate or close that cursor, `T` to cycle
 contextual Targets, `Q`/`L` to attune the two Burn plans, `B` to prepare Burn,
 `V` for the Cleaver stance or strike, Space or `1` to pause/resume Slow
 Heartbeats, `C` to cancel or safely skip Recovery, F5/F9 to save/load, and `R`
@@ -402,11 +429,12 @@ They are preserved in the archived
 [Goal 4C UAT sheet](archive/uat/GOAL-4C-UAT.md), and
 [Slice 5 UAT](archive/uat/SLICE-5-UAT.md).
 
-Godot keeps the compatible file at `user://slice0_chronicle.json`. Strict v6
-saves use stable successor Word identities and contain the current body,
-Codex/Loadout, generated encounter state, Engagement Plan, active action state,
-scorch, and neutral retained durables. Literal v5, v4, v3, v2, v1, and
-pre-envelope files decode through predecessor shapes before constructing v6;
+Godot keeps the compatible file at `user://slice0_chronicle.json`. Strict v9
+saves use stable successor Word and Agent identities and contain the current
+body, Codex/Loadout, combat and Home-power state, consequential Agents, their
+relationships, owned personal places, pending Directives, and ordered response
+memories. Literal v8 through v1 and pre-envelope files decode through
+predecessor shapes before constructing v9;
 their fitted Nouns, Study/Understanding, and predecessor conflict state do not
 survive as a parallel gameplay system. Generated snapshots are reconstructed
 from seed, pinned World Grammar, durable identity, and World Address.
@@ -423,7 +451,9 @@ To open the editor instead:
   authored Word Catalogue, canonical Codex, bounded Verb/Modifier Loadout,
   contextual Target validity, the Goal 6A encounter and forecasts, Incarnation
   death and replacement, retained material durables, Landmark identity, and
-  strict canonical persistence and migration without referencing Godot.
+  Agent grammar and relationships, Directive admissibility/response/memory,
+  strict canonical persistence, and migration
+  without referencing Godot.
 - `Chronicle.VisualPack` owns immutable compiled-pack values and the compact
   manually authored 16 px/20 px reference pack without referencing Core or
   Godot.
@@ -431,7 +461,7 @@ To open the editor instead:
   deterministic transient render plans without referencing Godot.
 - `Chronicle.Godot` translates input and wall-clock pulses, renders Core
   snapshots through those plans, expands atlas textures, presents the map-first
-  status/Target/action rails, Target highlights, death and replacement controls,
+  status/Target/Agent/Directive/inspection rails, Target highlights, death and replacement controls,
   Starting Vector and bounded Loadout controls, and owns the `user://` file
   lifecycle.
 - Godot is an inspection and presentation surface for generated worlds, not a

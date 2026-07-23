@@ -113,7 +113,7 @@ player UAT verifies that the result is actually understandable. A mechanically
 correct rule whose queue, pause, mitigation, availability, or persistence is
 not legible has not met the presentation contract.
 
-### Retained v6-and-earlier migration boundary
+### Retained v8-and-earlier migration boundary
 
 - The v5 Word Catalogue contained authored Verbs and Nouns. Its Study Sources,
   fitted-Noun Loadouts, Bell pursuit, and Cairn fixture remain private literal
@@ -121,15 +121,19 @@ not legible has not met the presentation contract.
 - Stable string `WordId` values still bridge catalogue definitions, Codex
   membership, Understanding, and successor Loadouts. Colliding predecessor
   numeric values never enter the current identity model.
-- Literal v6, v5, v4, v3, v2, v1, and pre-envelope saves deserialize through
-  private predecessor shapes before constructing strict current v7 state.
+- Literal v8, v7, v6, v5, v4, v3, v2, v1, and pre-envelope saves deserialize
+  through private predecessor shapes before constructing strict current v9 state.
   Their supported World Grammar pins remain unchanged, so old Chronicles do
   not gain later generated subjects retroactively.
+- Literal v8 preserves its exact consequential Agents, Guest relationships,
+  and owned places while adding no social Words, pending Directive, or response
+  memory. A frozen canonical v8 byte fixture prevents its reader contract from
+  drifting.
 - Retired fitted `Fly[Stone]` and `Fly[Bell]` behavior defines only the strict
   migration boundary, not the successor grammar recorded by
   [ADR 0003](adr/0003-use-verbs-linked-modifiers-and-world-targets.md).
 
-### Current v7 successor language runtime
+### Current v9 successor language and Directive runtime
 
 - The current Word Catalogue contains authored Verbs and Modifiers. Targets
   retain World Addresses or durable subject identities and never become
@@ -174,6 +178,22 @@ not legible has not met the presentation contract.
   Lode state, the sole Home-relative Hearth Resonator, bounded physical
   commitments, Source vulnerability, and current-versus-next-Attunement facts
   behind `ChronicleSimulation`; neither Godot nor P-GEN owns those rules.
+- World Grammar v6 adds deterministic latent Agent possibilities and persists
+  only consequential instances, their needs/relationships, and owned personal
+  places. Agent generation, local movement, blocking, welcome, and Guest
+  history remain Core rules; presentation never branches on Tamar's name or a
+  UAT profile.
+- Goal 7B adds authored Suggest and Command Verbs without changing World
+  Grammar. `DirectiveRules` separately evaluates social force, physical
+  delivery, and the recipient's autonomous response. Pending consideration
+  resolves on one active Heartbeat; Accepted, Delayed, and Refused outcomes
+  retain recipient, issuer, Word, objective, reason, tick, and resulting
+  address as ordered Agent memory. A valid Command grants an attempt, never
+  obedience.
+- Visible-cell inspection is transient Godot presentation over the same
+  bounded `WorldArea` and `WorldSubject` snapshots used by Visual Grammar and
+  the Inspector. Cursor and selection state never enter strict v9 or decide an
+  action's legality.
 
 ### Other accepted simulation rules
 

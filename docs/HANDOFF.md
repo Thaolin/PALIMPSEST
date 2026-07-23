@@ -1,6 +1,6 @@
 # Active Handoff Contract
 
-Last reconciled: 2026-07-22 (Goal 6C accepted)
+Last reconciled: 2026-07-22 (Goal 7B complete and player-accepted)
 
 This is the short-lived execution contract for the current gate. It may narrow
 the active slice but may never expand or contradict [AGENTS.md](../AGENTS.md),
@@ -10,9 +10,103 @@ authorized future slice contract.
 
 ## Current gate
 
-**Goal 6C — One Rulebook, One Vocabulary is complete and player-accepted; the
-complete retained gate is green after the focused-Space and top-rail
-correction**
+**Goal 7B — A Directive, Not Unit Control is complete and player-accepted;
+later production remains unauthorized**
+
+- On 2026-07-22 the player explicitly authorized Goal 7B production on
+  `codex/goal-7b-directive-not-unit-control`, approved all five bounded fixture
+  decisions exactly as written, required the complete retained gate, and
+  required a stop with both player UAT journeys pending.
+- `DirectiveRules.cs` owns social-force admissibility, physical delivery,
+  one-Heartbeat consideration, withdrawal, autonomous Accepted/Delayed/Refused
+  outcomes, movement, blockers, persistent memory, and Core snapshots behind
+  `ChronicleSimulation`. Suggest is authored Load `1`; Command is Load `3`;
+  neither accepts a Modifier in this slice.
+- The safe `Rest by your road-roll` Suggestion is accepted for one cardinal
+  move, or delayed once when blocked with no hidden retry. Suggest cannot
+  express `Approach the Mire Brute`; Command can deliver it, but Tamar refuses
+  because Guest history contains no violent commitment. Command never becomes
+  control, a job, a Companion, or Agent combat.
+- Read-only visible-cell inspection now uses `I`/mouse, a bounded WASD cursor,
+  Enter selection, and Escape exit over the existing `WorldArea`/
+  `WorldSubject` snapshot. It advances no Heartbeat and changes no durable
+  state. Directive and inspection presentation stays within five concise
+  decision/checklist lines and was visually checked at native `1600 × 900`.
+- Strict save v9 is current over unchanged World Grammar v6. Literal v8
+  migrates once with exact Agents/places and no Directive state or social-Word
+  grant; the canonical v8 byte oracle and all older literal migrations remain
+  green. Pending intent and ordered response memories persist through
+  save/load, death, and replacement with the original issuing Incarnation.
+- `checks/verify.ps1` passes with exit code `0`, zero warnings, and zero errors,
+  including the full force table, `256` Agents/`512` memories, malformed v9,
+  replay, semantic inspection, packaged/manual parity, focused-Space and
+  pause-latch regressions, eight actual Goal 7B HUD captures, retained Goals
+  6A/6B/7A, Inspector proof, P-GEN isolation, and exact four-file packaging.
+- Player UAT A launches with
+  `.\play.ps1 -Profile goal7b-suggest-uat`; player UAT B launches with
+  `.\play.ps1 -Profile goal7b-command-uat`. Each initializes only when its
+  isolated save is absent and otherwise restores normally.
+- On 2026-07-22 the player reported both isolated UAT journeys passed. Goal 7B
+  is accepted and closed at its bounded gate.
+- Stop here. Do not commit, push, merge, begin Goal 7C or Slice 8, or add Areas,
+  base building, inventory, or any excluded framework without fresh explicit
+  authorization.
+
+- On 2026-07-22 the player explicitly authorized complete Goal 7A production
+  under [Someone Comes Home](GOAL-7A-SOMEONE-COMES-HOME.md) on
+  `codex/goal-7a-someone-comes-home`. Work may implement only that contract,
+  preserve the complete retained gate, prepare its two isolated UAT journeys,
+  and stop with player acceptance pending. All five fixture decisions remain
+  approved exactly as written.
+- The bounded implementation is complete. `AgentRules.cs` owns deterministic
+  latent generation, consequential promotion, the durable multi-Agent
+  collection, one-step approach, blocked movement, one-shot arrival pause,
+  welcome/withdrawal/acceptance, Guest history, and the owned road-roll behind
+  `ChronicleSimulation`.
+- Strict save v8 and World Grammar v6 were Goal 7A's accepted persistence
+  boundary. Current v9 retains its literal reader; literal v7 still migrates
+  with no Agents and retains WG5. The frozen v7 save oracle is unchanged.
+- The canonical P-GEN pack and manual comparison pack include approaching,
+  waiting, open-offer, Guest, road-roll, and blocked-route visuals. Player and
+  Inspector consume the same WorldSubject and Visual Grammar path; packaged
+  output remains the exact four-file bundle with compiler/catalogue artifacts
+  absent.
+- `checks/verify.ps1` passed on 2026-07-22 with exit code `0`, zero warnings,
+  and zero errors. It includes the `512` generated-profile order fixture, `256`
+  strict-v8 consequential records, malformed-state rejection, deterministic
+  replay, literal migration, retained Goals 6A/6B, packaged/manual Inspector
+  parity, focused-Space safety, and six actual `1600 × 900` Goal 7A captures.
+- Player UAT A launches with
+  `.\play.ps1 -Profile goal7a-welcome-uat`; player UAT B launches with
+  `.\play.ps1 -Profile goal7a-replacement-uat`. Each profile is initialized
+  only when its isolated save is absent, then restores normally for the
+  contract's quit/relaunch checks.
+- On 2026-07-22 the player completed both isolated journeys and reported
+  **“All pass.”** Accepted evidence includes Tamar's arrival and welcome, the
+  visible durable road-roll, checklist completion, and Tamar's persistence
+  after Incarnation death. The road-roll initially read as bread, but the
+  player accepted the bounded proof after clarification.
+
+- Goal 6C is complete, published, merged, and player-accepted; its complete
+  retained gate is green after the focused-Space and top-rail correction.
+- The player confirmed that Goal 7A's first named person is the production-shaped
+  NPC category from which worlds may eventually contain hundreds, not a bespoke
+  quest character. The proposed
+  [Goal 7A contract](GOAL-7A-SOMEONE-COMES-HOME.md) therefore requires
+  deterministic latent Agent generation, promotion to a durable collection on
+  consequential contact, structural hundreds-scale fixtures, and no eager
+  world population simulation.
+- The playable proof remains one person: seed `41337` generates Tamar Venn, who
+  follows the installed Resonant Lode's history to Home, seeks Refuge, accepts
+  a non-Directive welcome on a Heartbeat, becomes a Guest, and leaves one
+  visible persistent road-roll.
+- This contract intentionally does not add explicit Areas, interiors, base
+  building, housing/jobs, factions, Directives, Companions, Pressure,
+  off-camera history, raids, or Agent combat/death. Those require later bounded
+  contracts.
+- Goal 7A and Goal 7B player review are complete. No production gate is active;
+  commit, push, merge, Goal 7C, Areas, base building, and every excluded
+  framework remain unauthorized.
 
 - Goal 6B's complete material loop remains player-accepted; this review passed
   the Lode, carrying, construction, and Attunement path unchanged.
@@ -413,10 +507,10 @@ reported.
 
 ## Current permitted scope
 
-Goal 6C is complete and player-accepted under
-[its contract](GOAL-6C-ONE-RULEBOOK.md). The user has authorized commit, push,
-and merge. There is no active production scope after publication; Goal 7 is the
-next contract-design gate.
+Goal 6C is complete, published, merged, and player-accepted under
+[its contract](GOAL-6C-ONE-RULEBOOK.md). Goals 7A and 7B are complete and
+player-accepted under their approved bounded contracts. No production scope is
+active. Goal 7C is the next contract-design gate and remains unauthorized.
 
 E5, E5.1, Goal 6A, Goal 6B, and Goal 6 are complete and accepted. Goal 6A is
 closed with a qualified prototype verdict under
@@ -426,7 +520,8 @@ bounded correction, green retained gate, and final player pass. There is no
 active production scope. Follow-up Goal 6A polish, Word acquisition/equipping
 UX, the future robust inventory, Area topology, camera-density or
 rectangular-cell changes, unrelated actor-art iteration, additional opponents,
-Goal 7, and broader gameplay frameworks require separate authorization.
+Goal 7 production, and broader gameplay frameworks require separate
+authorization.
 
 ## Goal 6B player-UAT boundary
 
@@ -600,14 +695,19 @@ Goal 7, and broader gameplay frameworks require separate authorization.
 
 - Water traversal still needs an appropriate future capability.
 - A directional Return Route arrow may improve later UI.
+- Goal 7B added the accepted bounded read-only `I`/mouse inspection surface for
+  visible terrain, Agents, structures, materials, and personal places such as
+  Tamar's road-roll. An encyclopedia, omniscient Atlas, or hidden-fact reveal
+  remains future scope.
 
 ## Do not drift into
 
-- Goal 7 Agents, residents, relationships, Directives, Pressure, or off-camera
-  history before a Goal 7 child-slice contract is approved;
+- Goal 7C Pressure/off-camera history, additional Agent relationships, jobs,
+  or population systems before a later bounded contract;
 - Slice 8 raid work before Goal 7 provides its accepted Pressure;
-- successor grammar, save, combat, Home-power, or catalogue expansion beyond
-  the bounded Goal 6B contract before a later contract is separately approved;
+- successor grammar, save, combat, Agent, Home-power, or catalogue expansion
+  beyond the bounded Goal 7B contract before a later contract is separately
+  approved;
 - a universal tick surcharge per Link, a generic mana bar, or Home progression
   that makes ordinary combat and exploration wait for settlement development;
 - settled Palimpsest Awakening rules or a power-resource economy by inference;
@@ -623,8 +723,6 @@ Goal 7, and broader gameplay frameworks require separate authorization.
 
 ## Stop and hand off
 
-Publish the complete, player-accepted Goal 6C branch as explicitly authorized,
-then stop before Goal 7 production. Do not implement the recorded
-Codex/Loadout surface, Goal 6A's remaining polish debt, broader Word
-acquisition/equipping UX, the future inventory, Goal 7, Slice 8, or same-scale
-Area production without a separately approved bounded contract.
+Stop after the complete, player-accepted Goal 7B gate. Do not commit, push,
+merge, begin Goal 7C, Areas, base building, Slice 8, the future inventory, or
+any excluded framework before explicit follow-up authority.

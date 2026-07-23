@@ -5,7 +5,7 @@ namespace Chronicle.Core;
 
 public static partial class ChronicleSaveCodec
 {
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 9;
 
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
     private static readonly IReadOnlyDictionary<WordId, IReadOnlyList<WordId>>
@@ -63,6 +63,8 @@ public static partial class ChronicleSaveCodec
             5 => DeserializeVersion5(root),
             6 => DeserializeVersion6(root),
             7 => DeserializeVersion7(root),
+            8 => DeserializeVersion8(root),
+            9 => DeserializeVersion9(root),
             _ => throw new InvalidOperationException($"Unsupported Chronicle save version '{version}'."),
         };
     }
@@ -213,8 +215,40 @@ public static partial class ChronicleSaveCodec
         }
 
         ValidateVersion7Document(chronicleElement);
-        var current = chronicleElement.Deserialize<CurrentChronicleState>(Options)
+        var current = chronicleElement.Deserialize<Version7ChronicleState>(Options)
             ?? throw new InvalidOperationException("Version 7 Chronicle save data was empty.");
+        var state = FromVersion7Save(current).MigrateAndValidate();
+        ValidateCurrentState(state);
+        return state;
+    }
+
+    private static ChronicleState DeserializeVersion8(JsonElement root)
+    {
+        RequireExactObjectWithProperties(root, "Version 8 envelope", "Version", "Chronicle");
+        if (!root.TryGetProperty("Chronicle", out var chronicleElement))
+        {
+            throw new InvalidOperationException("Version 8 Chronicle save data was missing its Chronicle.");
+        }
+
+        ValidateVersion8Document(chronicleElement);
+        var current = chronicleElement.Deserialize<Version8ChronicleState>(Options)
+            ?? throw new InvalidOperationException("Version 8 Chronicle save data was empty.");
+        var state = FromVersion8Save(current).MigrateAndValidate();
+        ValidateCurrentState(state);
+        return state;
+    }
+
+    private static ChronicleState DeserializeVersion9(JsonElement root)
+    {
+        RequireExactObjectWithProperties(root, "Version 9 envelope", "Version", "Chronicle");
+        if (!root.TryGetProperty("Chronicle", out var chronicleElement))
+        {
+            throw new InvalidOperationException("Version 9 Chronicle save data was missing its Chronicle.");
+        }
+
+        ValidateVersion9Document(chronicleElement);
+        var current = chronicleElement.Deserialize<CurrentChronicleState>(Options)
+            ?? throw new InvalidOperationException("Version 9 Chronicle save data was empty.");
         var state = FromCurrentSave(current).MigrateAndValidate();
         ValidateCurrentState(state);
         return state;
@@ -259,7 +293,8 @@ public static partial class ChronicleSaveCodec
             state.WorldGrammarVersion,
             state.Combat,
             state.PowerHome,
-            retained);
+            retained,
+            Array.AsReadOnly(state.Agents.Select(ToCurrentAgent).ToArray()));
     }
 
     private static ChronicleState FromCurrentSave(CurrentChronicleState current)
@@ -302,8 +337,153 @@ public static partial class ChronicleSaveCodec
             retained?.BellAddress ?? SkyStratum.LandmarkAddress,
             current.Combat,
             current.PowerHome,
-            current.Attunement);
+            current.Attunement,
+            new AgentCollectionState((current.Agents ?? []).Select(FromCurrentAgent)));
     }
+
+    private static ChronicleState FromVersion8Save(Version8ChronicleState current)
+    {
+        var retained = current.RetainedDurables;
+        var firstConflict = retained?.RivenCairn is { } cairn
+            ? new FirstConflictState(
+                FirstConflictSubjects.RiverWardSubjectId,
+                cairn.Address,
+                checked(cairn.ResolvedTick - 1),
+                PendingAction: null,
+                Outcome: FirstConflictOutcome.Shattered,
+                ResolvedTick: cairn.ResolvedTick,
+                ResolvingIncarnationId: cairn.ResolvingIncarnationId)
+            : null;
+        var modifiers = current.Loadout.Modifiers ?? [];
+        if (modifiers.Count > 2)
+        {
+            throw new InvalidOperationException("Version 8 supports at most two Modifiers in its one active Expression.");
+        }
+
+        return new ChronicleState(
+            current.Seed,
+            current.Tick,
+            current.Address,
+            current.Speed,
+            current.Intent,
+            current.Codex,
+            new StudyState(),
+            new LoadoutState(new LoadoutSlot(
+                current.Loadout.Verb,
+                Modifier: modifiers.Count > 0 ? modifiers[0] : null,
+                Modifier2: modifiers.Count > 1 ? modifiers[1] : null)),
+            retained?.LooseStoneAddress ?? ChronicleState.InitialLooseStoneAddress,
+            current.IncarnationId,
+            current.IncarnationLife,
+            current.WorldGrammarVersion,
+            retained?.Home,
+            firstConflict,
+            retained?.BellAddress ?? SkyStratum.LandmarkAddress,
+            current.Combat,
+            current.PowerHome,
+            current.Attunement,
+            new AgentCollectionState((current.Agents ?? []).Select(FromVersion8Agent)));
+    }
+
+    private static ChronicleState FromVersion7Save(Version7ChronicleState current)
+    {
+        var retained = current.RetainedDurables;
+        var firstConflict = retained?.RivenCairn is { } cairn
+            ? new FirstConflictState(
+                FirstConflictSubjects.RiverWardSubjectId,
+                cairn.Address,
+                checked(cairn.ResolvedTick - 1),
+                PendingAction: null,
+                Outcome: FirstConflictOutcome.Shattered,
+                ResolvedTick: cairn.ResolvedTick,
+                ResolvingIncarnationId: cairn.ResolvingIncarnationId)
+            : null;
+        var modifiers = current.Loadout.Modifiers ?? [];
+        if (modifiers.Count > 2)
+        {
+            throw new InvalidOperationException("Version 7 supports at most two Modifiers in its one active Expression.");
+        }
+
+        return new ChronicleState(
+            current.Seed,
+            current.Tick,
+            current.Address,
+            current.Speed,
+            current.Intent,
+            current.Codex,
+            new StudyState(),
+            new LoadoutState(new LoadoutSlot(
+                current.Loadout.Verb,
+                Modifier: modifiers.Count > 0 ? modifiers[0] : null,
+                Modifier2: modifiers.Count > 1 ? modifiers[1] : null)),
+            retained?.LooseStoneAddress ?? ChronicleState.InitialLooseStoneAddress,
+            current.IncarnationId,
+            current.IncarnationLife,
+            current.WorldGrammarVersion,
+            retained?.Home,
+            firstConflict,
+            retained?.BellAddress ?? SkyStratum.LandmarkAddress,
+            current.Combat,
+            current.PowerHome,
+            current.Attunement,
+            Agents: default);
+    }
+
+    private static CurrentAgentState ToCurrentAgent(AgentState agent) => new(
+        agent.Profile,
+        agent.Address,
+        agent.WaitingAddress,
+        agent.Presence,
+        agent.Need,
+        agent.HomeRelationship,
+        agent.Intent,
+        agent.PromotedTick,
+        agent.ArrivalTick,
+        agent.WelcomeOfferedTick,
+        agent.RoadRollAddress,
+        agent.PendingDirective,
+        Array.AsReadOnly(agent.DirectiveMemories.ToArray()));
+
+    private static AgentState FromCurrentAgent(CurrentAgentState agent) => new(
+        agent.Profile,
+        agent.Address,
+        agent.WaitingAddress,
+        agent.Presence,
+        agent.Need,
+        agent.HomeRelationship,
+        agent.Intent,
+        agent.PromotedTick,
+        agent.ArrivalTick,
+        agent.WelcomeOfferedTick,
+        agent.RoadRollAddress,
+        agent.PendingDirective,
+        new DirectiveMemoryCollectionState(agent.DirectiveMemories ?? []));
+
+    private static Version8AgentState ToVersion8Agent(AgentState agent) => new(
+        agent.Profile,
+        agent.Address,
+        agent.WaitingAddress,
+        agent.Presence,
+        agent.Need,
+        agent.HomeRelationship,
+        agent.Intent,
+        agent.PromotedTick,
+        agent.ArrivalTick,
+        agent.WelcomeOfferedTick,
+        agent.RoadRollAddress);
+
+    private static AgentState FromVersion8Agent(Version8AgentState agent) => new(
+        agent.Profile,
+        agent.Address,
+        agent.WaitingAddress,
+        agent.Presence,
+        agent.Need,
+        agent.HomeRelationship,
+        agent.Intent,
+        agent.PromotedTick,
+        agent.ArrivalTick,
+        agent.WelcomeOfferedTick,
+        agent.RoadRollAddress);
 
     private static RetainedDurablesState? ToRetainedDurables(ChronicleState state)
     {
@@ -389,9 +569,122 @@ public static partial class ChronicleSaveCodec
         state.LooseStoneAddress != ChronicleState.InitialLooseStoneAddress ||
         state.BellAddress != SkyStratum.LandmarkAddress;
 
+    internal static string SerializeVersion7ForVerification(ChronicleState state)
+    {
+        var current = state.MigrateAndValidate();
+        ValidateCurrentState(current);
+        var slot = current.ActiveLoadout.Slots.FirstOrDefault(candidate => candidate.Verb is not null);
+        var version7 = new Version7ChronicleState(
+            current.Seed,
+            current.Tick,
+            current.Address,
+            current.Speed,
+            current.Intent,
+            current.Codex,
+            new CurrentLoadoutState(slot.Verb, Array.AsReadOnly(slot.Modifiers.ToArray())),
+            current.Attunement,
+            current.IncarnationId,
+            current.IncarnationLife,
+            current.WorldGrammarVersion,
+            current.Combat,
+            current.PowerHome,
+            ToRetainedDurables(current));
+        return JsonSerializer.Serialize(new Version7SaveEnvelope(7, version7), Options);
+    }
+
+    internal static string SerializeVersion8ForVerification(ChronicleState state)
+    {
+        var current = state.MigrateAndValidate();
+        ValidateCurrentState(current);
+        var slot = current.ActiveLoadout.Slots.FirstOrDefault(candidate => candidate.Verb is not null);
+        var version8 = new Version8ChronicleState(
+            current.Seed,
+            current.Tick,
+            current.Address,
+            current.Speed,
+            current.Intent,
+            current.Codex,
+            new CurrentLoadoutState(slot.Verb, Array.AsReadOnly(slot.Modifiers.ToArray())),
+            current.Attunement,
+            current.IncarnationId,
+            current.IncarnationLife,
+            current.WorldGrammarVersion,
+            current.Combat,
+            current.PowerHome,
+            ToRetainedDurables(current),
+            Array.AsReadOnly(current.Agents.Select(ToVersion8Agent).ToArray()));
+        return JsonSerializer.Serialize(new Version8SaveEnvelope(8, version8), Options);
+    }
+
     private sealed record CurrentSaveEnvelope(int Version, CurrentChronicleState Chronicle);
 
+    private sealed record Version8SaveEnvelope(int Version, Version8ChronicleState Chronicle);
+
+    private sealed record Version7SaveEnvelope(int Version, Version7ChronicleState Chronicle);
+
     private sealed record CurrentChronicleState(
+        long Seed,
+        long Tick,
+        WorldAddress Address,
+        ChronicleSpeed Speed,
+        OpeningIntent Intent,
+        CodexState Codex,
+        CurrentLoadoutState Loadout,
+        LoadAttunementState? Attunement,
+        long IncarnationId,
+        IncarnationLifeState IncarnationLife,
+        int WorldGrammarVersion,
+        CombatState? Combat,
+        PowerHomeState? PowerHome,
+        RetainedDurablesState? RetainedDurables,
+        IReadOnlyList<CurrentAgentState> Agents);
+
+    private sealed record Version8ChronicleState(
+        long Seed,
+        long Tick,
+        WorldAddress Address,
+        ChronicleSpeed Speed,
+        OpeningIntent Intent,
+        CodexState Codex,
+        CurrentLoadoutState Loadout,
+        LoadAttunementState? Attunement,
+        long IncarnationId,
+        IncarnationLifeState IncarnationLife,
+        int WorldGrammarVersion,
+        CombatState? Combat,
+        PowerHomeState? PowerHome,
+        RetainedDurablesState? RetainedDurables,
+        IReadOnlyList<Version8AgentState> Agents);
+
+    private sealed record CurrentAgentState(
+        AgentProfile Profile,
+        WorldAddress Address,
+        WorldAddress WaitingAddress,
+        AgentPresenceState Presence,
+        AgentNeedState Need,
+        AgentHomeRelationshipState HomeRelationship,
+        AgentIntentKind Intent,
+        long PromotedTick,
+        long? ArrivalTick,
+        long? WelcomeOfferedTick,
+        WorldAddress? RoadRollAddress,
+        PendingDirectiveState? PendingDirective,
+        IReadOnlyList<DirectiveMemoryState> DirectiveMemories);
+
+    private sealed record Version8AgentState(
+        AgentProfile Profile,
+        WorldAddress Address,
+        WorldAddress WaitingAddress,
+        AgentPresenceState Presence,
+        AgentNeedState Need,
+        AgentHomeRelationshipState HomeRelationship,
+        AgentIntentKind Intent,
+        long PromotedTick,
+        long? ArrivalTick,
+        long? WelcomeOfferedTick,
+        WorldAddress? RoadRollAddress);
+
+    private sealed record Version7ChronicleState(
         long Seed,
         long Tick,
         WorldAddress Address,

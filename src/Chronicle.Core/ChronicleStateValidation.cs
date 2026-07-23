@@ -22,7 +22,7 @@ public static partial class ChronicleSaveCodec
             throw new InvalidOperationException($"Unknown opening Intent '{state.Intent}'.");
         }
 
-        if (state.WorldGrammarVersion is not (0 or 1 or 2 or 3 or 4 or 5))
+        if (state.WorldGrammarVersion is not (0 or 1 or 2 or 3 or 4 or 5 or 6))
         {
             throw new InvalidOperationException(
                 $"Unsupported World Grammar version '{state.WorldGrammarVersion}'.");
@@ -77,6 +77,7 @@ public static partial class ChronicleSaveCodec
         ValidateFirstConflict(state);
         ValidateCombat(state);
         ValidatePowerHome(state);
+        ValidateAgents(state);
     }
 
     private static void ValidateOpeningIntentProvenance(ChronicleState state)
@@ -93,12 +94,12 @@ public static partial class ChronicleSaveCodec
 
         if (state.Intent == OpeningIntent.Against)
         {
-            if (state.WorldGrammarVersion is not (3 or 4 or 5))
+            if (state.WorldGrammarVersion is not (3 or 4 or 5 or 6))
             {
-                throw new InvalidOperationException("AGAINST is only available in World Grammar version 3, 4, or 5.");
+                throw new InvalidOperationException("AGAINST is only available in World Grammar version 3 through 6.");
             }
 
-            var firstVerb = state.WorldGrammarVersion is 4 or 5 ? WordIds.Burn : WordIds.Smash;
+            var firstVerb = state.WorldGrammarVersion is 4 or 5 or 6 ? WordIds.Burn : WordIds.Smash;
             if (!state.Codex.Contains(firstVerb))
             {
                 throw new InvalidOperationException(
@@ -358,12 +359,12 @@ public static partial class ChronicleSaveCodec
 
     private static void ValidateCombat(ChronicleState state)
     {
-        if (state.WorldGrammarVersion is not (4 or 5))
+        if (state.WorldGrammarVersion is not (4 or 5 or 6))
         {
             if (state.Combat is not null)
             {
                 throw new InvalidOperationException(
-                    "Goal 6A combat state requires World Grammar version 4 or 5.");
+                    "Goal 6A combat state requires World Grammar version 4, 5, or 6.");
             }
 
             return;
@@ -372,7 +373,7 @@ public static partial class ChronicleSaveCodec
         if (state.Combat is not { } combat)
         {
             throw new InvalidOperationException(
-                "World Grammar version 4 or 5 requires its authored Goal 6A combat state.");
+                "World Grammar version 4, 5, or 6 requires its authored Goal 6A combat state.");
         }
 
         if (state.FirstConflict is not null)
@@ -599,12 +600,12 @@ public static partial class ChronicleSaveCodec
 
     private static void ValidatePowerHome(ChronicleState state)
     {
-        if (state.WorldGrammarVersion != 5)
+        if (state.WorldGrammarVersion is not (5 or 6))
         {
             if (state.PowerHome is not null)
             {
                 throw new InvalidOperationException(
-                    "Power Comes Home state requires World Grammar version 5.");
+                    "Power Comes Home state requires World Grammar version 5 or 6.");
             }
 
             if (state.Attunement is { Capacity: not HoldingFacts.InherentLoadCapacity })
@@ -617,7 +618,7 @@ public static partial class ChronicleSaveCodec
         }
 
         var power = state.PowerHome
-            ?? throw new InvalidOperationException("World Grammar version 5 requires one Resonant Lode.");
+            ?? throw new InvalidOperationException("World Grammar version 5 or 6 requires one Resonant Lode.");
         var lode = power.Lode;
         if (!string.Equals(lode.Identity, HoldingRules.ResonantLodeIdentity(state.Seed), StringComparison.Ordinal) ||
             lode.OriginAddress != HoldingFacts.SingingSeamAddress)
@@ -786,6 +787,291 @@ public static partial class ChronicleSaveCodec
             }
         }
     }
+
+    private static void ValidateAgents(ChronicleState state)
+    {
+        if (state.WorldGrammarVersion != 6)
+        {
+            if (state.Agents.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    "Consequential Agents require World Grammar version 6.");
+            }
+
+            return;
+        }
+
+        var home = state.Home
+            ?? throw new InvalidOperationException("World Grammar version 6 Agents require Home.");
+        var identities = new HashSet<string>(StringComparer.Ordinal);
+        var occupied = new HashSet<WorldAddress>();
+        var roadRolls = new HashSet<WorldAddress>();
+        foreach (var agent in state.Agents)
+        {
+            if (!identities.Add(agent.Profile.Identity))
+            {
+                throw new InvalidOperationException("Consequential Agent identities must be unique.");
+            }
+
+            var generated = AgentGrammar.Generate(
+                state.Seed,
+                state.WorldGrammarVersion,
+                agent.Profile.ProvenanceIdentity,
+                agent.Profile.OriginAddress,
+                agent.Profile.Ordinal);
+            if (agent.Profile != generated)
+            {
+                throw new InvalidOperationException(
+                    "A consequential Agent profile must match its stable generated provenance.");
+            }
+
+            if (!Enum.IsDefined(agent.Presence) ||
+                !Enum.IsDefined(agent.Need.Kind) ||
+                !Enum.IsDefined(agent.Need.Status) ||
+                !Enum.IsDefined(agent.HomeRelationship.Kind) ||
+                !Enum.IsDefined(agent.Intent))
+            {
+                throw new InvalidOperationException("A consequential Agent contains an unknown authored value.");
+            }
+
+            ValidateCurrentAddress(agent.Profile.OriginAddress, "Agent origin");
+            ValidateCurrentAddress(agent.Address, "Agent");
+            ValidateCurrentAddress(agent.WaitingAddress, "Agent waiting place");
+            if (!occupied.Add(agent.Address))
+            {
+                throw new InvalidOperationException("Two consequential Agents cannot occupy one exclusive cell.");
+            }
+
+            if (agent.PromotedTick < 0 || agent.PromotedTick > state.Tick ||
+                agent.ArrivalTick is { } arrivalTick &&
+                (arrivalTick < agent.PromotedTick || arrivalTick > state.Tick) ||
+                agent.WelcomeOfferedTick is { } offeredTick &&
+                (offeredTick < agent.PromotedTick || offeredTick > state.Tick))
+            {
+                throw new InvalidOperationException("Agent event provenance must remain within Chronicle time.");
+            }
+
+            if (!string.Equals(
+                    agent.HomeRelationship.HomeIdentity,
+                    home.HoldingId,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("An Agent Home relationship must name the singular Home.");
+            }
+
+            var validState = agent.Presence switch
+            {
+                AgentPresenceState.ApproachingHome =>
+                    agent.Need.Status == AgentNeedStatus.Seeking &&
+                    agent.HomeRelationship.Kind == AgentHomeRelationshipKind.Unfamiliar &&
+                    agent.Intent == AgentIntentKind.ApproachHome &&
+                    agent.ArrivalTick is null &&
+                    agent.WelcomeOfferedTick is null &&
+                    agent.RoadRollAddress is null,
+                AgentPresenceState.WaitingAtHome when
+                    agent.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered =>
+                    agent.Need.Status == AgentNeedStatus.Offered &&
+                    agent.Intent == AgentIntentKind.ConsiderWelcome &&
+                    agent.ArrivalTick is not null &&
+                    agent.WelcomeOfferedTick is not null &&
+                    agent.HomeRelationship.EstablishedTick is null &&
+                    agent.HomeRelationship.WelcomingIncarnationId is > 0 &&
+                    agent.RoadRollAddress is null,
+                AgentPresenceState.WaitingAtHome =>
+                    agent.Need.Status == AgentNeedStatus.Seeking &&
+                    agent.HomeRelationship.Kind == AgentHomeRelationshipKind.Unfamiliar &&
+                    agent.Intent == AgentIntentKind.WaitForWelcome &&
+                    agent.ArrivalTick is not null &&
+                    agent.WelcomeOfferedTick is null &&
+                    agent.HomeRelationship.EstablishedTick is null &&
+                    agent.HomeRelationship.WelcomingIncarnationId is null &&
+                    agent.RoadRollAddress is null,
+                AgentPresenceState.AtHome =>
+                    agent.Need.Status == AgentNeedStatus.Satisfied &&
+                    agent.HomeRelationship.Kind == AgentHomeRelationshipKind.Guest &&
+                    agent.Intent is AgentIntentKind.RemainAtHome or AgentIntentKind.ConsiderDirective &&
+                    agent.ArrivalTick is not null &&
+                    agent.WelcomeOfferedTick is not null &&
+                    agent.HomeRelationship.EstablishedTick is { } established &&
+                    established >= agent.WelcomeOfferedTick &&
+                    established <= state.Tick &&
+                    agent.HomeRelationship.WelcomingIncarnationId is > 0 &&
+                    agent.RoadRollAddress is not null,
+                _ => false,
+            };
+            if (!validState)
+            {
+                throw new InvalidOperationException(
+                    "Agent presence, need, relationship, intent, and material state disagree.");
+            }
+
+            if (agent.HomeRelationship.WelcomingIncarnationId is { } welcomingIncarnation &&
+                welcomingIncarnation > state.IncarnationId)
+            {
+                throw new InvalidOperationException(
+                    "An Agent welcome cannot name a future Incarnation.");
+            }
+
+            if (agent.RoadRollAddress is { } roadRoll)
+            {
+                ValidateCurrentAddress(roadRoll, "Agent road-roll");
+                if (!roadRolls.Add(roadRoll))
+                {
+                    throw new InvalidOperationException(
+                        "Agent road-roll ownership and exclusive occupancy must be unambiguous.");
+                }
+            }
+
+            ValidateDirectiveState(state, agent);
+        }
+
+        if (state.Agents.Any(agent => state.Agents.Any(other =>
+                !string.Equals(agent.Profile.Identity, other.Profile.Identity, StringComparison.Ordinal) &&
+                other.RoadRollAddress == agent.Address)))
+        {
+            throw new InvalidOperationException("An Agent cannot occupy another Agent's road-roll.");
+        }
+
+        var listenerProfile = AgentRules.ResonanceListenerProfile(state);
+        var listener = state.Agents.Find(listenerProfile.Identity);
+        var sourceHasCompleted = state.PowerHome?.Resonator?.Phase is
+            HearthResonatorPhase.Intact or
+            HearthResonatorPhase.Damaged or
+            HearthResonatorPhase.Destroyed or
+            HearthResonatorPhase.Rebuilding;
+        if (sourceHasCompleted && listener is null)
+        {
+            throw new InvalidOperationException(
+                "A WG6 Chronicle whose first Resonator completed must retain its promoted Agent.");
+        }
+
+        if (listener is not null)
+        {
+            if (listener.WaitingAddress != AgentRules.ResonanceListenerWaitingAddress(state) ||
+                listener.Presence == AgentPresenceState.ApproachingHome &&
+                (listener.Address.Y != listener.WaitingAddress.Y ||
+                 listener.Address.X < AgentRules.ResonanceListenerStartAddress(state).X ||
+                 listener.Address.X >= listener.WaitingAddress.X) ||
+                listener.Presence == AgentPresenceState.WaitingAtHome &&
+                listener.Address != listener.WaitingAddress ||
+                listener.Presence == AgentPresenceState.AtHome &&
+                listener.Address != listener.WaitingAddress &&
+                listener.Address != listener.RoadRollAddress ||
+                listener.RoadRollAddress is { } roadRoll &&
+                roadRoll != AgentRules.ResonanceListenerRoadRollAddress(state))
+            {
+                throw new InvalidOperationException(
+                    "The generated resonance listener must retain its Home-relative arrival and road-roll addresses.");
+            }
+        }
+    }
+
+    private static void ValidateDirectiveState(ChronicleState state, AgentState agent)
+    {
+        if (agent.PendingDirective is { } pending)
+        {
+            if (agent.Presence != AgentPresenceState.AtHome ||
+                agent.HomeRelationship.Kind != AgentHomeRelationshipKind.Guest ||
+                agent.Intent != AgentIntentKind.ConsiderDirective ||
+                !string.Equals(pending.AgentIdentity, agent.Profile.Identity, StringComparison.Ordinal) ||
+                pending.IssuingIncarnationId <= 0 ||
+                pending.IssuingIncarnationId > state.IncarnationId ||
+                pending.IssuedTick < agent.PromotedTick ||
+                pending.IssuedTick > state.Tick ||
+                pending.ResolvesAtTick != pending.IssuedTick + 1 ||
+                pending.ResolvesAtTick <= state.Tick ||
+                DirectiveRules.ForceFor(pending.Verb) is not { } force ||
+                force < DirectiveRules.Definition(pending.Directive).MinimumForce)
+            {
+                throw new InvalidOperationException(
+                    "A pending Directive must retain a valid recipient, issuer, force, intent, and future Heartbeat.");
+            }
+
+            ValidateCurrentAddress(pending.ObjectiveAddress, "Directive objective");
+            ValidateCurrentAddress(pending.DeliveryAddress, "Directive delivery");
+            if (!DirectiveObjectiveMatches(state, agent, pending.Directive, pending.ObjectiveIdentity, pending.ObjectiveAddress))
+            {
+                throw new InvalidOperationException(
+                    "A pending Directive must retain its canonical Chronicle objective.");
+            }
+        }
+        else if (agent.Intent == AgentIntentKind.ConsiderDirective)
+        {
+            throw new InvalidOperationException(
+                "An Agent cannot consider a missing pending Directive.");
+        }
+
+        var previousResolvedTick = -1L;
+        var identities = new HashSet<(long IssuedTick, long Issuer, DirectiveKind Directive)>();
+        foreach (var memory in agent.DirectiveMemories)
+        {
+            if (!string.Equals(memory.AgentIdentity, agent.Profile.Identity, StringComparison.Ordinal) ||
+                memory.IssuingIncarnationId <= 0 ||
+                memory.IssuingIncarnationId > state.IncarnationId ||
+                memory.IssuedTick < agent.PromotedTick ||
+                memory.ResolvedTick <= memory.IssuedTick ||
+                memory.ResolvedTick > state.Tick ||
+                memory.ResolvedTick < previousResolvedTick ||
+                !identities.Add((memory.IssuedTick, memory.IssuingIncarnationId, memory.Directive)) ||
+                DirectiveRules.ForceFor(memory.Verb) is not { } force ||
+                force < DirectiveRules.Definition(memory.Directive).MinimumForce ||
+                !Enum.IsDefined(memory.Response) ||
+                !Enum.IsDefined(memory.Reason) ||
+                !Enum.IsDefined(memory.Blocker))
+            {
+                throw new InvalidOperationException(
+                    "A Directive memory contains impossible identity, force, time, order, or authored values.");
+            }
+
+            ValidateCurrentAddress(memory.ObjectiveAddress, "Directive memory objective");
+            ValidateCurrentAddress(memory.ResultingAddress, "Directive memory result");
+            var responseMatches = memory switch
+            {
+                {
+                    Directive: DirectiveKind.RestByRoadRoll,
+                    Response: DirectiveResponseKind.Accepted,
+                    Reason: DirectiveResponseReason.RestAccepted,
+                    Blocker: AgentBlockerKind.None,
+                } => memory.ResultingAddress == memory.ObjectiveAddress,
+                {
+                    Directive: DirectiveKind.RestByRoadRoll,
+                    Response: DirectiveResponseKind.Delayed,
+                    Reason: DirectiveResponseReason.DestinationBlocked,
+                } => memory.Blocker != AgentBlockerKind.None,
+                {
+                    Directive: DirectiveKind.ApproachMireBrute,
+                    Response: DirectiveResponseKind.Refused,
+                    Reason: DirectiveResponseReason.GuestHasNoViolentCommitment,
+                    Blocker: AgentBlockerKind.None,
+                } => true,
+                _ => false,
+            };
+            if (!responseMatches || string.IsNullOrWhiteSpace(memory.ObjectiveIdentity))
+            {
+                throw new InvalidOperationException(
+                    "A Directive memory response, reason, blocker, and result disagree.");
+            }
+
+            previousResolvedTick = memory.ResolvedTick;
+        }
+    }
+
+    private static bool DirectiveObjectiveMatches(
+        ChronicleState state,
+        AgentState agent,
+        DirectiveKind directive,
+        string identity,
+        WorldAddress address) => directive switch
+        {
+            DirectiveKind.RestByRoadRoll =>
+                agent.RoadRollAddress == address &&
+                string.Equals(identity, AgentRules.RoadRollIdentity(agent.Profile.Identity), StringComparison.Ordinal),
+            DirectiveKind.ApproachMireBrute =>
+                state.Combat?.MireBrute is { IsLiving: true } brute &&
+                brute.Address == address &&
+                string.Equals(identity, brute.Identity, StringComparison.Ordinal),
+            _ => false,
+        };
 
     private static void ValidateCurrentAddress(WorldAddress address, string subject)
     {

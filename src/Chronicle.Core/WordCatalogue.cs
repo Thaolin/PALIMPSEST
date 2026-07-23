@@ -29,6 +29,8 @@ public static class WordIds
     public static readonly WordId Burn = new("word.burn");
     public static readonly WordId Quickly = new("word.quickly");
     public static readonly WordId Lasting = new("word.lasting");
+    public static readonly WordId Suggest = new("word.suggest");
+    public static readonly WordId Command = new("word.command");
 
     // These identities remain parseable solely for explicit v6 retirement of
     // literal predecessor saves. They are not successor vocabulary.
@@ -133,6 +135,22 @@ public static class WordCatalogue
             Load: 5,
             Effect: new WordEffect(Consequence: 3),
             CompatibleVerbs: Array.AsReadOnly([WordIds.Burn])),
+        new(
+            WordIds.Suggest,
+            "Suggest",
+            WordKind.Verb,
+            "Offer a high-level intent without enough force to demand dangerous action.",
+            0,
+            Array.Empty<WordId>(),
+            Load: 1),
+        new(
+            WordIds.Command,
+            "Command",
+            WordKind.Verb,
+            "Attempt authority-gated or dangerous intent without guaranteeing obedience.",
+            0,
+            Array.Empty<WordId>(),
+            Load: 3),
         new(
             WordIds.Stone,
             "Stone",

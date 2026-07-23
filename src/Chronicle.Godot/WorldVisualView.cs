@@ -119,7 +119,8 @@ public partial class WorldVisualView : Node2D
             }
         }
 
-        foreach (var selection in _plan.Marks.Where(mark => mark.VisualId == "emphasis.target.selected"))
+        foreach (var selection in _plan.Marks.Where(mark =>
+                     mark.VisualId is "emphasis.target.selected" or "emphasis.selection"))
         {
             DrawSelectionBrackets(selection, _plan.CellSize);
         }
@@ -130,10 +131,13 @@ public partial class WorldVisualView : Node2D
         var center = new Vector2(
             mark.Column * cellSize + cellSize / 2.0f,
             mark.Row * cellSize + cellSize / 2.0f);
-        var player = mark.VisualId == "actor.incarnation";
-        var ring = player
-            ? new Color(0.28f, 0.82f, 0.68f, 0.96f)
-            : new Color(0.98f, 0.34f, 0.16f, 0.96f);
+        var ring = mark.VisualId switch
+        {
+            "actor.incarnation" => new Color(0.28f, 0.82f, 0.68f, 0.96f),
+            var id when id.StartsWith("agent.", StringComparison.Ordinal) =>
+                new Color(0.91f, 0.72f, 0.30f, 0.96f),
+            _ => new Color(0.98f, 0.34f, 0.16f, 0.96f),
+        };
         DrawArc(center, cellSize * 0.40f, 0, Mathf.Tau, 32, ring, 1.0f, true);
 
         var keyline = new Color(0.01f, 0.008f, 0.006f, 0.90f);
@@ -164,7 +168,8 @@ public partial class WorldVisualView : Node2D
     }
 
     private static bool IsLivingActor(VisualRenderMark mark) =>
-        mark.VisualId is "actor.incarnation" or "subject.mire-brute.living";
+        mark.VisualId is "actor.incarnation" or "subject.mire-brute.living" ||
+        mark.VisualId.StartsWith("agent.", StringComparison.Ordinal);
 
     private void DrawMark(
         VisualRenderMark mark,

@@ -3,7 +3,11 @@ namespace Chronicle.Core;
 public sealed class ChronicleSimulation
 {
     private const int RecentCombatResultLimit = 12;
+    private const int RecentAgentEventLimit = 12;
+    private const int RecentDirectiveEventLimit = 12;
     private readonly List<CombatResultSnapshot> _recentCombatResults = [];
+    private readonly List<AgentEventSnapshot> _recentAgentEvents = [];
+    private readonly List<DirectiveEventSnapshot> _recentDirectiveEvents = [];
 
     public ChronicleSimulation(ChronicleState initialState)
     {
@@ -24,6 +28,12 @@ public sealed class ChronicleSimulation
 
     public PowerComesHomeContextSnapshot PowerComesHomeContext =>
         HoldingRules.Snapshot(State);
+
+    public AgentContextSnapshot AgentContext =>
+        AgentRules.Snapshot(State, _recentAgentEvents);
+
+    public DirectiveContextSnapshot DirectiveContext =>
+        DirectiveRules.Snapshot(State, _recentDirectiveEvents);
 
     public StudySourceSnapshot? CurrentStudySource =>
         StudySourceGrammar.At(State, State.Address);
@@ -129,6 +139,26 @@ public sealed class ChronicleSimulation
             return ChangeLodeCarry(HoldingRules.TryCancel);
         }
 
+        if (command is OfferWelcome offerWelcome)
+        {
+            return OfferAgentWelcome(offerWelcome.AgentIdentity);
+        }
+
+        if (command is WithdrawWelcome withdrawWelcome)
+        {
+            return WithdrawAgentWelcome(withdrawWelcome.AgentIdentity);
+        }
+
+        if (command is DeliverDirective deliverDirective)
+        {
+            return DeliverAgentDirective(deliverDirective);
+        }
+
+        if (command is WithdrawDirective withdrawDirective)
+        {
+            return WithdrawAgentDirective(withdrawDirective.AgentIdentity);
+        }
+
         if (command is ConfigureEngagementPlan configurePlan)
         {
             return ConfigurePlan(configurePlan);
@@ -194,7 +224,7 @@ public sealed class ChronicleSimulation
                 ? State.WithIntent(OpeningIntent.Here)
                 : State,
             ChooseAgainstIntent => State.Intent == OpeningIntent.Unchosen &&
-                                   State.WorldGrammarVersion is 3 or 4 or 5
+                                   State.WorldGrammarVersion is 3 or 4 or 5 or 6
                 ? State.WithIntent(OpeningIntent.Against)
                 : State,
             EndIncarnationAtBell => State.EndIncarnationAtBell(),
@@ -214,15 +244,28 @@ public sealed class ChronicleSimulation
 
     public void AdvanceOneTick()
     {
+        var beforeTick = State.Tick;
         if (!CombatRules.IsAvailable(State))
         {
             State = State.AdvanceTick();
-            return;
+        }
+        else
+        {
+            var result = CombatRules.Advance(State, HoldingCommitments.Instance);
+            State = result.State;
+            AddCombatResults(result.Results);
         }
 
-        var result = CombatRules.Advance(State, HoldingCommitments.Instance);
-        State = result.State;
-        AddCombatResults(result.Results);
+        if (State.Tick != beforeTick)
+        {
+            var agents = AgentRules.Advance(State);
+            State = agents.State;
+            AddAgentEvents(agents.Events);
+
+            var directives = DirectiveRules.Advance(State);
+            State = directives.State;
+            AddDirectiveEvents(directives.Events);
+        }
     }
 
     public void AdvanceClockPulse()
@@ -527,6 +570,7 @@ public sealed class ChronicleSimulation
             checked(State.Address.X + move.DeltaX),
             checked(State.Address.Y + move.DeltaY));
         if (CombatRules.IsOccupiedByLivingMireBrute(State, destination) ||
+            AgentRules.IsOccupied(State, destination) ||
             HoldingFacts.BlocksMovement(State, destination))
         {
             AddCombatResult(new CombatResultSnapshot(
@@ -534,6 +578,8 @@ public sealed class ChronicleSimulation
                 CombatResultKind.Command,
                 CombatRules.IsOccupiedByLivingMireBrute(State, destination)
                     ? "The living Mire Brute occupies that cell."
+                    : AgentRules.IsOccupied(State, destination)
+                        ? "A Chronicle Agent occupies that cell."
                     : "A physical subject occupies that cell.",
                 Address: destination));
             return State;
@@ -609,6 +655,92 @@ public sealed class ChronicleSimulation
         return ChronicleCommandResult.Succeeded(message);
     }
 
+    private ChronicleCommandResult OfferAgentWelcome(string agentIdentity)
+    {
+        if (!AgentRules.TryOfferWelcome(
+                State,
+                agentIdentity,
+                out var updated,
+                out _,
+                out var @event))
+        {
+            return ChronicleCommandResult.Rejected(string.Empty);
+        }
+
+        State = updated;
+        if (@event is not null)
+        {
+            AddAgentEvent(@event);
+        }
+
+        return ChronicleCommandResult.Succeeded(string.Empty);
+    }
+
+    private ChronicleCommandResult WithdrawAgentWelcome(string agentIdentity)
+    {
+        if (!AgentRules.TryWithdrawWelcome(
+                State,
+                agentIdentity,
+                out var updated,
+                out _,
+                out var @event))
+        {
+            return ChronicleCommandResult.Rejected(string.Empty);
+        }
+
+        State = updated;
+        if (@event is not null)
+        {
+            AddAgentEvent(@event);
+        }
+
+        return ChronicleCommandResult.Succeeded(string.Empty);
+    }
+
+    private ChronicleCommandResult DeliverAgentDirective(DeliverDirective command)
+    {
+        if (!DirectiveRules.TryDeliver(
+                State,
+                command.AgentIdentity,
+                command.SlotIndex,
+                command.Directive,
+                out var updated,
+                out _,
+                out var @event))
+        {
+            return ChronicleCommandResult.Rejected(string.Empty);
+        }
+
+        State = updated;
+        if (@event is not null)
+        {
+            AddDirectiveEvents([@event]);
+        }
+
+        return ChronicleCommandResult.Succeeded(string.Empty);
+    }
+
+    private ChronicleCommandResult WithdrawAgentDirective(string agentIdentity)
+    {
+        if (!DirectiveRules.TryWithdraw(
+                State,
+                agentIdentity,
+                out var updated,
+                out _,
+                out var @event))
+        {
+            return ChronicleCommandResult.Rejected(string.Empty);
+        }
+
+        State = updated;
+        if (@event is not null)
+        {
+            AddDirectiveEvents([@event]);
+        }
+
+        return ChronicleCommandResult.Succeeded(string.Empty);
+    }
+
     private void AddCombatResults(IEnumerable<CombatResultSnapshot> results)
     {
         foreach (var result in results)
@@ -623,6 +755,38 @@ public sealed class ChronicleSimulation
         if (_recentCombatResults.Count > RecentCombatResultLimit)
         {
             _recentCombatResults.RemoveRange(0, _recentCombatResults.Count - RecentCombatResultLimit);
+        }
+    }
+
+    private void AddAgentEvents(IEnumerable<AgentEventSnapshot> events)
+    {
+        foreach (var @event in events)
+        {
+            AddAgentEvent(@event);
+        }
+    }
+
+    private void AddAgentEvent(AgentEventSnapshot @event)
+    {
+        _recentAgentEvents.Add(@event);
+        if (_recentAgentEvents.Count > RecentAgentEventLimit)
+        {
+            _recentAgentEvents.RemoveRange(0, _recentAgentEvents.Count - RecentAgentEventLimit);
+        }
+    }
+
+    private void AddDirectiveEvents(IEnumerable<DirectiveEventSnapshot> events)
+    {
+        foreach (var @event in events)
+        {
+            _recentDirectiveEvents.Add(@event);
+        }
+
+        if (_recentDirectiveEvents.Count > RecentDirectiveEventLimit)
+        {
+            _recentDirectiveEvents.RemoveRange(
+                0,
+                _recentDirectiveEvents.Count - RecentDirectiveEventLimit);
         }
     }
 
@@ -1217,3 +1381,14 @@ public sealed record LiftResonantLode : ChronicleCommand;
 public sealed record SetDownResonantLode : ChronicleCommand;
 
 public sealed record CancelPowerCommitment : ChronicleCommand;
+
+public sealed record OfferWelcome(string AgentIdentity) : ChronicleCommand;
+
+public sealed record WithdrawWelcome(string AgentIdentity) : ChronicleCommand;
+
+public sealed record DeliverDirective(
+    int SlotIndex,
+    string AgentIdentity,
+    DirectiveKind Directive) : ChronicleCommand;
+
+public sealed record WithdrawDirective(string AgentIdentity) : ChronicleCommand;
