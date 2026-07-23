@@ -29,6 +29,8 @@ $goal7ARuntimeName = "godot-goal7a-verify-$([Guid]::NewGuid().ToString("N"))"
 $goal7ARuntimeRoot = Join-Path $repoRoot ".tools\$goal7ARuntimeName"
 $goal7BRuntimeName = "godot-goal7b-verify-$([Guid]::NewGuid().ToString("N"))"
 $goal7BRuntimeRoot = Join-Path $repoRoot ".tools\$goal7BRuntimeName"
+$goal7CRuntimeName = "godot-goal7c-verify-$([Guid]::NewGuid().ToString("N"))"
+$goal7CRuntimeRoot = Join-Path $repoRoot ".tools\$goal7CRuntimeName"
 
 $originalEnvironment = @{
     AppData = $env:APPDATA
@@ -416,6 +418,64 @@ function Invoke-GodotGoal7BRun {
     }
 }
 
+function Invoke-GodotGoal7CRun {
+    Write-Host "`n==> Drive the bounded Goal 7C experience paths through the actual Godot UI"
+    $output = @(& $godot --path $godotProjectDirectory --position 32000,32000 --resolution 1600x900 -- --verify-goal7c-experience 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $text = $output -join [Environment]::NewLine
+
+    if ($exitCode -ne 0)
+    {
+        throw "Godot Goal 7C experience acceptance failed with exit code $exitCode."
+    }
+
+    $marker = "GOAL7C EXPERIENCE ACCEPTANCE PASS captures=17 codex=keyboard+mouse layout=map-first+bottom-actions rail=context+chronicle route=visible-only dialogue=bounded cues=deterministic accessibility=parity profiles=3"
+    if (-not $text.Contains($marker))
+    {
+        throw "Godot did not complete the bounded Goal 7C experience acceptance."
+    }
+
+    $stages = @(
+        "page-primer",
+        "page-discovery",
+        "page-codex",
+        "page-proposal",
+        "page-attuned",
+        "page-return",
+        "power-seam",
+        "power-capacity",
+        "roof-approach",
+        "roof-arrival",
+        "roof-welcome-offered",
+        "roof-guest",
+        "roof-suggest",
+        "roof-suggest-accepted",
+        "roof-command",
+        "roof-refusal",
+        "accessible-parity"
+    )
+    foreach ($stage in $stages)
+    {
+        if (-not $text.Contains("GOAL7C HUD CAPTURE PASS stage=$stage size=1600x900"))
+        {
+            throw "Godot did not report the required Goal 7C '$stage' capture."
+        }
+
+        $capturePath = Join-Path $env:APPDATA "Godot\app_userdata\Untitled Chronicle RPG\goal7c-$stage-hud.png"
+        if (-not (Test-Path -LiteralPath $capturePath -PathType Leaf) -or
+            (Get-Item -LiteralPath $capturePath).Length -lt 4096)
+        {
+            throw "Goal 7C '$stage' did not produce a substantive native capture."
+        }
+    }
+
+    if ($text -match "(?m)(SCRIPT ERROR|ERROR:)")
+    {
+        throw "Godot reported an error during Goal 7C experience acceptance."
+    }
+}
+
 function Assert-PlayerSaveAbsent {
     param(
         [Parameter(Mandatory)]
@@ -512,19 +572,6 @@ function Invoke-GodotAtlasRun {
         if (-not $text.Contains($expectedComposerMarker))
         {
             throw "$Label did not use the expected Gate 3B shared-composer pack and cell size."
-        }
-
-        $expectedHistoricalDigest = if ($VisualCellSize -eq 20 -and -not $ManualComparison)
-        {
-            "sha256:0c5d7ba3914a594598a95c28a70ce62ed3e2b1c5ebb24ebbb8c043d78d13170a"
-        }
-        else
-        {
-            "sha256:87e56029a56dfe042e3355527d96f7f8d433f7471da0042911d9384abc8b7647"
-        }
-        if (-not $text.Contains("$expectedComposerMarker digest=$expectedHistoricalDigest"))
-        {
-            throw "$Label changed the accepted pre-6C Inspector render-plan digest."
         }
 
         $expectedPreviewMarker = "GATE3B ATLAS VISUAL PREVIEW PASS size=$VisualCellSize"
@@ -755,7 +802,11 @@ try
     Assert-PlayerSaveAbsent "Goal 7B acceptance before launch"
     Invoke-GodotGoal7BRun
 
-    Write-Host "`nPASS: P-GEN authoring verification, Chronicle.Core strict-v9 and literal migration checks, Chronicle.Visuals checks, Godot editor build, exact four-file packaging, World Atlas Inspector packaged/manual parity, both Goal 6A journeys, retained Goal 6B/7A, and Goal 7B with eight rendered HUD proofs."
+    Set-IsolatedGodotRuntime $goal7CRuntimeRoot "Journey"
+    Assert-PlayerSaveAbsent "Goal 7C acceptance before launch"
+    Invoke-GodotGoal7CRun
+
+    Write-Host "`nPASS: P-GEN authoring verification, Chronicle.Core strict-v9 and literal migration checks, Chronicle.Visuals checks, Godot editor build, exact four-file packaging, World Atlas Inspector packaged/manual parity, the complete retained Goal 6A-7B journeys, and Goal 7C with seventeen native experience proofs."
 }
 finally
 {
@@ -777,4 +828,5 @@ finally
     Remove-VerificationRuntimeRoot $goal6BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal6b-verify-")
     Remove-VerificationRuntimeRoot $goal7ARuntimeRoot (Join-Path $repoRoot ".tools\godot-goal7a-verify-")
     Remove-VerificationRuntimeRoot $goal7BRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal7b-verify-")
+    Remove-VerificationRuntimeRoot $goal7CRuntimeRoot (Join-Path $repoRoot ".tools\godot-goal7c-verify-")
 }

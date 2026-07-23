@@ -22,6 +22,10 @@ param(
 
     [switch] $ManualVisualPack,
 
+    [switch] $SoundOff,
+
+    [switch] $ReducedMotion,
+
     [ValidateSet(16, 20)]
     [int] $CellSize = 20
 )
@@ -190,6 +194,14 @@ try
     {
         $gameArguments += "--manual-visual-pack"
     }
+    if ($SoundOff)
+    {
+        $gameArguments += "--sound-off"
+    }
+    if ($ReducedMotion)
+    {
+        $gameArguments += "--reduced-motion"
+    }
     if ($Profile -eq "goal7a-welcome-uat")
     {
         $gameArguments += "--prepare-goal7a-welcome-uat"
@@ -205,6 +217,18 @@ try
     elseif ($Profile -eq "goal7b-command-uat")
     {
         $gameArguments += "--prepare-goal7b-command-uat"
+    }
+    elseif ($Profile -eq "goal7c-page-to-fire-uat")
+    {
+        $gameArguments += "--prepare-goal7c-page-to-fire-uat"
+    }
+    elseif ($Profile -eq "goal7c-power-made-physical-uat")
+    {
+        $gameArguments += "--prepare-goal7c-power-made-physical-uat"
+    }
+    elseif ($Profile -eq "goal7c-roof-not-oath-uat")
+    {
+        $gameArguments += "--prepare-goal7c-roof-not-oath-uat"
     }
     & $godot --path $projectDirectory -- @gameArguments
     if ($LASTEXITCODE -ne 0)

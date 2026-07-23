@@ -18,6 +18,7 @@ Run("Goal 7A Agent grammar, promotion, and scale", VerifyAgentGrammarAndScale);
 Run("Goal 7A arrival, welcome, persistence, and replay", VerifyAgentJourneyAndPersistence);
 Run("Goal 7B social Words, Directive truth table, and agency", VerifyDirectiveRules);
 Run("Goal 7B persistence, replacement, scale, and migration", VerifyDirectivePersistenceAndMigration);
+Run("Goal 7C Attunement preview is derived and non-mutating", VerifyAttunementPreview);
 Run("Core owns facts, not player-facing copy", VerifyCoreOwnsNoPresentationCopy);
 Run("authored Word effects extend without resolver edits", VerifyAuthoredWordEffects);
 Run("accepted pre-6C save bytes remain stable", VerifyHistoricalSaveOracle);
@@ -27,6 +28,7 @@ Console.WriteLine("GOAL6A CORE ACCEPTANCE PASS retained grammar=4 combat=determi
 Console.WriteLine("GOAL6B CORE ACCEPTANCE PASS save=7 grammar=5 power-home=physical attunement=next-only replay=deterministic");
 Console.WriteLine("GOAL7A CORE ACCEPTANCE PASS save=8 grammar=6 agent=consequential welcome=autonomous replay=deterministic");
 Console.WriteLine("GOAL7B CORE ACCEPTANCE PASS save=9 grammar=6 directive=bounded agency=preserved replay=deterministic");
+Console.WriteLine("GOAL7C CORE ACCEPTANCE PASS save=9 grammar=6 preview=derived mechanics=unchanged");
 
 static void VerifyAuthoredFixture()
 {
@@ -1893,6 +1895,50 @@ static ChronicleSimulation Goal7BSocialFixture(WordId activeVerb)
     Assert(simulation.Apply(new AttuneExpression(activeVerb, [])).Applied,
         $"The Goal 7B fixture must attune authored social Verb {activeVerb.Value} while safe.");
     return simulation;
+}
+
+static void VerifyAttunementPreview()
+{
+    var simulation = NewGoal6BFixture();
+    var before = ChronicleSaveCodec.Serialize(simulation.State);
+    var quick = simulation.PreviewAttunement(WordIds.Burn, [WordIds.Quickly]);
+    Assert(
+        quick.Available &&
+        quick.UsedLoad == 7 &&
+        quick.LoadCapacity == 8 &&
+        quick.UsedLinks == 2 &&
+        quick.LinkCapacity == 3 &&
+        quick.Effect == new WordEffect(Preparation: 1, Consequence: 3, Recovery: 8, Damage: 4),
+        "The Goal 7C preview must expose the existing authored Burn + Quickly facts.");
+
+    var combined = simulation.PreviewAttunement(
+        WordIds.Burn,
+        [WordIds.Quickly, WordIds.Lasting]);
+    Assert(
+        !combined.Available &&
+        combined.Availability == AttunementAvailabilityReason.LoadCapacityExceeded &&
+        combined.UsedLoad == 12 &&
+        combined.LoadCapacity == 8 &&
+        combined.UsedLinks == 3 &&
+        combined.LinkCapacity == 3,
+        "The Goal 7C preview must distinguish insufficient Load from the valid three-Link shape.");
+    Assert(
+        ChronicleSaveCodec.Serialize(simulation.State) == before,
+        "Previewing and editing a proposed Loadout must not mutate Core state or strict save bytes.");
+
+    var rejected = simulation.Apply(new AttuneExpression(
+        WordIds.Burn,
+        [WordIds.Quickly, WordIds.Lasting]));
+    Assert(
+        !rejected.Applied &&
+        ChronicleSaveCodec.Serialize(simulation.State) == before,
+        "The existing atomic Attunement command must reject the same preview without mutation.");
+
+    var danger = NewEncounter(WordIds.Quickly, openingWeapon: false);
+    Assert(
+        danger.PreviewAttunement(WordIds.Burn, [WordIds.Lasting]).Availability ==
+        AttunementAvailabilityReason.ImmediateDanger,
+        "The preview must expose immediate danger as the decisive Attunement blocker.");
 }
 
 static void VerifyHistoricalSaveOracle()

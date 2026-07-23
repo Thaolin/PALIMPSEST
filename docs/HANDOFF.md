@@ -1,6 +1,6 @@
 # Active Handoff Contract
 
-Last reconciled: 2026-07-22 (Goal 7B complete and player-accepted)
+Last reconciled: 2026-07-23 (Goal 7C complete and player-accepted; Goal 7D contract next)
 
 This is the short-lived execution contract for the current gate. It may narrow
 the active slice but may never expand or contradict [AGENTS.md](../AGENTS.md),
@@ -10,8 +10,153 @@ authorized future slice contract.
 
 ## Current gate
 
-**Goal 7B — A Directive, Not Unit Control is complete and player-accepted;
-later production remains unauthorized**
+**Goal 7C is complete and player-accepted; Goal 7D contract definition is next**
+
+- Goal 7A/7B was committed as `d42529a` (`Implement Goal 7 agents and
+  directives`) and pushed to
+  `origin/codex/goal-7b-directive-not-unit-control` after both Goal 7B player
+  UAT journeys passed.
+- The player directed creation of the exact `UX-Redux` branch from that
+  accepted commit, authorized documentation design for the power-progression
+  and experience directions, and approved the completed UX Redux direction on
+  2026-07-23.
+- [Power Progression Direction](POWER-PROGRESSION-DIRECTION.md) records the
+  approved
+  three-layer body/language/leverage growth model, concrete action-plan
+  dimensions, ten candidate Verbs, and ten support-like Modifiers. `Modifier`
+  remains the canonical term; “extension word” is plain-language description.
+  Body names a capability layer without settling levels or attributes. Every
+  future Modifier proof must change a decision, expose a visible or audible
+  tradeoff, remain optional, and demonstrate cross-Verb breadth unless narrow
+  compatibility is its authored identity. Effect dimensions now require
+  corresponding player-facing changes; stress-test Expressions are
+  target-specific stories rather than recipes. The roster remains a design
+  probe and does not authorize adding Words.
+- [Experience Pass 1](EXPERIENCE-PASS-1-FROM-HARNESS-TO-GAME.md) records the
+  approved
+  atmosphere mantra **Generate everything. Player power is the point. The
+  world remembers.** It scopes player voice, dialogue popups, personality,
+  progressive decision detail, physical feedback, graphics/sound passes, and
+  goal-based UAT while preserving the map-first deterministic game. The
+  tightened direction allocates information as always visible, contextual, or
+  on demand; replaces the fixed stale rail with observation, commitment, and
+  consequence states; requires bounded semantic sound with accessible parity;
+  and selects three existing journeys: From page to fire, Power made physical,
+  and A roof is not an oath.
+- [Goal 7C — From Harness to Game](GOAL-7C-FROM-HARNESS-TO-GAME.md) is the
+  approved presentation-only goal over three accepted journeys. It preserves
+  strict v9/WG6 and all mechanics, defines one bounded current-catalogue
+  Codex/Loadout surface with five fixture Words exercised directly, three
+  contextual-rail roles, semantic motion/sound with accessible parity, exact
+  P-GEN/Visual Grammar/Godot ownership, one five-intent Tamar voice kit,
+  semantic rather than frozen-prose oracles, and three isolated UAT profiles.
+  The player approved all six bounded fixture decisions on 2026-07-23 and
+  directed the pass to be rebuilt and rewired as Goal 7C.
+- The player then said **“engage,”** explicitly invoking the contract's
+  recommended production prompt. Work is authorized only on
+  `codex/goal-7c-from-harness-to-game`, under the six frozen fixture decisions
+  and complete retained gate, and must stop with all three isolated player UAT
+  journeys pending.
+- The bounded implementation is complete. `C` opens the paused
+  current-catalogue Codex/Loadout surface; proposals are transient and explicit
+  Attunement uses one Core-derived preview. Consequential Tamar speech uses one
+  lower-map dialogue surface.
+- The second correction makes the world the dominant surface. Existing actions
+  occupy one compact lower strip; the right rail exposes exactly Context and
+  bounded Chronicle-history views; semantic color distinguishes threat,
+  people, material power, selection, and consequence.
+- Keyboard WASD moves without duplicated buttons. Arrow keys navigate action or
+  inspection selection, `I` opens inspection, left click selects and inspects,
+  and right click follows one transient visible-map route by issuing existing
+  cardinal movement commands. Danger, commitment, blockage, modal state, or a
+  changed destination stops that route.
+- `ExperienceFeedback.cs`, `WorldVisualView.cs`, and `SemanticAudioPlayer.cs`
+  provide deterministic causal roles, bounded emphasis, semantic cue plans,
+  sound-off parity, and reduced-motion parity without advancing or delaying
+  the Chronicle. Exactly seven existing P-GEN families were revised; the
+  road-roll no longer uses the bread-like silhouette.
+- Tamar's bounded presentation kit contains exactly five reaction intents and
+  two identity-selected authored cadences per intent. Automation proves all ten
+  distinct variants while Core remains the source of relationship, Directive,
+  objective, response, and memory facts.
+- `checks/verify.ps1` passes with exit code `0`, zero build warnings, and zero
+  build errors. It retains strict v9 and every literal migration, Core replay,
+  all Goal 6A–7B mechanics and rendered journeys, packaged/manual Inspector
+  parity, and exact four-file compiler/runtime isolation, then adds 17 native
+  Goal 7C captures and keyboard/mouse/accessibility proof of the map-first
+  layout, lower actions, two-view rail, and bounded visible-map routing.
+- Player UAT A launches with
+  `.\play.ps1 -Profile goal7c-page-to-fire-uat`; player UAT B launches with
+  `.\play.ps1 -Profile goal7c-power-made-physical-uat`; player UAT C launches
+  with `.\play.ps1 -Profile goal7c-roof-not-oath-uat`. Each initializes only
+  when its isolated save is absent and otherwise restores normally.
+- The first player UAT reported that the systems and steps work, the Codex is a
+  good proof of concept, and the green causal path reads well. It rejected the
+  candidate because the new Message Log overflows and exposes variables,
+  dialogue boxes do not disappear, and movement/inspection controls consume
+  rail space in an unnatural arrangement.
+- The completed presentation-only correction orders and bounds recent event
+  copy, removes internal identities and raw addresses from ordinary
+  presentation, and clips the supporting rail body as a final layout guard.
+  It lets an unchanged spoken beat expire after `4.5` seconds or yield to the
+  next deliberate action without changing persisted memory.
+- That first correction placed contextual actions above a compact spatial WASD
+  cluster. `[I] LOOK` opened an explicit read-only cursor and mouse selection no
+  longer hijacked movement. Player review accepted the readability repairs but
+  rejected the duplicated movement pad and dashboard hierarchy; the completed
+  second correction supersedes that layout without changing its input facts.
+- The green causal-path feedback is retained as a passed foundation. Richer
+  movement, pause, and motion semantics remain later slice work unless required
+  to correct a concrete Goal 7C comprehension failure.
+- The complete retained/new gate passes again with exit code `0`, zero build
+  warnings, and zero build errors. It includes the full strict-v9 migration and
+  replay suite, authored Word extensibility, Goals 6A–7B, keyboard/mouse Look
+  and Directive reach, packaged/manual Inspector parity, exact four-file
+  P-GEN isolation, and all 17 Goal 7C native captures. New assertions prove no
+  duplicated movement controls, arrow-key selection, left-click inspection,
+  bounded right-click routing, bottom-action focus, two-view rail switching,
+  semantic roles, bounded copy, and dialogue recession.
+- Player re-UAT passed on 2026-07-23. The player reported that the revised game
+  feels better, tiles and the current inspection target are legible, and the
+  semantic sound is a welcome addition.
+- Goal 7D contract definition is now the next design step. Goal 7D production,
+  progression rules, catalogue expansion, save or grammar changes, inventory,
+  Areas, base building, and every excluded framework remain unauthorized.
+- The player explicitly began that project, settled that Caves of Qud's macro
+  world map is handmade/static, and directed the remaining issues to be deeply
+  researched and synthesized as **Palimpsest's Creative Director**, not a
+  generic creative-director adviser.
+- [Palimpsest's Creative Director Research](PALIMPSEST-CREATIVE-DIRECTOR-RESEARCH.md)
+  now replaces weak secondary evidence with developer papers, official game
+  and studio pages, first-party development logs, and developer talks. It
+  separates what Palimpsest should take from Qud, Dwarf Fortress, RimWorld,
+  Path of Exile, and Cogmind from what this project explicitly rejects.
+- The global `palimpsest-creative-director` skill is the project-specific
+  decision instrument. It reads canon and the Handoff before ideation, protects
+  authorization boundaries, makes an opinionated recommendation, writes
+  concrete player moments, and ends in a bounded falsifiable proof. The old
+  generic `procedural-rpg-design` package is retained outside active skill
+  discovery as a recoverable backup rather than a competing trigger.
+- Player review accepted the first correction's copy, dialogue, and inspection
+  repairs but rejected its on-screen WASD cluster and dashboard hierarchy. The
+  supplied Caves of Qud UI study is an information-hierarchy reference, not a
+  visual template: the map must read as the game; existing skills/actions move
+  to one compact bottom strip; the right rail exposes exactly Context and
+  Chronicle-history views; and semantic color distinguishes threat, people,
+  material power, selection, and consequence.
+- Keyboard WASD remains direct movement without duplicated buttons. Arrow keys
+  navigate selection, `I` opens inspection, left click selects/inspects, and
+  right click may follow one transient route inside the current visible map by
+  issuing existing cardinal movement commands. Any danger, commitment,
+  blockage, modal state, or changed destination stops the route. This does not
+  authorize a Core route rule, save state, off-screen travel, or general
+  pathfinding framework.
+- The authorized second bounded Goal 7C presentation correction, its
+  retained/new verification, and player re-UAT are complete. Do not commit,
+  push, merge, begin Goal 7D production, or enter an excluded framework.
+
+**Accepted predecessor gate:** Goal 7B — A Directive, Not Unit Control is
+complete and player-accepted.
 
 - On 2026-07-22 the player explicitly authorized Goal 7B production on
   `codex/goal-7b-directive-not-unit-control`, approved all five bounded fixture
@@ -48,9 +193,9 @@ later production remains unauthorized**
   isolated save is absent and otherwise restores normally.
 - On 2026-07-22 the player reported both isolated UAT journeys passed. Goal 7B
   is accepted and closed at its bounded gate.
-- Stop here. Do not commit, push, merge, begin Goal 7C or Slice 8, or add Areas,
-  base building, inventory, or any excluded framework without fresh explicit
-  authorization.
+- Stop here. Do not commit, push, merge, begin Goal 7C, Goal 7D, or Slice 8,
+  or add Areas, base building, inventory, or any excluded framework without
+  fresh explicit authorization.
 
 - On 2026-07-22 the player explicitly authorized complete Goal 7A production
   under [Someone Comes Home](GOAL-7A-SOMEONE-COMES-HOME.md) on
@@ -105,8 +250,8 @@ later production remains unauthorized**
   off-camera history, raids, or Agent combat/death. Those require later bounded
   contracts.
 - Goal 7A and Goal 7B player review are complete. No production gate is active;
-  commit, push, merge, Goal 7C, Areas, base building, and every excluded
-  framework remain unauthorized.
+  commit, push, merge, Goal 7C, Goal 7D, Areas, base building, and every
+  excluded framework remain unauthorized.
 
 - Goal 6B's complete material loop remains player-accepted; this review passed
   the Lode, carrying, construction, and Attunement path unchanged.
@@ -509,8 +654,15 @@ reported.
 
 Goal 6C is complete, published, merged, and player-accepted under
 [its contract](GOAL-6C-ONE-RULEBOOK.md). Goals 7A and 7B are complete and
-player-accepted under their approved bounded contracts. No production scope is
-active. Goal 7C is the next contract-design gate and remains unauthorized.
+player-accepted under their approved bounded contracts. Goal 7C is complete
+and player-accepted under its approved bounded contract. `UX-Redux` permits
+documentation review and amendment of
+[Power Progression Direction](POWER-PROGRESSION-DIRECTION.md) and
+[Experience Pass 1](EXPERIENCE-PASS-1-FROM-HARNESS-TO-GAME.md), the
+[completed Goal 7C contract](GOAL-7C-FROM-HARNESS-TO-GAME.md), the
+[Palimpsest's Creative Director research brief](PALIMPSEST-CREATIVE-DIRECTOR-RESEARCH.md),
+and the external project-specific skill package. Goal 7D contract definition
+is the next documentation step; Goal 7D production remains unauthorized.
 
 E5, E5.1, Goal 6A, Goal 6B, and Goal 6 are complete and accepted. Goal 6A is
 closed with a qualified prototype verdict under
@@ -702,27 +854,32 @@ authorization.
 
 ## Do not drift into
 
-- Goal 7C Pressure/off-camera history, additional Agent relationships, jobs,
+- Goal 7D Pressure/off-camera history, additional Agent relationships, jobs,
   or population systems before a later bounded contract;
 - Slice 8 raid work before Goal 7 provides its accepted Pressure;
-- successor grammar, save, combat, Agent, Home-power, or catalogue expansion
-  beyond the bounded Goal 7B contract before a later contract is separately
-  approved;
+- successor grammar, save, combat, Agent, Home-power, or catalogue expansion;
+  Goal 7C is presentation-only and changes none of those rules;
 - a universal tick surcharge per Link, a generic mana bar, or Home progression
   that makes ordinary combat and exploration wait for settlement development;
 - settled Palimpsest Awakening rules or a power-resource economy by inference;
 - camera zoom or rectangular runtime cells, water traversal, route arrows, or
-  visual work outside the bounded P-GEN E5.1 contract;
+  visual work outside Goal 7C's seven approved P-GEN families;
 - additional health, damage, initiative, combat statistics, bestiary, loot,
   inventory, or a generic production combat framework beyond the fixed 6A
   encounter;
 - moving prototype types directly into production or using Goal 6A's bounded
   Core rules as permission for Companion, broad Target, or combat frameworks;
 - weakening strict saves, changing old grammar pins, or hiding Core decisions
-  in Godot.
+  in Godot; or
+- turning Palimpsest's Creative Director into a generic RPG adviser, treating
+  an inspiration as authority, or using a direction verdict as production
+  authorization.
 
 ## Stop and hand off
 
-Stop after the complete, player-accepted Goal 7B gate. Do not commit, push,
-merge, begin Goal 7C, Areas, base building, Slice 8, the future inventory, or
-any excluded framework before explicit follow-up authority.
+Goal 7C is corrected, automation-green, and player-accepted on
+`codex/goal-7c-from-harness-to-game`; the complete retained/new gate and active
+documents are reconciled. The next authorized work is documentation-only Goal
+7D contract definition. Do not begin Goal 7D production, Areas, base building,
+Slice 8, inventory, or any excluded framework without explicit follow-up
+authority.

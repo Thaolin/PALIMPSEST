@@ -3,7 +3,10 @@
 **Status:** Complete and player-accepted on 2026-07-22. All five bounded
 fixture decisions were approved exactly as written, the complete automated and
 retained gate is green, and the player passed both isolated UAT journeys.
-Goal 7C and every excluded framework remain unauthorized.
+Goal 7C was later authorized as a presentation-only pass; its current
+arrow-key inspection and mouse-selection language supersedes Goal 7B's
+accepted on-screen/WASD cursor presentation without changing any Directive or
+inspection fact. Goal 7D and every excluded framework remain unauthorized.
 
 ## Outcome
 
@@ -185,7 +188,7 @@ The memory belongs to the Agent and Chronicle; changing bodies does not rewrite
 the issuing Incarnation.
 
 This is a bounded social-history record, not a general event-sourcing system,
-quest log, reputation score, or off-camera Chronicle Record. Goal 7C owns
+quest log, reputation score, or off-camera Chronicle Record. Goal 7D owns
 distant causal history.
 
 ## Exact Directive rules
@@ -588,8 +591,8 @@ Do not add:
   framework, hidden-fact reveal, or unrelated HUD/visual redesign;
 - new generated subjects, World Grammar v7, multiple active UAT Agents, broad
   name/archetype content, or distant Agent simulation; or
-- Goal 7C, Slice 8, the first Raid, Areas, future inventory, or any unrelated
-  framework.
+- Goal 7C, Goal 7D, Slice 8, the first Raid, Areas, future inventory, or any
+  unrelated framework.
 
 ## Approved bounded fixture decisions
 
@@ -614,8 +617,8 @@ Do not add:
 
 Implementation stopped with both player UAT journeys pending as required. On
 2026-07-22 the player passed both journeys. Do not commit, push, merge, begin
-Goal 7C or Slice 8, or add Areas, base building, inventory, or any excluded
-framework without fresh explicit authorization.
+Goal 7C, Goal 7D, or Slice 8, or add Areas, base building, inventory, or any
+excluded framework without fresh explicit authorization.
 
 ## Production authorization record
 

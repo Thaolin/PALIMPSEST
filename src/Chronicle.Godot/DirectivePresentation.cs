@@ -22,8 +22,11 @@ internal static class DirectivePresentation
     {
         var slot = state.ActiveLoadout[0];
         var active = slot.Verb is { } verb ? WordCatalogue.Get(verb).DisplayName : "none";
+        var activeLoad = slot.Verb is { } activeVerb
+            ? WordCatalogue.Get(activeVerb).Load.ToString()
+            : "—";
         return "RELATIONSHIP · GUEST\n" +
-               $"ATTUNED · {active.ToUpperInvariant()} · {WordCatalogue.Get(slot.Verb!.Value).Load} LOAD\n" +
+               $"ATTUNED · {active.ToUpperInvariant()} · {activeLoad} LOAD\n" +
                $"DIRECTIVE MEMORY · {context.Memories.Count}";
     }
 
@@ -74,7 +77,7 @@ internal static class DirectivePresentation
                 $"[x] WHO · {agent.DisplayName} · Incarnation #{memory.IssuingIncarnationId}",
                 $"[x] WORD · {WordName(memory.Verb)} · {DirectiveName(memory.Directive)}",
                 $"[x] WHY · {Reason(memory)}",
-                $"[x] WHEN · H{memory.ResolvedTick} · now at {memory.ResultingAddress}",
+                $"[x] WHEN · H{memory.ResolvedTick} · answer remembered",
             });
         }
 
@@ -101,7 +104,7 @@ internal static class DirectivePresentation
                 paused
                     ? $"H{pending.ResolvesAtTick} · PAUSED; {agent.DisplayName} has not answered"
                     : $"H{pending.ResolvesAtTick} · {agent.DisplayName} answers once",
-                $"OBJECTIVE · {pending.ObjectiveIdentity} at {pending.ObjectiveAddress}",
+                $"ASK · {DirectiveName(pending.Directive)}",
             ];
         }
 
@@ -135,7 +138,7 @@ internal static class DirectivePresentation
         DirectiveAvailabilityReason.ObjectiveAlreadySatisfied => "ALREADY AT ROAD-ROLL",
         DirectiveAvailabilityReason.ObjectiveUnavailable => "OBJECTIVE MISSING OR DEAD",
         DirectiveAvailabilityReason.ActiveSocialVerbRequired => "ATTUNE SUGGEST OR COMMAND",
-        _ => action.AvailabilityReason.ToString().ToUpperInvariant(),
+        _ => "UNAVAILABLE",
     };
 
     internal static string ActionUnavailable(DirectiveActionSnapshot action) =>
@@ -153,7 +156,7 @@ internal static class DirectivePresentation
                 "That objective is missing or no longer living.",
             DirectiveAvailabilityReason.ActiveSocialVerbRequired =>
                 "Attune Suggest or Command before delivering a Directive.",
-            _ => $"Directive unavailable: {action.AvailabilityReason}.",
+            _ => "That Directive is unavailable right now.",
         };
 
     internal static string Log(DirectiveEventSnapshot item, string displayName) => item.Kind switch
@@ -163,9 +166,9 @@ internal static class DirectivePresentation
         DirectiveEventKind.Withdrawn =>
             $"H{item.Tick}: Directive withdrawn before {displayName} answered.",
         DirectiveEventKind.Accepted =>
-            $"H{item.Tick}: {displayName} accepts and moves to {item.ObjectiveAddress}.",
+            $"H{item.Tick}: {displayName} accepts and acts on the request.",
         DirectiveEventKind.Delayed =>
-            $"H{item.Tick}: {displayName} delays; {Blocker(item.Blocker)} blocks {item.ObjectiveAddress}.",
+            $"H{item.Tick}: {displayName} delays; {Blocker(item.Blocker)} blocks the way.",
         DirectiveEventKind.Refused =>
             $"H{item.Tick}: {displayName} refuses; Guest status grants no violent commitment.",
         _ => $"H{item.Tick}: {displayName}'s Directive state changed.",

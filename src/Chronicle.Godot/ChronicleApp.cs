@@ -10,6 +10,8 @@ public partial class ChronicleApp : Node
     private const string SavePath = "user://slice0_chronicle.json";
     private const long InitialSeed = 41_337;
     private const double SlowHeartbeatSeconds = 0.72;
+    private const double MouseRouteStepSeconds = 0.10;
+    private const ulong DialogueVisibleMilliseconds = 4_500;
 
     private static readonly StringName MoveNorthAction = "chronicle_move_north";
     private static readonly StringName MoveSouthAction = "chronicle_move_south";
@@ -33,6 +35,8 @@ public partial class ChronicleApp : Node
 
     private ChronicleSimulation _simulation = CreateTestingStart();
     private ChronicleHud _hud = null!;
+    private CodexLoadoutPanel _codex = null!;
+    private SemanticAudioPlayer _audio = null!;
     private WorldVisualView _map = null!;
     private CompiledVisualPack _visualPack = null!;
     private ColorRect _openingPanel = null!;
@@ -50,13 +54,27 @@ public partial class ChronicleApp : Node
     private bool _verifyGoal6BVisuals;
     private bool _verifyGoal7AVisuals;
     private bool _verifyGoal7BVisuals;
+    private bool _verifyGoal7CExperience;
     private bool _prepareGoal7AWelcomeUat;
     private bool _prepareGoal7AReplacementUat;
     private bool _prepareGoal7BSuggestUat;
     private bool _prepareGoal7BCommandUat;
+    private bool _prepareGoal7CPageToFireUat;
+    private bool _prepareGoal7CPowerMadePhysicalUat;
+    private bool _prepareGoal7CRoofNotOathUat;
     private bool _isInspecting;
     private WorldAddress? _inspectionCursor;
     private WorldAddress? _inspectionSelection;
+    private CombatResultSnapshot? _presentedCombatResult;
+    private AgentEventSnapshot? _presentedAgentEvent;
+    private DirectiveEventSnapshot? _presentedDirectiveEvent;
+    private TamarSpokenBeat? _activeSpokenBeat;
+    private string? _lastSpokenBeatKey;
+    private ulong _dialogueExpiresAt;
+    private readonly Queue<WorldAddress> _mouseRoute = [];
+    private WorldAddress? _mouseRouteDestination;
+    private double _mouseRouteAccumulator;
+    private bool _advancingMouseRoute;
 
     public override void _Ready()
     {
@@ -68,10 +86,14 @@ public partial class ChronicleApp : Node
         _verifyGoal6BVisuals = arguments.Contains("--verify-goal6b-visuals", StringComparer.Ordinal);
         _verifyGoal7AVisuals = arguments.Contains("--verify-goal7a-visuals", StringComparer.Ordinal);
         _verifyGoal7BVisuals = arguments.Contains("--verify-goal7b-visuals", StringComparer.Ordinal);
+        _verifyGoal7CExperience = arguments.Contains("--verify-goal7c-experience", StringComparer.Ordinal);
         _prepareGoal7AWelcomeUat = arguments.Contains("--prepare-goal7a-welcome-uat", StringComparer.Ordinal);
         _prepareGoal7AReplacementUat = arguments.Contains("--prepare-goal7a-replacement-uat", StringComparer.Ordinal);
         _prepareGoal7BSuggestUat = arguments.Contains("--prepare-goal7b-suggest-uat", StringComparer.Ordinal);
         _prepareGoal7BCommandUat = arguments.Contains("--prepare-goal7b-command-uat", StringComparer.Ordinal);
+        _prepareGoal7CPageToFireUat = arguments.Contains("--prepare-goal7c-page-to-fire-uat", StringComparer.Ordinal);
+        _prepareGoal7CPowerMadePhysicalUat = arguments.Contains("--prepare-goal7c-power-made-physical-uat", StringComparer.Ordinal);
+        _prepareGoal7CRoofNotOathUat = arguments.Contains("--prepare-goal7c-roof-not-oath-uat", StringComparer.Ordinal);
 
         _visualPack = PackagedVisualPackLoader.Load(arguments, 20);
         _map = new WorldVisualView
@@ -89,11 +111,43 @@ public partial class ChronicleApp : Node
         _hud.SaveRequested += SaveChronicle;
         _hud.LoadRequested += LoadChronicle;
         _hud.ReplacementRequested += () => Issue(new CreateReplacementIncarnation());
+        _hud.CodexRequested += OpenCodex;
+        _hud.PresentationActionRequested += HandlePresentationAction;
+        _hud.SoundChanged += enabled => _audio.Enabled = enabled;
+        _hud.ReducedMotionChanged += reduced =>
+            _map.SetFeedback(_map.CurrentFeedback, reduced);
         AddChild(_hud);
+        _audio = new SemanticAudioPlayer
+        {
+            Name = "SemanticAudio",
+            Enabled = !arguments.Contains("--sound-off", StringComparer.Ordinal),
+        };
+        AddChild(_audio);
+        _hud.SetSoundEnabled(_audio.Enabled);
+        _hud.SetReducedMotion(arguments.Contains("--reduced-motion", StringComparer.Ordinal));
+        _codex = new CodexLoadoutPanel { Name = "CodexLoadout" };
+        _codex.AttuneRequested += command =>
+        {
+            Issue(command);
+            _codex.RefreshState(_simulation.State);
+        };
+        _codex.CloseRequested += resume =>
+        {
+            if (resume)
+            {
+                Issue(new SetChronicleSpeed(ChronicleSpeed.Slow));
+            }
+            else
+            {
+                RefreshPresentation(forceMap: true);
+            }
+        };
+        AddChild(_codex);
         BuildOpeningPanel();
 
         var hadSave = Godot.FileAccess.FileExists(SavePath);
         LoadOrCreateChronicle();
+        ResetFeedbackCursors();
         if (!hadSave && _prepareGoal7AWelcomeUat)
         {
             PrepareGoal7AWelcomeUat();
@@ -110,13 +164,30 @@ public partial class ChronicleApp : Node
         {
             PrepareGoal7BUat(WordIds.Command);
         }
+        else if (!hadSave && _prepareGoal7CPageToFireUat)
+        {
+            PrepareGoal7CPageToFireUat();
+        }
+        else if (!hadSave && _prepareGoal7CPowerMadePhysicalUat)
+        {
+            PrepareGoal7CPowerMadePhysicalUat();
+        }
+        else if (!hadSave && _prepareGoal7CRoofNotOathUat)
+        {
+            PrepareGoal7CRoofNotOathUat();
+        }
         RefreshPresentation(forceMap: true);
         GD.Print("GOAL6A READY");
         GD.Print("GOAL6B READY");
         GD.Print("GOAL7A READY");
         GD.Print("GOAL7B READY");
+        GD.Print("GOAL7C READY");
 
-        if (_verifyGoal7BVisuals)
+        if (_verifyGoal7CExperience)
+        {
+            Callable.From(() => RunAcceptance(RunGoal7CExperienceAcceptance)).CallDeferred();
+        }
+        else if (_verifyGoal7BVisuals)
         {
             Callable.From(() => RunAcceptance(RunGoal7BVisualAcceptance)).CallDeferred();
         }
@@ -148,21 +219,56 @@ public partial class ChronicleApp : Node
 
     public override void _Process(double delta)
     {
-        if (!_verifyGoal6BVisuals && !_verifyGoal7AVisuals && !_verifyGoal7BVisuals)
+        if (!_verifyGoal6BVisuals && !_verifyGoal7AVisuals && !_verifyGoal7BVisuals &&
+            !_verifyGoal7CExperience)
         {
             _heartbeatAccumulator += delta;
             while (_heartbeatAccumulator >= SlowHeartbeatSeconds)
             {
                 _heartbeatAccumulator -= SlowHeartbeatSeconds;
                 _simulation.AdvanceClockPulse();
+                PresentResolvedFeedback();
             }
         }
 
+        AdvanceMouseRoute(delta);
         RefreshPresentation();
     }
 
     public override void _Input(InputEvent @event)
     {
+        if (@event is InputEventKey { Pressed: true, Echo: false } key)
+        {
+            if (key.PhysicalKeycode == Key.F6)
+            {
+                GetViewport().SetInputAsHandled();
+                _hud.SetSoundEnabled(!_hud.SoundEnabled);
+                return;
+            }
+            if (key.PhysicalKeycode == Key.F7)
+            {
+                GetViewport().SetInputAsHandled();
+                _hud.SetReducedMotion(!_hud.ReducedMotion);
+                return;
+            }
+        }
+
+        if (_codex.Visible)
+        {
+            if (@event.IsActionPressed(PauseAction))
+            {
+                GetViewport().SetInputAsHandled();
+                _codex.Close(resume: true);
+            }
+            else if (@event.IsActionPressed(CancelAction) ||
+                     @event.IsActionPressed("ui_cancel"))
+            {
+                GetViewport().SetInputAsHandled();
+                _codex.Close(resume: false);
+            }
+            return;
+        }
+
         if (_simulation.State.Intent == OpeningIntent.Unchosen ||
             !_simulation.State.HasLivingIncarnation ||
             !@event.IsActionPressed(PauseAction))
@@ -205,6 +311,73 @@ public partial class ChronicleApp : Node
             return;
         }
 
+        if (_isInspecting)
+        {
+            if (@event.IsActionPressed(InspectAction) ||
+                @event.IsActionPressed("ui_cancel"))
+            {
+                CloseInspection();
+            }
+            else if (@event is InputEventMouseButton
+                {
+                    Pressed: true,
+                    ButtonIndex: MouseButton.Left,
+                } mouse && TryMapAddress(mouse.Position, out var clickedAddress))
+            {
+                BeginInspection(clickedAddress, select: true);
+            }
+            else if (@event.IsActionPressed("ui_up"))
+            {
+                MoveInspectionCursor(0, -1);
+            }
+            else if (@event.IsActionPressed("ui_left"))
+            {
+                MoveInspectionCursor(-1, 0);
+            }
+            else if (@event.IsActionPressed("ui_down"))
+            {
+                MoveInspectionCursor(0, 1);
+            }
+            else if (@event.IsActionPressed("ui_right"))
+            {
+                MoveInspectionCursor(1, 0);
+            }
+            else if (@event.IsActionPressed("ui_accept"))
+            {
+                PinInspection();
+            }
+            else
+            {
+                return;
+            }
+
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (@event.IsActionPressed("ui_cancel") && _inspectionSelection is not null)
+        {
+            CloseInspection();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (@event.IsActionPressed(CancelAction) && !IsRetainedVerification())
+        {
+            OpenCodex();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (@event.IsActionPressed("ui_cancel") &&
+            (_simulation.CombatContext.PendingAction is not null ||
+             _simulation.CombatContext.Preparation is not null))
+        {
+            Issue(new CancelPendingTacticalAction());
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
         if (@event.IsActionPressed(InspectAction))
         {
             BeginInspection(_simulation.State.Address);
@@ -216,48 +389,34 @@ public partial class ChronicleApp : Node
             {
                 Pressed: true,
                 ButtonIndex: MouseButton.Left,
-            } mouse && TryMapAddress(mouse.Position, out var clickedAddress))
+            } mapMouse && TryMapAddress(mapMouse.Position, out var mapAddress))
         {
-            BeginInspection(clickedAddress, select: true);
+            BeginInspection(mapAddress, select: true);
             GetViewport().SetInputAsHandled();
             return;
         }
 
-        if (_isInspecting)
+        if (@event is InputEventMouseButton
+            {
+                Pressed: true,
+                ButtonIndex: MouseButton.Right,
+            } routeMouse && TryMapAddress(routeMouse.Position, out var routeAddress))
         {
-            if (@event.IsActionPressed(MoveNorthAction))
-            {
-                MoveInspectionCursor(0, -1);
-            }
-            else if (@event.IsActionPressed(MoveWestAction))
-            {
-                MoveInspectionCursor(-1, 0);
-            }
-            else if (@event.IsActionPressed(MoveSouthAction))
-            {
-                MoveInspectionCursor(0, 1);
-            }
-            else if (@event.IsActionPressed(MoveEastAction))
-            {
-                MoveInspectionCursor(1, 0);
-            }
-            else if (@event.IsActionPressed("ui_accept"))
-            {
-                _inspectionSelection = _inspectionCursor;
-                _presentationStatus = $"Selected visible cell {_inspectionSelection}.";
-                RefreshPresentation(forceMap: true);
-            }
-            else if (@event.IsActionPressed("ui_cancel"))
-            {
-                _isInspecting = false;
-                _presentationStatus = "Inspection closed. WASD moves the Incarnation again.";
-                RefreshPresentation(forceMap: true);
-            }
-            else
-            {
-                return;
-            }
+            BeginMouseRoute(routeAddress);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
 
+        if (@event.IsActionPressed("ui_left") || @event.IsActionPressed("ui_up"))
+        {
+            _hud.FocusAction(-1);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (@event.IsActionPressed("ui_right") || @event.IsActionPressed("ui_down"))
+        {
+            _hud.FocusAction(1);
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -308,11 +467,11 @@ public partial class ChronicleApp : Node
         {
             Issue(new SetChronicleSpeed(ChronicleSpeed.Slow));
         }
-        else if (@event.IsActionPressed(QuicklyAction))
+        else if (@event.IsActionPressed(QuicklyAction) && IsRetainedVerification())
         {
             Issue(new AttuneExpression(WordIds.Burn, [WordIds.Quickly]));
         }
-        else if (@event.IsActionPressed(CombinedAction))
+        else if (@event.IsActionPressed(CombinedAction) && IsRetainedVerification())
         {
             Issue(new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]));
         }
@@ -324,7 +483,7 @@ public partial class ChronicleApp : Node
         {
             IssuePowerSecondary();
         }
-        else if (@event.IsActionPressed(LastingAction))
+        else if (@event.IsActionPressed(LastingAction) && IsRetainedVerification())
         {
             Issue(new AttuneExpression(WordIds.Burn, [WordIds.Lasting]));
         }
@@ -351,6 +510,33 @@ public partial class ChronicleApp : Node
 
         GetViewport().SetInputAsHandled();
         RefreshPresentation();
+    }
+
+    private bool IsRetainedVerification() =>
+        _verifyQuickly ||
+        _verifyQuicklyRestart ||
+        _verifyLasting ||
+        _verifyLastingRestart ||
+        _verifyGoal6BVisuals ||
+        _verifyGoal7AVisuals ||
+        _verifyGoal7BVisuals;
+
+    private void OpenCodex()
+    {
+        if (!_simulation.State.HasLivingIncarnation ||
+            _simulation.State.Intent == OpeningIntent.Unchosen)
+        {
+            return;
+        }
+
+        ClearMouseRoute();
+        DismissDialogue();
+        if (_simulation.State.Speed != ChronicleSpeed.Paused)
+        {
+            Issue(new SetChronicleSpeed(ChronicleSpeed.Paused));
+        }
+        _codex.Open(_simulation.State, _simulation.PreviewAttunement);
+        RefreshPresentation(forceMap: true);
     }
 
     public override void _ExitTree()
@@ -440,6 +626,21 @@ public partial class ChronicleApp : Node
 
     private void Issue(ChronicleCommand command)
     {
+        if (!_advancingMouseRoute && command is not SetChronicleSpeed)
+        {
+            ClearMouseRoute();
+        }
+        if (command is not SetChronicleSpeed)
+        {
+            DismissDialogue();
+        }
+        if (command is MoveIncarnation)
+        {
+            _inspectionSelection = null;
+            _inspectionCursor = null;
+        }
+
+        var beforeState = _simulation.State;
         var beforeResults = _simulation.CombatContext.RecentResults;
         var beforeLast = beforeResults.LastOrDefault();
         var beforeCount = beforeResults.Count;
@@ -447,6 +648,13 @@ public partial class ChronicleApp : Node
         var beforeAgentLast = beforeAgentEvents.LastOrDefault();
         var beforeAgentCount = beforeAgentEvents.Count;
         var result = _simulation.Apply(command);
+        var feedback = ExperienceFeedback.ForCommand(
+            command,
+            beforeState,
+            _simulation.State,
+            result.Applied);
+        _map.SetFeedback(feedback, _hud.ReducedMotion);
+        _audio.Play(feedback);
         var afterResults = _simulation.CombatContext.RecentResults;
         var afterAgentEvents = _simulation.AgentContext.RecentEvents;
         var commandRecorded = result.Applied &&
@@ -457,8 +665,10 @@ public partial class ChronicleApp : Node
         _presentationStatus = commandRecorded
             ? string.Empty
             : string.IsNullOrWhiteSpace(result.Message)
-                ? result.Applied ? AppliedCommandMessage(command) : "Nothing changed."
-                : result.Message;
+                ? result.Applied ? AppliedCommandMessage(command) : string.Empty
+                : string.Equals(result.Message, "Nothing changed.", StringComparison.Ordinal)
+                    ? string.Empty
+                    : result.Message;
         RefreshPresentation(forceMap: true);
     }
 
@@ -581,18 +791,321 @@ public partial class ChronicleApp : Node
         RefreshPresentation(forceMap: true);
     }
 
+    private void BeginMouseRoute(WorldAddress destination)
+    {
+        ClearMouseRoute();
+        _inspectionSelection = destination;
+
+        if (!_simulation.State.HasLivingIncarnation ||
+            _simulation.PowerComesHomeContext.Commitment is not null)
+        {
+            _presentationStatus = "Finish or cancel the current commitment before travelling.";
+            RefreshPresentation(forceMap: true);
+            return;
+        }
+
+        if (_simulation.CombatContext.Danger.IsImmediate)
+        {
+            _presentationStatus = "Danger is close. Choose each step.";
+            RefreshPresentation(forceMap: true);
+            return;
+        }
+
+        if (destination == _simulation.State.Address)
+        {
+            BeginInspection(destination, select: true);
+            return;
+        }
+
+        var route = FindVisibleRoute(destination);
+        if (route.Count == 0)
+        {
+            _presentationStatus = _simulation.IsMovementBlocked(destination)
+                ? "That cell is occupied."
+                : "No clear route fits inside the visible map.";
+            RefreshPresentation(forceMap: true);
+            return;
+        }
+
+        foreach (var step in route)
+        {
+            _mouseRoute.Enqueue(step);
+        }
+
+        _mouseRouteDestination = destination;
+        _mouseRouteAccumulator = MouseRouteStepSeconds;
+        _presentationStatus = $"Route set · {route.Count} step{(route.Count == 1 ? string.Empty : "s")}.";
+        RefreshPresentation(forceMap: true);
+    }
+
+    private IReadOnlyList<WorldAddress> FindVisibleRoute(WorldAddress destination)
+    {
+        var start = _simulation.State.Address;
+        var bounds = CurrentVisibleBounds();
+        if (!Contains(bounds, destination) || _simulation.IsMovementBlocked(destination))
+        {
+            return [];
+        }
+
+        var frontier = new Queue<WorldAddress>();
+        var previous = new Dictionary<WorldAddress, WorldAddress?>();
+        frontier.Enqueue(start);
+        previous[start] = null;
+
+        while (frontier.Count > 0)
+        {
+            var current = frontier.Dequeue();
+            if (current == destination)
+            {
+                break;
+            }
+
+            foreach (var next in RouteNeighbors(current, destination))
+            {
+                if (!Contains(bounds, next) ||
+                    previous.ContainsKey(next) ||
+                    _simulation.IsMovementBlocked(next))
+                {
+                    continue;
+                }
+
+                previous[next] = current;
+                frontier.Enqueue(next);
+            }
+        }
+
+        if (!previous.ContainsKey(destination))
+        {
+            return [];
+        }
+
+        var reversed = new List<WorldAddress>();
+        for (var cursor = destination; cursor != start; cursor = previous[cursor]!.Value)
+        {
+            reversed.Add(cursor);
+        }
+        reversed.Reverse();
+        return reversed;
+    }
+
+    private static IEnumerable<WorldAddress> RouteNeighbors(
+        WorldAddress address,
+        WorldAddress destination)
+    {
+        var horizontal = destination.X >= address.X ? 1L : -1L;
+        var vertical = destination.Y >= address.Y ? 1L : -1L;
+        if ((horizontal > 0 && address.X < long.MaxValue) ||
+            (horizontal < 0 && address.X > long.MinValue))
+        {
+            yield return address with { X = address.X + horizontal };
+        }
+        if ((vertical > 0 && address.Y < long.MaxValue) ||
+            (vertical < 0 && address.Y > long.MinValue))
+        {
+            yield return address with { Y = address.Y + vertical };
+        }
+        if ((horizontal > 0 && address.X > long.MinValue) ||
+            (horizontal < 0 && address.X < long.MaxValue))
+        {
+            yield return address with { X = address.X - horizontal };
+        }
+        if ((vertical > 0 && address.Y > long.MinValue) ||
+            (vertical < 0 && address.Y < long.MaxValue))
+        {
+            yield return address with { Y = address.Y - vertical };
+        }
+    }
+
+    private static bool Contains(WorldRectangle bounds, WorldAddress address) =>
+        address.X >= bounds.MinX &&
+        address.Y >= bounds.MinY &&
+        address.X - bounds.MinX < bounds.Width &&
+        address.Y - bounds.MinY < bounds.Height;
+
+    private void AdvanceMouseRoute(double delta)
+    {
+        if (_mouseRoute.Count == 0)
+        {
+            return;
+        }
+
+        _mouseRouteAccumulator += delta;
+        if (_mouseRouteAccumulator < MouseRouteStepSeconds)
+        {
+            return;
+        }
+        _mouseRouteAccumulator = 0;
+
+        if (_codex.Visible ||
+            _isInspecting ||
+            !_simulation.State.HasLivingIncarnation ||
+            _simulation.PowerComesHomeContext.Commitment is not null ||
+            _simulation.CombatContext.Danger.IsImmediate)
+        {
+            ClearMouseRoute();
+            _presentationStatus = "Route stopped.";
+            return;
+        }
+
+        var next = _mouseRoute.Peek();
+        var current = _simulation.State.Address;
+        var deltaX = next.X - current.X;
+        var deltaY = next.Y - current.Y;
+        if (next.Stratum != current.Stratum ||
+            Math.Abs(deltaX) + Math.Abs(deltaY) != 1 ||
+            _simulation.IsMovementBlocked(next))
+        {
+            ClearMouseRoute();
+            _presentationStatus = "Route stopped by a changed cell.";
+            return;
+        }
+
+        _advancingMouseRoute = true;
+        try
+        {
+            Issue(new MoveIncarnation((int)deltaX, (int)deltaY));
+        }
+        finally
+        {
+            _advancingMouseRoute = false;
+        }
+
+        if (_simulation.State.Address != next)
+        {
+            ClearMouseRoute();
+            _presentationStatus = "Route stopped before danger.";
+            return;
+        }
+
+        _mouseRoute.Dequeue();
+        if (_mouseRoute.Count == 0)
+        {
+            _mouseRouteDestination = null;
+            _presentationStatus = string.Empty;
+        }
+    }
+
+    private void ClearMouseRoute()
+    {
+        _mouseRoute.Clear();
+        _mouseRouteDestination = null;
+        _mouseRouteAccumulator = 0;
+    }
+
+    private void PresentResolvedFeedback()
+    {
+        ExperienceFeedbackPlan? feedback = null;
+        var combat = _simulation.CombatContext;
+        var combatResult = combat.RecentResults.LastOrDefault();
+        if (combatResult is not null && combatResult != _presentedCombatResult)
+        {
+            _presentedCombatResult = combatResult;
+            if (combat.MireBrute is { } brute)
+            {
+                feedback = ExperienceFeedback.ForResolvedCombat(
+                    combatResult,
+                    _simulation.State.Address,
+                    brute.Address);
+            }
+        }
+
+        var agents = _simulation.AgentContext;
+        var agentEvent = agents.RecentEvents.LastOrDefault();
+        if (agentEvent is not null && agentEvent != _presentedAgentEvent)
+        {
+            _presentedAgentEvent = agentEvent;
+            feedback = ExperienceFeedback.ForAgentEvent(
+                agentEvent,
+                _simulation.State.Address) ?? feedback;
+        }
+
+        var directives = _simulation.DirectiveContext;
+        var directiveEvent = directives.RecentEvents.LastOrDefault();
+        if (directiveEvent is not null && directiveEvent != _presentedDirectiveEvent)
+        {
+            _presentedDirectiveEvent = directiveEvent;
+            feedback = ExperienceFeedback.ForDirectiveEvent(
+                directiveEvent,
+                _simulation.State.Address,
+                agents.PrimaryAgent?.Address ?? _simulation.State.Address) ?? feedback;
+        }
+
+        if (feedback is not null)
+        {
+            _map.SetFeedback(feedback, _hud.ReducedMotion);
+            _audio.Play(feedback);
+        }
+    }
+
+    private void ResetFeedbackCursors()
+    {
+        _presentedCombatResult = _simulation.CombatContext.RecentResults.LastOrDefault();
+        _presentedAgentEvent = _simulation.AgentContext.RecentEvents.LastOrDefault();
+        _presentedDirectiveEvent = _simulation.DirectiveContext.RecentEvents.LastOrDefault();
+    }
+
+    private void UpdateDialogue(
+        TamarSpokenBeat? candidate,
+        AgentSnapshot? agent,
+        DirectiveContextSnapshot directives)
+    {
+        if (candidate is null)
+        {
+            _activeSpokenBeat = null;
+            return;
+        }
+
+        var latestEvent = directives.RecentEvents.LastOrDefault();
+        var latestMemory = directives.Memories.LastOrDefault();
+        var key = string.Join(
+            "|",
+            candidate.Intent,
+            candidate.Cadence,
+            agent?.Identity,
+            agent?.HomeRelationship.EstablishedTick,
+            latestEvent?.Tick,
+            latestEvent?.Kind,
+            latestEvent?.Reason,
+            latestMemory?.ResolvedTick,
+            latestMemory?.Response);
+        if (!string.Equals(key, _lastSpokenBeatKey, StringComparison.Ordinal))
+        {
+            _lastSpokenBeatKey = key;
+            _activeSpokenBeat = candidate;
+            _dialogueExpiresAt = Time.GetTicksMsec() + DialogueVisibleMilliseconds;
+            return;
+        }
+
+        if (_activeSpokenBeat is not null && Time.GetTicksMsec() >= _dialogueExpiresAt)
+        {
+            _activeSpokenBeat = null;
+        }
+    }
+
+    private void DismissDialogue()
+    {
+        _activeSpokenBeat = null;
+        _dialogueExpiresAt = 0;
+    }
+
     private void BeginInspection(WorldAddress address, bool select = false)
     {
-        _isInspecting = true;
+        ClearMouseRoute();
+        DismissDialogue();
         _inspectionCursor = address;
         if (select)
         {
             _inspectionSelection = address;
+            _isInspecting = false;
+            _presentationStatus = "Cell pinned. Move to return to the world, or press I to look around.";
+        }
+        else
+        {
+            _isInspecting = true;
+            _inspectionSelection = null;
+            _presentationStatus = "Look mode. Arrow keys move the cursor; Enter pins; I or Escape closes.";
         }
 
-        _presentationStatus = select
-            ? $"Selected visible cell {address}. Escape returns WASD to movement."
-            : "Inspection open. WASD moves the cursor; Enter selects; Escape exits.";
         RefreshPresentation(forceMap: true);
     }
 
@@ -603,8 +1116,39 @@ public partial class ChronicleApp : Node
         var x = Math.Clamp(current.X + deltaX, visible.MinX, visible.MinX + visible.Width - 1L);
         var y = Math.Clamp(current.Y + deltaY, visible.MinY, visible.MinY + visible.Height - 1L);
         _inspectionCursor = new WorldAddress(current.Stratum, x, y);
-        _presentationStatus = $"Inspecting {_inspectionCursor}. Enter selects; no time passes.";
+        _presentationStatus = "Looking. Enter pins this cell; no time passes.";
         RefreshPresentation(forceMap: true);
+    }
+
+    private void CloseInspection()
+    {
+        _isInspecting = false;
+        _inspectionCursor = null;
+        _inspectionSelection = null;
+        _presentationStatus = "Look closed. WASD moves you again.";
+        RefreshPresentation(forceMap: true);
+    }
+
+    private void PinInspection()
+    {
+        var address = _inspectionCursor ?? _simulation.State.Address;
+        BeginInspection(address, select: true);
+    }
+
+    private void HandlePresentationAction(string actionId)
+    {
+        switch (actionId)
+        {
+            case "inspect":
+                BeginInspection(_simulation.State.Address);
+                break;
+            case "inspect-close":
+                CloseInspection();
+                break;
+            case "look-pin":
+                PinInspection();
+                break;
+        }
     }
 
     private bool TryMapAddress(Vector2 viewportPosition, out WorldAddress address)
@@ -760,6 +1304,69 @@ public partial class ChronicleApp : Node
             $"Goal 7B ready: {WordCatalogue.Get(activeVerb).DisplayName} attuned. Press I to inspect; move south to reach Tamar.";
     }
 
+    private void PrepareGoal7CPageToFireUat()
+    {
+        var start = CreateTestingStart().State with
+        {
+            Codex = new CodexState(),
+            Loadout = LoadoutState.Empty,
+            Agents = default,
+            Speed = ChronicleSpeed.Paused,
+        };
+        _simulation = new ChronicleSimulation(start);
+        ResetTransientPresentation();
+        SaveChronicle();
+        _presentationStatus =
+            "A sealed primer rests near the Hearth. The Mire Brute waits beyond the clearing.";
+    }
+
+    private void PrepareGoal7CPowerMadePhysicalUat()
+    {
+        var prepared = CreateGoal6BTestingStart();
+        RequireApplied(prepared, new ReadBurnPrimer(), "The material UAT could not read the Burn Primer.");
+        RequireApplied(
+            prepared,
+            new AttuneExpression(WordIds.Burn, [WordIds.Quickly]),
+            "The material UAT could not Attune Burn + Quickly.");
+        _simulation = new ChronicleSimulation(prepared.State with
+        {
+            Address = ChronicleState.AcceptedHomeFixtureAddress,
+            Speed = ChronicleSpeed.Paused,
+        });
+        ResetTransientPresentation();
+        SaveChronicle();
+        _presentationStatus =
+            "A Singing Seam holds one Resonant Lode east of Home. The Hearth has no Resonator.";
+    }
+
+    private void PrepareGoal7CRoofNotOathUat()
+    {
+        var prepared = CompleteGoal7AResonatorForFixture();
+        _simulation = new ChronicleSimulation(prepared.State with
+        {
+            Codex = prepared.State.Codex.Learn(WordIds.Suggest).Learn(WordIds.Command),
+            Loadout = LoadoutState.Empty,
+            Address = ChronicleState.AcceptedHomeFixtureAddress,
+            Speed = ChronicleSpeed.Paused,
+        });
+        ResetTransientPresentation();
+        SaveChronicle();
+        _presentationStatus =
+            "The Resonator has drawn a stranger toward the Hearth.";
+    }
+
+    private void ResetTransientPresentation()
+    {
+        _isInspecting = false;
+        _inspectionCursor = null;
+        _inspectionSelection = null;
+        _activeSpokenBeat = null;
+        _lastSpokenBeatKey = null;
+        _dialogueExpiresAt = 0;
+        _renderKey = string.Empty;
+        ResetFeedbackCursors();
+    }
+
     private static ChronicleSimulation CompleteGoal7AResonatorForFixture()
     {
         var simulation = CreateTestingStart();
@@ -836,10 +1443,12 @@ public partial class ChronicleApp : Node
     }
 
     private bool HasDirectiveSurface() =>
-        _simulation.State.Codex.Contains(WordIds.Suggest) ||
-        _simulation.State.Codex.Contains(WordIds.Command) ||
-        _simulation.DirectiveContext.Pending is not null ||
-        _simulation.DirectiveContext.Memories.Count > 0;
+        _simulation.AgentContext.PrimaryAgent?.HomeRelationship.Kind ==
+        AgentHomeRelationshipKind.Guest &&
+        (_simulation.State.Codex.Contains(WordIds.Suggest) ||
+         _simulation.State.Codex.Contains(WordIds.Command) ||
+         _simulation.DirectiveContext.Pending is not null ||
+         _simulation.DirectiveContext.Memories.Count > 0);
 
     private static void RequireApplied(
         ChronicleSimulation simulation,
@@ -864,6 +1473,11 @@ public partial class ChronicleApp : Node
         {
             using var file = Godot.FileAccess.Open(SavePath, Godot.FileAccess.ModeFlags.Read);
             _simulation = new ChronicleSimulation(ChronicleSaveCodec.Deserialize(file.GetAsText()));
+            ClearMouseRoute();
+            ResetFeedbackCursors();
+            _activeSpokenBeat = null;
+            _lastSpokenBeatKey = null;
+            _dialogueExpiresAt = 0;
             _heartbeatAccumulator = 0;
             _renderKey = string.Empty;
             _presentationStatus = "Loaded Chronicle from user://.";
@@ -942,7 +1556,9 @@ public partial class ChronicleApp : Node
             directives.Memories.LastOrDefault()?.Response,
             _isInspecting,
             _inspectionCursor,
-            _inspectionSelection);
+            _inspectionSelection,
+            _mouseRouteDestination,
+            _mouseRoute.Count);
         if (forceMap || !string.Equals(key, _renderKey, StringComparison.Ordinal))
         {
             RenderMap(state, combat, selected);
@@ -1014,11 +1630,16 @@ public partial class ChronicleApp : Node
         }
 
         var inspectionAddress = _isInspecting ? _inspectionCursor : _inspectionSelection;
-        IReadOnlyList<WorldAddress> selectedAddresses = inspectionAddress is { } inspected
-            ? [inspected]
-            : selected is null
-                ? []
-                : [selected.Address];
+        var selectedAddresses = new List<WorldAddress>();
+        if (inspectionAddress is { } inspected)
+        {
+            selectedAddresses.Add(inspected);
+        }
+        else if (selected is not null)
+        {
+            selectedAddresses.Add(selected.Address);
+        }
+        selectedAddresses.AddRange(_mouseRoute);
 
         var plan = VisualGrammar.Compose(new VisualCompositionInput(
             area,
@@ -1059,8 +1680,9 @@ public partial class ChronicleApp : Node
             combat.Preparation is not null ||
             combat.Recovery.RemainingTicks > 0 ||
             combat.MireBrute?.IsBurning == true;
-        var showsInspection = _isInspecting && inspected is not null;
-        var showsDirectiveContext = HasDirectiveSurface() && agent is not null &&
+        var showsInspection = inspected is not null;
+        var showsDirectiveContext = HasDirectiveSurface() &&
+                                    agent?.HomeRelationship.Kind == AgentHomeRelationshipKind.Guest &&
                                     !urgentCombat && power.Commitment is null && !showsInspection;
         var showsAgentContext = agent is not null && !urgentCombat && power.Commitment is null &&
                                 !showsInspection && !showsDirectiveContext;
@@ -1112,21 +1734,51 @@ public partial class ChronicleApp : Node
                 .Take(4)
                 .Select(CompactForecastText)
                 .ToArray();
-        var logged = combat.RecentResults.Select(LogText)
-            .Concat(agents.RecentEvents.Select(item => AgentPresentation.Log(
-                item,
-                agents.Agents.FirstOrDefault(candidate => candidate.Identity == item.AgentIdentity)
-                    ?.DisplayName ?? "An Agent")))
-            .Concat(directives.RecentEvents.Select(item => DirectivePresentation.Log(
-                item,
-                agents.Agents.FirstOrDefault(candidate => candidate.Identity == item.AgentIdentity)
-                    ?.DisplayName ?? "An Agent")))
+        var logged = combat.RecentResults
+            .Select(item => (item.Tick, Text: LogText(item)))
+            .Concat(agents.RecentEvents.Select(item => (
+                item.Tick,
+                Text: AgentPresentation.Log(
+                    item,
+                    agents.Agents.FirstOrDefault(candidate => candidate.Identity == item.AgentIdentity)
+                        ?.DisplayName ?? "Someone"))))
+            .Concat(directives.RecentEvents.Select(item => (
+                item.Tick,
+                Text: DirectivePresentation.Log(
+                    item,
+                    agents.Agents.FirstOrDefault(candidate => candidate.Identity == item.AgentIdentity)
+                        ?.DisplayName ?? "Someone"))))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Text))
+            .OrderBy(item => item.Tick)
+            .TakeLast(2)
+            .Select(item => item.Text)
             .ToArray();
         var messages = logged
             .Append(_presentationStatus)
             .Where(text => !string.IsNullOrWhiteSpace(text))
-            .TakeLast(3)
+            .Distinct()
+            .TakeLast(8)
             .ToArray();
+        var hasCommitment =
+            combat.PendingAction is not null ||
+            combat.Preparation is not null ||
+            combat.Recovery.RemainingTicks > 0 ||
+            power.Commitment is not null ||
+            directives.Pending is not null ||
+            agent?.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered;
+        var hasFreshConsequence =
+            combat.RecentResults.LastOrDefault()?.Tick == state.Tick ||
+            agents.RecentEvents.LastOrDefault()?.Tick == state.Tick ||
+            directives.RecentEvents.LastOrDefault()?.Tick == state.Tick;
+        var railRole = hasCommitment
+            ? ChronicleRailRole.Commitment
+            : hasFreshConsequence
+                ? ChronicleRailRole.Consequence
+                : ChronicleRailRole.Observation;
+        var spokenCandidate = urgentCombat || power.Commitment is not null
+            ? null
+            : TamarVoice.Present(agent, directives);
+        UpdateDialogue(spokenCandidate, agent, directives);
         var targets = (showsCombatContext ? combat.Targets : [])
             .Select(target => new ChronicleHudTarget(
                 target.Kind.ToString().ToLowerInvariant(),
@@ -1144,7 +1796,7 @@ public partial class ChronicleApp : Node
             forecast,
             messages,
             targets,
-            BuildActions(state, combat, selected),
+            BuildActions(state, combat, selected, IsRetainedVerification()),
             combat.Incarnation.HitPoints,
             combat.Incarnation.MaximumHitPoints,
             showsCombatContext ? selected?.HitPoints : null,
@@ -1153,7 +1805,7 @@ public partial class ChronicleApp : Node
             $"CLEAVER {combat.Equipment.WeaponDamage}/{combat.Equipment.WeaponCadence} · " +
             $"JACK −{combat.Equipment.ArmorReduction} · WARD +{combat.Equipment.MaximumHitPointBonus}",
             showsInspection
-                ? "INSPECTION · READ ONLY"
+                ? "LOOK · READ ONLY"
                 : showsDirectiveContext
                     ? DirectivePresentation.Banner(directives)
                     : showsAgentContext
@@ -1169,44 +1821,55 @@ public partial class ChronicleApp : Node
                 ? AgentPresentation.Checklist(agent!, state.Speed == ChronicleSpeed.Paused)
                 : HoldingPresentation.Checklist(power),
             showsInspection
-                ? "READ ONLY · I / MOUSE · WASD CURSOR · ENTER · ESC"
+                ? "ARROWS move cursor · ENTER pin · I / ESC close"
                 : showsDirectiveContext
                     ? $"CODEX · SUGGEST + COMMAND · ACTIVE {state.ActiveLoadout[0].DisplayName}"
                     : showsAgentContext
-                ? $"CAUSE · RESONANT LODE FROM {agent!.OriginAddress} · " +
-                  $"HOME · {agent.HomeRelationship.Kind.ToString().ToUpperInvariant()}"
+                ? "CAUSE · followed the Resonant Lode from the Singing Seam · " +
+                  $"HOME · {AgentRelationshipText(agent!.HomeRelationship.Kind)}"
                 : CompactPowerCapacity(power.Attunement),
             string.Empty,
             showsCombatContext,
             showsInspection || showsDirectiveContext || showsAgentContext,
             !state.HasLivingIncarnation,
             !state.HasLivingIncarnation ? AgentPresentation.ReplacementStatus(agent) : string.Empty,
-            state.Speed == ChronicleSpeed.Paused);
+            state.Speed == ChronicleSpeed.Paused,
+            railRole,
+            _activeSpokenBeat?.Speaker,
+            _activeSpokenBeat?.Relation,
+            _activeSpokenBeat?.Text);
     }
 
     private IReadOnlyList<ChronicleHudAction> BuildActions(
         ChronicleState state,
         CombatContextSnapshot combat,
-        TargetPreviewSnapshot? selected)
+        TargetPreviewSnapshot? selected,
+        bool legacyFixtureMacros)
     {
         if (_isInspecting)
         {
-            return [];
+            return
+            [
+                new("inspect-close", "[I] CLOSE", null, true, "RETURN TO MOVE"),
+                new("look-pin", "[ENTER] PIN", null, true, "KEEP THIS CELL"),
+            ];
         }
 
-        if (HasDirectiveSurface() && _simulation.AgentContext.PrimaryAgent is not null)
+        if (HasDirectiveSurface() &&
+            _simulation.AgentContext.PrimaryAgent?.HomeRelationship.Kind ==
+            AgentHomeRelationshipKind.Guest)
         {
-            return BuildGoal7BActions(state);
+            return BuildGoal7BActions(state, legacyFixtureMacros);
         }
 
         if (state.WorldGrammarVersion == 6 && _simulation.AgentContext.PrimaryAgent is not null)
         {
-            return BuildGoal7AActions(state, combat, selected);
+            return BuildGoal7AActions(state, combat, selected, legacyFixtureMacros);
         }
 
         if (state.WorldGrammarVersion is 5 or 6)
         {
-            return BuildGoal6BActions(state, combat, selected);
+            return BuildGoal6BActions(state, combat, selected, legacyFixtureMacros);
         }
 
         var alive = state.HasLivingIncarnation && state.Intent != OpeningIntent.Unchosen;
@@ -1215,7 +1878,7 @@ public partial class ChronicleApp : Node
         var cancelOrSkip = combat.PendingAction is not null || combat.Preparation is not null
             ? new ChronicleHudAction(
                 "cancel",
-                "[C] CANCEL",
+                legacyFixtureMacros ? "[C] CANCEL" : "[ESC] CANCEL",
                 new CancelPendingTacticalAction(),
                 state.Speed == ChronicleSpeed.Paused,
                 "abandon pending")
@@ -1237,12 +1900,12 @@ public partial class ChronicleApp : Node
 
         return
         [
-            new("attune-quickly", quicklyActive ? "◆ QUICK BURN" : "[Q] QUICK BURN", new AttuneExpression(WordIds.Burn, [WordIds.Quickly]), canAttune, quicklyActive ? $"{combat.Expression.UsedLoad}/{combat.Expression.SharedLoadCapacity} LOAD · {combat.Expression.UsedLinks}/{combat.Expression.LinkCapacity}" : "7/8 LOAD · 2/2"),
-            new("attune-lasting", lastingActive ? "◆ LASTING BURN" : "[L] LASTING BURN", new AttuneExpression(WordIds.Burn, [WordIds.Lasting]), canAttune, lastingActive ? $"{combat.Expression.UsedLoad}/{combat.Expression.SharedLoadCapacity} LOAD · {combat.Expression.UsedLinks}/{combat.Expression.LinkCapacity}" : "6/8 LOAD · 2/2"),
-            new("move-north", "[W]", new MoveIncarnation(0, -1), alive),
-            new("move-west", "[A]", new MoveIncarnation(-1, 0), alive),
-            new("move-south", "[S]", new MoveIncarnation(0, 1), alive),
-            new("move-east", "[D]", new MoveIncarnation(1, 0), alive),
+            legacyFixtureMacros
+                ? new("attune-quickly", quicklyActive ? "◆ QUICK BURN" : "[Q] QUICK BURN", new AttuneExpression(WordIds.Burn, [WordIds.Quickly]), canAttune, quicklyActive ? $"{combat.Expression.UsedLoad}/{combat.Expression.SharedLoadCapacity} LOAD · {combat.Expression.UsedLinks}/{combat.Expression.LinkCapacity}" : "7/8 LOAD · 2/2")
+                : new("codex", "[C] CODEX", null, true, combat.Expression.DisplayName),
+            legacyFixtureMacros
+                ? new("attune-lasting", lastingActive ? "◆ LASTING BURN" : "[L] LASTING BURN", new AttuneExpression(WordIds.Burn, [WordIds.Lasting]), canAttune, lastingActive ? $"{combat.Expression.UsedLoad}/{combat.Expression.SharedLoadCapacity} LOAD · {combat.Expression.UsedLinks}/{combat.Expression.LinkCapacity}" : "6/8 LOAD · 2/2")
+                : new("inspect", "[I] LOOK", null, true, "MAP CELL"),
             new("burn", "[B] BURN", selected is null ? null : new PrepareBurn(selected.Address), alive && selected?.CanBurn == true && combat.Recovery.RemainingTicks == 0, selected is null ? "NO TARGET" : $"{selected.PreparationTicks} PREP · {selected.ConsequenceTicks} BURN"),
             new("weapon", combat.Danger.IsImmediate ? "[V] CLEAVER" : "[V] PLAN", weaponCommand, alive, combat.Danger.IsImmediate ? (combat.WeaponStanceActive ? "ACTIVE" : "LOWERED") : (combat.EngagementPlan.OpenWithWeaponStance ? "OPEN ACTIVE" : "OPEN LOWERED")),
             new("clock", state.Speed == ChronicleSpeed.Paused ? "[SPACE] RESUME" : "[SPACE] PAUSE", clockCommand, alive, "SLOW HEARTBEATS"),
@@ -1250,7 +1913,9 @@ public partial class ChronicleApp : Node
         ];
     }
 
-    private IReadOnlyList<ChronicleHudAction> BuildGoal7BActions(ChronicleState state)
+    private IReadOnlyList<ChronicleHudAction> BuildGoal7BActions(
+        ChronicleState state,
+        bool legacyFixtureMacros)
     {
         var context = _simulation.DirectiveContext;
         var identity = context.PrimaryAgentIdentity
@@ -1275,8 +1940,8 @@ public partial class ChronicleApp : Node
                 rest.Available,
                 DirectivePresentation.ActionDetail(rest));
 
-        return
-        [
+        var actions = new List<ChronicleHudAction>
+        {
             primary,
             new(
                 "directive-danger",
@@ -1284,23 +1949,26 @@ public partial class ChronicleApp : Node
                 danger.Available ? new DeliverDirective(0, identity, danger.Directive) : null,
                 danger.Available,
                 DirectivePresentation.ActionDetail(danger)),
-            new("move-north", "[W]", new MoveIncarnation(0, -1), alive),
-            new("move-west", "[A]", new MoveIncarnation(-1, 0), alive),
-            new("move-south", "[S]", new MoveIncarnation(0, 1), alive),
-            new("move-east", "[D]", new MoveIncarnation(1, 0), alive),
             new(
                 "clock",
                 state.Speed == ChronicleSpeed.Paused ? "[SPACE] RESUME" : "[SPACE] PAUSE",
                 clockCommand,
                 alive,
                 context.Pending is { } pending ? $"ANSWER H{pending.ResolvesAtTick}" : "SLOW HEARTBEATS"),
-        ];
+        };
+        if (!legacyFixtureMacros)
+        {
+            actions.Insert(0, new("codex", "[C] CODEX", null, true, state.ActiveLoadout[0].DisplayName));
+            actions.Insert(1, new("inspect", "[I] LOOK", null, true, "MAP CELL"));
+        }
+        return actions;
     }
 
     private IReadOnlyList<ChronicleHudAction> BuildGoal7AActions(
         ChronicleState state,
         CombatContextSnapshot combat,
-        TargetPreviewSnapshot? selected)
+        TargetPreviewSnapshot? selected,
+        bool legacyFixtureMacros)
     {
         var agent = _simulation.AgentContext.PrimaryAgent
             ?? throw new InvalidOperationException("Goal 7A actions require a consequential Agent.");
@@ -1326,7 +1994,7 @@ public partial class ChronicleApp : Node
         var cancelOrSkip = combat.PendingAction is not null || combat.Preparation is not null
             ? new ChronicleHudAction(
                 "cancel",
-                "[C] CANCEL",
+                legacyFixtureMacros ? "[C] CANCEL" : "[ESC] CANCEL",
                 new CancelPendingTacticalAction(),
                 state.Speed == ChronicleSpeed.Paused,
                 "ABANDON PENDING")
@@ -1336,25 +2004,29 @@ public partial class ChronicleApp : Node
                 new SkipRecovery(),
                 combat.Recovery.CanSkipSafely,
                 $"REC {combat.Recovery.RemainingTicks}");
+        var utilityAction = !legacyFixtureMacros &&
+                            combat.PendingAction is null &&
+                            combat.Preparation is null &&
+                            !combat.Recovery.CanSkipSafely
+            ? new ChronicleHudAction("inspect", "[I] LOOK", null, true, "MAP CELL")
+            : cancelOrSkip;
 
         return
         [
-            new(
-                "attune-combined",
-                combinedActive ? "◆ ATTUNED 12" : "[G] ATTUNE 12",
-                new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]),
-                canAttune,
-                combinedActive ? "BURN + QUICK + LAST" : $"NEXT CAPACITY {power.Attunement.NextAttunementCapacity}"),
+            legacyFixtureMacros
+                ? new(
+                    "attune-combined",
+                    combinedActive ? "◆ ATTUNED 12" : "[G] ATTUNE 12",
+                    new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]),
+                    canAttune,
+                    combinedActive ? "BURN + QUICK + LAST" : $"NEXT CAPACITY {power.Attunement.NextAttunementCapacity}")
+                : new("codex", "[C] CODEX", null, true, state.ActiveLoadout[0].DisplayName),
             new(
                 "agent-primary",
                 $"[P] {AgentPresentation.ActionLabel(agent)}",
                 agentAction.Available ? agentCommand : null,
                 agentAction.Available,
                 AgentPresentation.ActionDetail(agentAction)),
-            new("move-north", "[W]", new MoveIncarnation(0, -1), alive),
-            new("move-west", "[A]", new MoveIncarnation(-1, 0), alive),
-            new("move-south", "[S]", new MoveIncarnation(0, 1), alive),
-            new("move-east", "[D]", new MoveIncarnation(1, 0), alive),
             new(
                 "burn",
                 "[B] BURN",
@@ -1377,14 +2049,15 @@ public partial class ChronicleApp : Node
                 agent.HomeRelationship.Kind == AgentHomeRelationshipKind.WelcomeOffered
                     ? $"ANSWER H{agent.NextHeartbeat}"
                     : "SLOW HEARTBEATS"),
-            cancelOrSkip,
+            utilityAction,
         ];
     }
 
     private IReadOnlyList<ChronicleHudAction> BuildGoal6BActions(
         ChronicleState state,
         CombatContextSnapshot combat,
-        TargetPreviewSnapshot? selected)
+        TargetPreviewSnapshot? selected,
+        bool legacyFixtureMacros)
     {
         var power = _simulation.PowerComesHomeContext;
         var alive = state.HasLivingIncarnation && state.Intent != OpeningIntent.Unchosen;
@@ -1428,7 +2101,7 @@ public partial class ChronicleApp : Node
                 : combat.PendingAction is not null || combat.Preparation is not null
                     ? new ChronicleHudAction(
                         "cancel",
-                        "[C] CANCEL",
+                        legacyFixtureMacros ? "[C] CANCEL" : "[ESC] CANCEL",
                         new CancelPendingTacticalAction(),
                         state.Speed == ChronicleSpeed.Paused,
                         "ABANDON PENDING")
@@ -1438,6 +2111,15 @@ public partial class ChronicleApp : Node
                         new SkipRecovery(),
                         combat.Recovery.CanSkipSafely,
                         $"REC {combat.Recovery.RemainingTicks}");
+        if (!legacyFixtureMacros &&
+            !committed &&
+            !carrying &&
+            combat.PendingAction is null &&
+            combat.Preparation is null &&
+            !combat.Recovery.CanSkipSafely)
+        {
+            secondary = new ChronicleHudAction("inspect", "[I] LOOK", null, true, "MAP CELL");
+        }
         var clockCommand = state.Speed == ChronicleSpeed.Paused
             ? (ChronicleCommand)new SetChronicleSpeed(ChronicleSpeed.Slow)
             : new SetChronicleSpeed(ChronicleSpeed.Paused);
@@ -1447,30 +2129,36 @@ public partial class ChronicleApp : Node
 
         return
         [
-            new(
-                "attune-combined",
-                combinedActive
-                    ? $"◆ ATTUNED {requiredLoad}/{power.Attunement.CapacityAtLastAttunement ?? nextCapacity}"
-                    : $"[G] ATTUNE {requiredLoad}/{nextCapacity}",
-                new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]),
-                canRequestAttunement,
-                combinedDetail),
+            legacyFixtureMacros
+                ? new(
+                    "attune-combined",
+                    combinedActive
+                        ? $"◆ ATTUNED {requiredLoad}/{power.Attunement.CapacityAtLastAttunement ?? nextCapacity}"
+                        : $"[G] ATTUNE {requiredLoad}/{nextCapacity}",
+                    new AttuneExpression(WordIds.Burn, [WordIds.Quickly, WordIds.Lasting]),
+                    canRequestAttunement,
+                    combinedDetail)
+                : new("codex", "[C] CODEX", null, true, state.ActiveLoadout[0].DisplayName),
             new(
                 "power-primary",
                 primary is null ? "[P] POWER" : $"[P] {HoldingPresentation.ActionLabel(primary)}",
                 primaryCommand,
                 primary?.Available == true,
                 PowerPrimaryButtonDetail(primary)),
-            new("move-north", "[W]", new MoveIncarnation(0, -1), alive && !committed),
-            new("move-west", "[A]", new MoveIncarnation(-1, 0), alive && !committed),
-            new("move-south", "[S]", new MoveIncarnation(0, 1), alive && !committed),
-            new("move-east", "[D]", new MoveIncarnation(1, 0), alive && !committed),
             new("burn", "[B] BURN", selected is null ? null : new PrepareBurn(selected.Address), alive && selected?.CanBurn == true && combat.Recovery.RemainingTicks == 0, selected is null ? "NO TARGET" : $"{selected.PreparationTicks} PREP · {selected.ConsequenceTicks} BURN"),
             new("weapon", combat.Danger.IsImmediate ? "[V] CLEAVER" : "[V] PLAN", weaponCommand, alive && !carrying && !committed, carrying ? "SET DOWN LODE" : committed ? "WORK COMMITTED" : combat.Danger.IsImmediate ? (combat.WeaponStanceActive ? "ACTIVE" : "LOWERED") : (combat.EngagementPlan.OpenWithWeaponStance ? "OPEN ACTIVE" : "OPEN LOWERED")),
             new("clock", state.Speed == ChronicleSpeed.Paused ? "[SPACE] RESUME" : "[SPACE] PAUSE", clockCommand, alive, committed ? $"WORK {power.Commitment!.CompletedTicks}/{power.Commitment.TotalTicks}" : "SLOW HEARTBEATS"),
             secondary,
         ];
     }
+
+    private static string AgentRelationshipText(AgentHomeRelationshipKind relationship) => relationship switch
+    {
+        AgentHomeRelationshipKind.Unfamiliar => "STRANGER",
+        AgentHomeRelationshipKind.WelcomeOffered => "WELCOME OFFERED",
+        AgentHomeRelationshipKind.Guest => "GUEST",
+        _ => "UNKNOWN",
+    };
 
     private static string PowerPrimaryButtonDetail(PowerActionSnapshot? action)
     {
@@ -1604,8 +2292,7 @@ public partial class ChronicleApp : Node
 
     private static string LogText(CombatResultSnapshot result) => result.Kind switch
     {
-        CombatResultKind.Movement when result.Address is { } address =>
-            $"H{result.Tick}: Moved to {address}.",
+        CombatResultKind.Movement => string.Empty,
         _ => $"H{result.Tick}: {result.Text}",
     };
 
@@ -1679,11 +2366,11 @@ public partial class ChronicleApp : Node
             ?? throw new InvalidOperationException("Goal 7B requires Tamar.");
 
         TriggerInput(InspectAction);
-        TriggerInput(MoveWestAction);
-        TriggerInput(MoveSouthAction);
-        TriggerInput(MoveSouthAction);
-        TriggerInput(MoveSouthAction);
-        TriggerInput(MoveSouthAction);
+        TriggerInput("ui_left");
+        TriggerInput("ui_down");
+        TriggerInput("ui_down");
+        TriggerInput("ui_down");
+        TriggerInput("ui_down");
         TriggerInput("ui_accept");
         Verify(
             _simulation.State == initialState &&
@@ -1704,9 +2391,10 @@ public partial class ChronicleApp : Node
             Position = tamarScreen,
         });
         Verify(
-            _simulation.State == initialState && _inspectionSelection == tamar.Address &&
+            _simulation.State == initialState && !_isInspecting &&
+            _inspectionSelection == tamar.Address &&
             InspectedCell()?.Subjects.Any(subject => subject.Kind == WorldSubjectKind.Agent) == true,
-            "Mouse inspection must select Tamar's semantic cell without mutating the Chronicle.");
+            "Mouse inspection must pin Tamar's semantic cell without mutating the Chronicle or hijacking movement.");
         TriggerInput("ui_cancel");
         Verify(
             _simulation.DirectiveContext.Actions.Single(action =>
@@ -1851,14 +2539,19 @@ public partial class ChronicleApp : Node
             ?? throw new InvalidOperationException("Goal 7B capture requires a rendered map plan.");
         var pending = _simulation.DirectiveContext.Pending;
         var inspectedStage = stage == "inspected-road-roll";
+        var decisionSurface = inspectedStage
+            ? _hud.TargetHeading.Text.StartsWith("LOOK · ", StringComparison.Ordinal) &&
+              _hud.TargetOutcome.Text.Contains("pinned", StringComparison.OrdinalIgnoreCase) &&
+              _hud.PowerStatus.Text.StartsWith("PINNED · ", StringComparison.Ordinal)
+            : _hud.TargetOutcome.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length <= 5 &&
+              _hud.TargetOutcome.Text.Contains("NEXT", StringComparison.Ordinal) &&
+              _hud.TargetOutcome.Text.Contains("WHEN", StringComparison.Ordinal) &&
+              _hud.TargetOutcome.Text.Contains("INTERRUPTS", StringComparison.Ordinal) &&
+              _hud.TargetOutcome.Text.Contains("PREVENTS", StringComparison.Ordinal) &&
+              _hud.PowerStatus.Text.StartsWith("CHECKLIST · ", StringComparison.Ordinal) &&
+              _hud.PowerStatus.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length <= 5;
         Verify(
-            _hud.TargetOutcome.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length <= 5 &&
-            _hud.TargetOutcome.Text.Contains("NEXT", StringComparison.Ordinal) &&
-            _hud.TargetOutcome.Text.Contains("WHEN", StringComparison.Ordinal) &&
-            _hud.TargetOutcome.Text.Contains("INTERRUPTS", StringComparison.Ordinal) &&
-            _hud.TargetOutcome.Text.Contains("PREVENTS", StringComparison.Ordinal) &&
-            _hud.PowerStatus.Text.StartsWith("CHECKLIST · ", StringComparison.Ordinal) &&
-            _hud.PowerStatus.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length <= 5 &&
+            decisionSurface &&
             plan.Marks.Any(mark => mark.Address == agent.Address &&
                 mark.VisualId.StartsWith("agent.", StringComparison.Ordinal)) &&
             plan.Marks.Any(mark => mark.VisualId == "place.wayfarer-road-roll.laid") &&
@@ -1878,14 +2571,10 @@ public partial class ChronicleApp : Node
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         Verify(
-            _hud.PowerStatus.GetMinimumSize().Y <= _hud.PowerStatus.Size.Y &&
-            _hud.TargetHeading.GetMinimumSize().X <= _hud.TargetHeading.Size.X &&
-            _hud.TargetFacts.GetMinimumSize().Y <= _hud.TargetFacts.Size.Y &&
-            _hud.ConsequenceRows.Where(row => row.Visible)
-                .All(row => row.GetMinimumSize().Y <= row.Size.Y) &&
-            _hud.ForecastReadout.GetMinimumSize().Y <= _hud.ForecastReadout.Size.Y &&
+            _hud.RailRoleBody.GetMinimumSize().Y <= _hud.RailRoleBody.Size.Y &&
+            !string.IsNullOrWhiteSpace(_hud.RailRoleBody.Text) &&
             _hud.MessageReadout.GetMinimumSize().Y <= _hud.MessageReadout.Size.Y &&
-            _hud.ActionButtons.All(button =>
+            _hud.ActionButtons.Where(button => button.Visible).All(button =>
                 button.FocusMode == Control.FocusModeEnum.All &&
                 button.GetThemeColor("font_disabled_color").A >= 0.75f),
             $"Goal 7B '{stage}' must not clip or overlap identity, timing, reason, memory, or action feedback.");
@@ -2136,14 +2825,10 @@ public partial class ChronicleApp : Node
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         Verify(
-            _hud.PowerStatus.GetMinimumSize().Y <= _hud.PowerStatus.Size.Y &&
-            _hud.TargetHeading.GetMinimumSize().X <= _hud.TargetHeading.Size.X &&
-            _hud.TargetFacts.GetMinimumSize().Y <= _hud.TargetFacts.Size.Y &&
-            _hud.ConsequenceRows.Where(row => row.Visible)
-                .All(row => row.GetMinimumSize().Y <= row.Size.Y) &&
-            _hud.ForecastReadout.GetMinimumSize().Y <= _hud.ForecastReadout.Size.Y &&
+            _hud.RailRoleBody.GetMinimumSize().Y <= _hud.RailRoleBody.Size.Y &&
+            !string.IsNullOrWhiteSpace(_hud.RailRoleBody.Text) &&
             _hud.MessageReadout.GetMinimumSize().Y <= _hud.MessageReadout.Size.Y &&
-            _hud.ActionButtons.All(button =>
+            _hud.ActionButtons.Where(button => button.Visible).All(button =>
                 button.FocusMode == Control.FocusModeEnum.All &&
                 button.GetThemeColor("font_disabled_color").A >= 0.75f),
             $"Goal 7A '{stage}' must not clip or overlap identity, need, timing, interruption, consequence, or action feedback.");
@@ -2349,7 +3034,14 @@ public partial class ChronicleApp : Node
 
     private void Goal6BMove(string actionId)
     {
-        Press(ActionButton(actionId));
+        TriggerInput(actionId switch
+        {
+            "move-north" => MoveNorthAction,
+            "move-west" => MoveWestAction,
+            "move-south" => MoveSouthAction,
+            "move-east" => MoveEastAction,
+            _ => throw new ArgumentOutOfRangeException(nameof(actionId), actionId, "Unknown movement action."),
+        });
         if (_simulation.CombatContext.PendingAction is null)
         {
             return;
@@ -2403,14 +3095,10 @@ public partial class ChronicleApp : Node
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         Verify(
-            _hud.PowerStatus.GetMinimumSize().Y <= _hud.PowerStatus.Size.Y &&
-            _hud.PowerCapacity.GetMinimumSize().Y <= _hud.PowerCapacity.Size.Y &&
-            _hud.TargetHeading.GetMinimumSize().X <= _hud.TargetHeading.Size.X &&
-            _hud.TargetFacts.GetMinimumSize().Y <= _hud.TargetFacts.Size.Y &&
-            _hud.ConsequenceRows.Where(row => row.Visible)
-                .All(row => row.GetMinimumSize().Y <= row.Size.Y) &&
+            _hud.RailRoleBody.GetMinimumSize().Y <= _hud.RailRoleBody.Size.Y &&
+            !string.IsNullOrWhiteSpace(_hud.RailRoleBody.Text) &&
             _hud.MessageReadout.GetMinimumSize().Y <= _hud.MessageReadout.Size.Y &&
-            _hud.ActionButtons.All(button =>
+            _hud.ActionButtons.Where(button => button.Visible).All(button =>
                 button.FocusMode == Control.FocusModeEnum.All &&
                 button.GetThemeColor("font_disabled_color").A >= 0.75f),
             $"Goal 6B '{stage}' must not clip its checklist, material state, decisions, or recent log, and every action must retain keyboard focus and readable disabled text.");
@@ -2426,10 +3114,10 @@ public partial class ChronicleApp : Node
     private static string AppliedCommandMessage(ChronicleCommand command) => command switch
     {
         SetChronicleSpeed speed => $"Chronicle speed is now {speed.Speed}.",
-        MoveIncarnation => "The Incarnation moves with everything physically attached.",
+        MoveIncarnation => string.Empty,
         EndIncarnationAtBell => "The Incarnation ends at the Bell; Chronicle durables remain.",
         CreateReplacementIncarnation => "A replacement Incarnation enters the existing Chronicle.",
-        _ => "Action completed.",
+        _ => string.Empty,
     };
 
     private async void RunAcceptance(Func<Task> journey)
@@ -2444,6 +3132,304 @@ public partial class ChronicleApp : Node
             GD.PushError($"GOAL ACCEPTANCE FAILED: {exception.Message}");
             GetTree().Quit(1);
         }
+    }
+
+    private async Task RunGoal7CExperienceAcceptance()
+    {
+        PrepareGoal7CPageToFireUat();
+        RefreshPresentation(forceMap: true);
+        await CaptureGoal7CProof("page-primer");
+        Press(ActionButton("power-primary"));
+        Verify(
+            _simulation.State.Codex.Contains(WordIds.Burn) &&
+            _simulation.State.Codex.Contains(WordIds.Quickly) &&
+            _simulation.State.Codex.Contains(WordIds.Lasting),
+            "The actual player action must move the Primer's three Words into the Codex.");
+        await CaptureGoal7CProof("page-discovery");
+
+        var unchangedBeforeProposal = ChronicleSaveCodec.Serialize(_simulation.State);
+        Press(ActionButton("codex"));
+        Verify(
+            _codex.Visible &&
+            _simulation.State.Speed == ChronicleSpeed.Paused &&
+            _codex.WordButtons.Count == 3,
+            "The mouse Codex path must pause without time and show every learned fixture Word.");
+        await CaptureGoal7CProof("page-codex");
+        Press(CodexWord("Burn"));
+        Press(CodexWord("Quickly"));
+        Verify(
+            _codex.ProposedVerb == WordIds.Burn &&
+            _codex.ProposedModifiers.SequenceEqual([WordIds.Quickly]) &&
+            !_codex.AttuneButton.Disabled &&
+            ChronicleSaveCodec.Serialize(_simulation.State) == unchangedBeforeProposal,
+            "Selecting Burn + Quickly must create only an available transient proposal.");
+        await CaptureGoal7CProof("page-proposal");
+        Press(_codex.AttuneButton);
+        Verify(
+            _simulation.State.ActiveLoadout[0].Verb == WordIds.Burn &&
+            _simulation.State.ActiveLoadout[0].Modifiers.SequenceEqual([WordIds.Quickly]),
+            "The explicit Attune control must send the existing command exactly once.");
+        await CaptureGoal7CProof("page-attuned");
+
+        var tickBeforeSpace = _simulation.State.Tick;
+        _Input(new InputEventAction
+        {
+            Action = PauseAction,
+            Pressed = true,
+        });
+        Verify(
+            !_codex.Visible &&
+            _simulation.State.Speed == ChronicleSpeed.Slow &&
+            _simulation.State.Tick == tickBeforeSpace,
+            "Focused Space must close Codex and resume without advancing or activating a Word.");
+        Issue(new SetChronicleSpeed(ChronicleSpeed.Paused));
+        Press(ActionButton("codex"));
+        _Input(new InputEventAction
+        {
+            Action = "ui_cancel",
+            Pressed = true,
+        });
+        Verify(
+            !_codex.Visible && _simulation.State.Speed == ChronicleSpeed.Paused,
+            "Escape must close Codex without resuming.");
+        await CaptureGoal7CProof("page-return");
+        var stateBeforeLook = _simulation.State;
+        Press(ActionButton("inspect"));
+        Verify(
+            _isInspecting &&
+            _hud.ActionButtons.Count(button => button.Visible) == 2 &&
+            _hud.ActionButtons.Where(button => button.Visible).All(button =>
+                !button.Name.ToString().StartsWith("HudAction_move-", StringComparison.Ordinal) &&
+                button.Name.ToString() is not "HudAction_look-north" and
+                    not "HudAction_look-west" and
+                    not "HudAction_look-south" and
+                    not "HudAction_look-east"),
+            "Look must use arrow-key selection without duplicating movement controls on screen.");
+        TriggerInput("ui_right");
+        Press(ActionButton("look-pin"));
+        Verify(
+            !_isInspecting &&
+            _inspectionSelection is not null &&
+            _simulation.State == stateBeforeLook,
+            "Look must pin a visible cell without moving the Incarnation or advancing time.");
+
+        var routeStart = _simulation.State.Address;
+        var routeDestination = routeStart with { X = routeStart.X + 2 };
+        var routeVisible = CurrentVisibleBounds();
+        var routeScreen = new Vector2(
+            (float)((routeDestination.X - routeVisible.MinX + 0.5) * ChronicleHud.MapDisplayCellSize),
+            (float)((routeDestination.Y - routeVisible.MinY + 0.5) * ChronicleHud.MapDisplayCellSize));
+        _UnhandledInput(new InputEventMouseButton
+        {
+            ButtonIndex = MouseButton.Right,
+            Pressed = true,
+            Position = routeScreen,
+        });
+        Verify(
+            _mouseRoute.Count == 2 &&
+            _mouseRouteDestination == routeDestination,
+            "Right click must create one transient route inside the visible map.");
+        AdvanceMouseRoute(MouseRouteStepSeconds);
+        AdvanceMouseRoute(MouseRouteStepSeconds);
+        Verify(
+            _simulation.State.Address == routeDestination &&
+            _mouseRoute.Count == 0 &&
+            _simulation.CombatContext.PendingAction is null,
+            "The visible-map route must issue exact cardinal moves and stop cleanly at its destination.");
+
+        TriggerInput("ui_right");
+        Verify(
+            _hud.ActionButtons.Any(button => button.Visible && button.HasFocus()),
+            "Arrow keys must select the compact action strip during ordinary play.");
+        Press(_hud.ChronicleTab);
+        Verify(
+            _hud.RailView == ChronicleRailView.Chronicle &&
+            _hud.MessageReadout.Visible,
+            "Chronicle history must be a deliberate rail view rather than permanent dashboard weight.");
+        Press(_hud.ContextTab);
+        Verify(
+            _hud.RailView == ChronicleRailView.Context &&
+            _hud.RailRoleBody.Visible,
+            "The rail must return to current context without changing Chronicle state.");
+
+        PrepareGoal7CPowerMadePhysicalUat();
+        RefreshPresentation(forceMap: true);
+        await CaptureGoal7CProof("power-seam");
+        Press(ActionButton("codex"));
+        Press(CodexWord("Lasting"));
+        Verify(
+            _codex.ProposedModifiers.SequenceEqual([WordIds.Quickly, WordIds.Lasting]) &&
+            _codex.AttuneButton.Disabled &&
+            _codex.AvailabilityReadout.Text.Contains("Needs 12 Load", StringComparison.Ordinal),
+            "The material profile must explain why learned combined Burn cannot fit before the Source.");
+        await CaptureGoal7CProof("power-capacity");
+        _Input(new InputEventAction { Action = "ui_cancel", Pressed = true });
+
+        PrepareGoal7CRoofNotOathUat();
+        RefreshPresentation(forceMap: true);
+        var tamar = _simulation.AgentContext.PrimaryAgent
+            ?? throw new InvalidOperationException(
+                "The Goal 7C social profile must contain its consequential Agent.");
+        var voiceKit = TamarVoice.ComposeKitForVerification(tamar);
+        Verify(
+            voiceKit.Count == 10 &&
+            voiceKit.Select(beat => beat.Text).Distinct(StringComparer.Ordinal).Count() == 10 &&
+            Enum.GetValues<TamarReactionIntent>().All(intent =>
+                voiceKit.Where(beat => beat.Intent == intent)
+                    .Select(beat => beat.Cadence)
+                    .Order()
+                    .SequenceEqual([0, 1])),
+            "Tamar's bounded voice kit must expose exactly five intents with two " +
+            "deterministically identity-selected authored cadences.");
+        await CaptureGoal7CProof("roof-approach");
+        while (_simulation.AgentContext.PrimaryAgent?.Presence != AgentPresenceState.WaitingAtHome)
+        {
+            if (_simulation.State.Speed != ChronicleSpeed.Slow)
+            {
+                Issue(new SetChronicleSpeed(ChronicleSpeed.Slow));
+            }
+            _simulation.AdvanceOneTick();
+            PresentResolvedFeedback();
+            RefreshPresentation(forceMap: true);
+        }
+        Issue(new SetChronicleSpeed(ChronicleSpeed.Paused));
+        Verify(
+            _hud.DialoguePanel.Visible,
+            "Tamar's arrival must open the bounded lower-edge spoken beat. " +
+            $"active={_activeSpokenBeat?.Intent.ToString() ?? "none"} " +
+            $"key={_lastSpokenBeatKey ?? "none"} now={Time.GetTicksMsec()} expiry={_dialogueExpiresAt}.");
+        await CaptureGoal7CProof("roof-arrival");
+        _dialogueExpiresAt = Time.GetTicksMsec();
+        RefreshPresentation(forceMap: true);
+        Verify(
+            !_hud.DialoguePanel.Visible,
+            "An unchanged spoken beat must recede instead of becoming permanent scenery.");
+        Press(ActionButton("agent-primary"));
+        await CaptureGoal7CProof("roof-welcome-offered");
+        Press(ActionButton("clock"));
+        _simulation.AdvanceOneTick();
+        PresentResolvedFeedback();
+        RefreshPresentation(forceMap: true);
+        Issue(new SetChronicleSpeed(ChronicleSpeed.Paused));
+        Verify(
+            _simulation.AgentContext.PrimaryAgent?.HomeRelationship.Kind ==
+            AgentHomeRelationshipKind.Guest,
+            "The actual welcome path must preserve Tamar's accepted Guest result.");
+        await CaptureGoal7CProof("roof-guest");
+
+        Press(ActionButton("codex"));
+        Press(CodexWord("Suggest"));
+        Press(_codex.AttuneButton);
+        _Input(new InputEventAction { Action = "ui_cancel", Pressed = true });
+        Press(ActionButton("directive-rest"));
+        await CaptureGoal7CProof("roof-suggest");
+        Issue(new SetChronicleSpeed(ChronicleSpeed.Slow));
+        _simulation.AdvanceOneTick();
+        PresentResolvedFeedback();
+        RefreshPresentation(forceMap: true);
+        Issue(new SetChronicleSpeed(ChronicleSpeed.Paused));
+        await CaptureGoal7CProof("roof-suggest-accepted");
+
+        TriggerInput(MoveWestAction);
+        Press(ActionButton("codex"));
+        Press(CodexWord("Command"));
+        Press(_codex.AttuneButton);
+        _Input(new InputEventAction { Action = "ui_cancel", Pressed = true });
+        Press(ActionButton("directive-danger"));
+        await CaptureGoal7CProof("roof-command");
+        Issue(new SetChronicleSpeed(ChronicleSpeed.Slow));
+        _simulation.AdvanceOneTick();
+        PresentResolvedFeedback();
+        RefreshPresentation(forceMap: true);
+        Issue(new SetChronicleSpeed(ChronicleSpeed.Paused));
+        Verify(
+            _simulation.DirectiveContext.Memories.LastOrDefault() is
+            {
+                Response: DirectiveResponseKind.Refused,
+                Reason: DirectiveResponseReason.GuestHasNoViolentCommitment,
+            } &&
+            _hud.DialoguePanel.Visible,
+            "Tamar's valid Command refusal must be personal, visible, and retain the decisive Core reason. " +
+            $"active={_simulation.State.ActiveLoadout[0].DisplayName} " +
+            $"pending={_simulation.DirectiveContext.Pending is not null} " +
+            $"memories={_simulation.DirectiveContext.Memories.Count} " +
+            $"dialogue={_hud.DialoguePanel.Visible}.");
+        await CaptureGoal7CProof("roof-refusal");
+        TriggerInput(MoveWestAction);
+        Verify(
+            !_hud.DialoguePanel.Visible,
+            "A deliberate map action must dismiss the spoken beat without erasing the remembered refusal.");
+
+        _hud.SetSoundEnabled(false);
+        _hud.SetReducedMotion(true);
+        var accessible = ExperienceFeedback.ForCommand(
+            new PrepareBurn(WorldArea.GeneratedMireBruteAddress(InitialSeed)),
+            _simulation.State,
+            _simulation.State,
+            applied: true);
+        _map.SetFeedback(accessible, reducedMotion: true);
+        _audio.Play(accessible);
+        Verify(
+            _audio.LastCuePlan.SequenceEqual([SemanticCueFamily.BurnPreparation]) &&
+            !_audio.Enabled &&
+            _map.CurrentFeedback?.EmphasizesCellsInReducedMotion == true,
+            "Sound-off and reduced motion must retain deterministic cue identity and visible evidence.");
+        await CaptureGoal7CProof("accessible-parity");
+
+        Verify(
+            !_hud.RailRoleBody.Text.Contains("STATE  ", StringComparison.Ordinal) &&
+            !_hud.RailRoleBody.Text.Contains("WHEN  ", StringComparison.Ordinal) &&
+            !_hud.RailRoleBody.Text.Contains("Incarnation moved", StringComparison.OrdinalIgnoreCase) &&
+            !_hud.RailRoleBody.Text.Contains("Action completed", StringComparison.OrdinalIgnoreCase),
+            "Normal presentation must not expose proof-form headings or generic harness narration.");
+        GD.Print(
+            "GOAL7C EXPERIENCE ACCEPTANCE PASS captures=17 codex=keyboard+mouse " +
+            "layout=map-first+bottom-actions rail=context+chronicle route=visible-only " +
+            "dialogue=bounded cues=deterministic accessibility=parity profiles=3");
+    }
+
+    private Button CodexWord(string displayName) =>
+        _codex.ButtonFor(WordCatalogue.Words.Single(word =>
+            word.DisplayName == displayName).Id);
+
+    private async Task CaptureGoal7CProof(string stage)
+    {
+        RefreshPresentation(forceMap: true);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        var visibleActions = _hud.ActionButtons.Where(button => button.Visible).ToArray();
+        var roleCopy = _hud.RailRoleBody.Text;
+        Verify(
+            ChronicleHud.RightRailWidth == 320 &&
+            ChronicleHud.MapWidth == 1280 &&
+            _hud.RailRoleBody.GetMinimumSize().Y <= _hud.RailRoleBody.Size.Y &&
+            _hud.ActionStrip.Position.Y >= 818 &&
+            _hud.ActionStrip.Size.Y <= 82 &&
+            visibleActions.Length <= 8 &&
+            visibleActions.All(button => button.FocusMode == Control.FocusModeEnum.All) &&
+            visibleActions.All(button =>
+                !button.Name.ToString().StartsWith("HudAction_move-", StringComparison.Ordinal) &&
+                button.Name.ToString() is not "HudAction_look-north" and
+                    not "HudAction_look-west" and
+                    not "HudAction_look-south" and
+                    not "HudAction_look-east") &&
+            _hud.ContextTab.FocusMode == Control.FocusModeEnum.All &&
+            _hud.ChronicleTab.FocusMode == Control.FocusModeEnum.All &&
+            !roleCopy.Contains("world.", StringComparison.Ordinal) &&
+            !roleCopy.Contains("directive.", StringComparison.Ordinal) &&
+            !roleCopy.Contains("agent.", StringComparison.Ordinal) &&
+            !roleCopy.Contains('{') &&
+            !roleCopy.Contains('}'),
+            $"Goal 7C '{stage}' must preserve map dominance, a compact bottom action language, bounded copy, and focus.");
+        RenderingServer.ForceDraw(swapBuffers: false);
+        var image = GetViewport().GetTexture().GetImage();
+        Verify(
+            image is not null && image.GetWidth() == 1600 && image.GetHeight() == 900,
+            "Goal 7C native proof must capture the exact 1600 × 900 viewport.");
+        Verify(
+            image!.SavePng($"user://goal7c-{stage}-hud.png") == Error.Ok,
+            $"Goal 7C '{stage}' native capture must be writable.");
+        GD.Print($"GOAL7C HUD CAPTURE PASS stage={stage} size=1600x900");
     }
 
     private async Task RunQuicklyAcceptance()
@@ -2667,17 +3653,25 @@ public partial class ChronicleApp : Node
             _hud.PauseBadge.Visible &&
             _hud.PauseBadge.Position.Y < ChronicleHud.TopRailHeight &&
             _hud.MessageReadout.Size.Y >= 258 &&
-            _hud.ConsequenceRows.Count == 5 &&
-            _hud.ConsequenceRows.All(row => !string.IsNullOrWhiteSpace(row.Text)) &&
             _map.IsPaused &&
             _map.VisibleColumns == ChronicleHud.MapColumns &&
             _map.VisibleRows == ChronicleHud.MapRows &&
             _hud.ActionButtons.Count(button => button.Icon is not null) >= 4 &&
             _hud.ActionButtons.All(button => button.FocusMode == Control.FocusModeEnum.All) &&
             _hud.TargetButtons.All(button => button.FocusMode == Control.FocusModeEnum.All) &&
-            !string.IsNullOrWhiteSpace(_hud.ForecastReadout.Text) &&
+            !string.IsNullOrWhiteSpace(_hud.RailRoleBody.Text) &&
+            _hud.RailRoleBody.GetMinimumSize().Y <= _hud.RailRoleBody.Size.Y &&
+            _hud.ContextTab.Visible &&
+            _hud.ChronicleTab.Visible &&
             !string.IsNullOrWhiteSpace(_hud.MessageReadout.Text),
-            "The revised HUD must expose value-integrated HP bars, top-rail pause, actor contrast, consequence rows, P-GEN action icons, forecast, and the enlarged Message Log.");
+            "The revised HUD must expose value-integrated HP bars, top-rail pause, actor contrast, " +
+            "P-GEN action icons, bounded current context, and on-demand Chronicle history. " +
+            $"incHp={_hud.IncarnationHealthBar.Visible}/{_hud.IncarnationHealthText.Text} " +
+            $"targetHp={_hud.TargetHealthBar.Visible}/{_hud.TargetHealthText.Text} " +
+            $"pause={_hud.PauseBadge.Visible} map={_map.IsPaused}/{_map.VisibleColumns}x{_map.VisibleRows} " +
+            $"icons={_hud.ActionButtons.Count(button => button.Icon is not null)} " +
+            $"role={_hud.RailRoleBody.Text.Length}/{_hud.RailRoleBody.GetMinimumSize().Y:F0}/{_hud.RailRoleBody.Size.Y:F0} " +
+            $"tabs={_hud.ContextTab.Visible}/{_hud.ChronicleTab.Visible} messages={_hud.MessageReadout.Text.Length}.");
 
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -2695,6 +3689,7 @@ public partial class ChronicleApp : Node
 
     private void MoveToThreat(bool useKeyboard)
     {
+        _ = useKeyboard;
         var guard = 0;
         while (!_simulation.CombatContext.Danger.IsImmediate && guard++ < 160)
         {
@@ -2704,22 +3699,11 @@ public partial class ChronicleApp : Node
             var deltaY = Math.Sign(brute.Address.Y - _simulation.State.Address.Y);
             if (deltaX != 0)
             {
-                if (useKeyboard)
-                {
-                    TriggerInput(deltaX > 0 ? MoveEastAction : MoveWestAction);
-                }
-                else
-                {
-                    Press(ActionButton(deltaX > 0 ? "move-east" : "move-west"));
-                }
-            }
-            else if (useKeyboard)
-            {
-                TriggerInput(deltaY > 0 ? MoveSouthAction : MoveNorthAction);
+                TriggerInput(deltaX > 0 ? MoveEastAction : MoveWestAction);
             }
             else
             {
-                Press(ActionButton(deltaY > 0 ? "move-south" : "move-north"));
+                TriggerInput(deltaY > 0 ? MoveSouthAction : MoveNorthAction);
             }
         }
 

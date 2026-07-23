@@ -1,3 +1,4 @@
+using Chronicle.Core;
 using Chronicle.VisualPack;
 using Chronicle.Visuals;
 using Godot;
@@ -17,6 +18,9 @@ public partial class WorldVisualView : Node2D
     private CompiledVisualPack? _pack;
     private ImageTexture? _atlasTexture;
     private VisualRenderPlan? _plan;
+    private ExperienceFeedbackPlan? _feedback;
+    private ulong _feedbackEndsAt;
+    private bool _reducedMotion;
     private bool _paused;
 
     public WorldVisualView()
@@ -33,6 +37,7 @@ public partial class WorldVisualView : Node2D
     public int VisibleRows => _plan?.Bounds.Height ?? 0;
 
     public bool IsPaused => _paused;
+    public ExperienceFeedbackPlan? CurrentFeedback => _feedback;
 
     public void SetPaused(bool paused)
     {
@@ -59,6 +64,28 @@ public partial class WorldVisualView : Node2D
         _plan = plan;
         _atlasTexture = atlasTexture;
         QueueRedraw();
+    }
+
+    public void SetFeedback(ExperienceFeedbackPlan? feedback, bool reducedMotion)
+    {
+        _feedback = feedback;
+        _reducedMotion = reducedMotion;
+        _feedbackEndsAt = feedback is null
+            ? 0
+            : Time.GetTicksMsec() + (ulong)feedback.MaximumMilliseconds;
+        SetProcess(feedback is not null);
+        QueueRedraw();
+    }
+
+    public override void _Process(double delta)
+    {
+        _ = delta;
+        if (_feedback is not null && Time.GetTicksMsec() >= _feedbackEndsAt)
+        {
+            _feedback = null;
+            SetProcess(false);
+            QueueRedraw();
+        }
     }
 
     public override void _Draw()
@@ -124,7 +151,58 @@ public partial class WorldVisualView : Node2D
         {
             DrawSelectionBrackets(selection, _plan.CellSize);
         }
+
+        DrawFeedback(_plan);
     }
+
+    private void DrawFeedback(VisualRenderPlan plan)
+    {
+        if (_feedback is null ||
+            !Contains(plan.Bounds, _feedback.Origin) ||
+            !Contains(plan.Bounds, _feedback.Recipient))
+        {
+            return;
+        }
+
+        var origin = CellCenter(plan, _feedback.Origin);
+        var recipient = CellCenter(plan, _feedback.Recipient);
+        var color = _feedback.Cues.Contains(SemanticCueFamily.BurnPreparation) ||
+                    _feedback.Cues.Contains(SemanticCueFamily.BurnImpact)
+            ? new Color(1f, 0.31f, 0.12f, 0.96f)
+            : _feedback.Cues.Any(cue => cue.ToString().StartsWith("Tamar", StringComparison.Ordinal))
+                ? new Color(0.91f, 0.72f, 0.30f, 0.96f)
+                : new Color(0.38f, 0.80f, 0.68f, 0.96f);
+        if (!_reducedMotion && _feedback.TravelsInFullMotion)
+        {
+            DrawLine(origin, recipient, color, 3f, true);
+            var direction = origin.DirectionTo(recipient);
+            DrawCircle(recipient - direction * 4f, 4f, color);
+        }
+
+        var inset = _reducedMotion ? 3f : 6f;
+        var size = plan.CellSize - inset * 2f;
+        DrawRect(
+            new Rect2(origin - new Vector2(plan.CellSize / 2f - inset, plan.CellSize / 2f - inset), new Vector2(size, size)),
+            color,
+            false,
+            _reducedMotion ? 3f : 1f);
+        DrawRect(
+            new Rect2(recipient - new Vector2(plan.CellSize / 2f - inset, plan.CellSize / 2f - inset), new Vector2(size, size)),
+            color,
+            false,
+            _reducedMotion ? 3f : 2f);
+    }
+
+    private static Vector2 CellCenter(VisualRenderPlan plan, WorldAddress address) =>
+        new(
+            (address.X - plan.Bounds.MinX) * plan.CellSize + plan.CellSize / 2f,
+            (address.Y - plan.Bounds.MinY) * plan.CellSize + plan.CellSize / 2f);
+
+    private static bool Contains(WorldRectangle bounds, WorldAddress address) =>
+        address.X >= bounds.MinX &&
+        address.Y >= bounds.MinY &&
+        (Int128)address.X < (Int128)bounds.MinX + bounds.Width &&
+        (Int128)address.Y < (Int128)bounds.MinY + bounds.Height;
 
     private void DrawActor(VisualRenderMark mark, int cellSize, int mapWidth, int mapHeight)
     {

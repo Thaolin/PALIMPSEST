@@ -233,6 +233,43 @@ public sealed record ExpressionSnapshot(
     int ActiveVerbSlots,
     string DisplayName);
 
+public enum AttunementAvailabilityReason
+{
+    Available,
+    WorldGrammarUnavailable,
+    ImmediateDanger,
+    CarryingLode,
+    PhysicalCommitment,
+    NoVerb,
+    UnknownVerb,
+    VerbNotLearned,
+    DuplicateModifier,
+    UnknownModifier,
+    ModifierNotLearned,
+    IncompatibleModifier,
+    LinkAndLoadExceeded,
+    LinkCapacityExceeded,
+    LoadCapacityExceeded,
+}
+
+/// <summary>
+/// Read-only facts for a transient proposed Loadout. Godot may use this to
+/// preview the existing atomic Attunement command without mutating Chronicle
+/// state or reproducing compatibility, Link, Load, or timing rules.
+/// </summary>
+public sealed record AttunementPreviewSnapshot(
+    AttunementAvailabilityReason Availability,
+    LoadoutSlot Expression,
+    int UsedLoad,
+    int LoadCapacity,
+    int UsedLinks,
+    int LinkCapacity,
+    WordEffect Effect,
+    HearthResonatorPhase? SourcePhase)
+{
+    public bool Available => Availability == AttunementAvailabilityReason.Available;
+}
+
 public sealed record PendingActionSnapshot(
     TacticalActionKind Kind,
     string DisplayName,
@@ -800,88 +837,155 @@ internal static class CombatRules
         out LoadoutSlot slot,
         out string message)
     {
-        slot = default;
-        if (!WordCatalogue.TryGet(verbId, out var verb) || verb.Kind != WordKind.Verb)
+        var preview = PreviewExpression(state, verbId, requestedModifiers);
+        slot = preview.Expression;
+        message = AttunementMessage(state, verbId, preview);
+        return preview.Available;
+    }
+
+    internal static AttunementPreviewSnapshot PreviewExpression(
+        ChronicleState state,
+        WordId? verbId,
+        IReadOnlyList<WordId> requestedModifiers)
+    {
+        ArgumentNullException.ThrowIfNull(requestedModifiers);
+        var loadCapacity = HoldingFacts.NextAttunementCapacity(state);
+        var linkCapacity = HoldingFacts.LinkCapacityFor(state);
+        var sourcePhase = HoldingFacts.IsAvailable(state)
+            ? state.PowerHome!.Resonator?.Phase
+            : null;
+        if (verbId is null)
         {
-            message = "That Verb is unknown.";
-            return false;
+            return new(
+                AttunementAvailabilityReason.NoVerb,
+                default,
+                0,
+                loadCapacity,
+                0,
+                linkCapacity,
+                WordEffect.None,
+                sourcePhase);
         }
 
-        if (!state.Codex.Contains(verbId))
+        if (!WordCatalogue.TryGet(verbId.Value, out var verb) || verb.Kind != WordKind.Verb)
         {
-            message = $"{verb.DisplayName} is not in the Codex.";
-            return false;
+            return Invalid(AttunementAvailabilityReason.UnknownVerb);
+        }
+
+        if (!state.Codex.Contains(verbId.Value))
+        {
+            return Invalid(AttunementAvailabilityReason.VerbNotLearned);
         }
 
         if (requestedModifiers.Distinct().Count() != requestedModifiers.Count)
         {
-            message = "A Modifier may appear only once in an Expression.";
-            return false;
+            return Invalid(AttunementAvailabilityReason.DuplicateModifier);
+        }
+
+        if (requestedModifiers.Any(id =>
+                !WordCatalogue.TryGet(id, out var definition) ||
+                definition.Kind != WordKind.Modifier))
+        {
+            return Invalid(AttunementAvailabilityReason.UnknownModifier);
         }
 
         var modifiers = WordCatalogue.Canonicalize(requestedModifiers);
-        if (modifiers.Any(id => !WordCatalogue.TryGet(id, out var definition) || definition.Kind != WordKind.Modifier))
-        {
-            message = "Expressions may attach only known Modifiers.";
-            return false;
-        }
-
-        if (modifiers.Any(id => !state.Codex.Contains(id)))
-        {
-            message = "Every attached Modifier must be in the Codex.";
-            return false;
-        }
-
-        if (modifiers.Any(id =>
-                !WordCatalogue.AreCompatible(verb, WordCatalogue.Get(id))))
-        {
-            message = $"That Modifier is incompatible with {verb.DisplayName}.";
-            return false;
-        }
-
-        var load = verb.Load + modifiers.Sum(id => WordCatalogue.Get(id).Load);
-        var linkCapacity = HoldingFacts.LinkCapacityFor(state);
-        var loadCapacity = HoldingFacts.NextAttunementCapacity(state);
-        var exceedsLinks = requestedModifiers.Count > linkCapacity - 1;
-        var exceedsLoad = load > loadCapacity;
-        if (exceedsLinks && exceedsLoad)
-        {
-            message = $"That Expression exceeds the {linkCapacity}-Link limit and needs " +
-                      $"{load} Load; next Attunement capacity is {loadCapacity}.";
-            return false;
-        }
-
-        if (exceedsLinks)
-        {
-            message = $"This Expression exceeds the {linkCapacity}-Link limit.";
-            return false;
-        }
-
-        if (exceedsLoad)
-        {
-            message = HoldingFacts.IsAvailable(state) && loadCapacity == HoldingFacts.InherentLoadCapacity
-                ? $"Needs {load} Load; next Attunement capacity is {loadCapacity}. " +
-                  (state.PowerHome!.Resonator?.Phase switch
-                  {
-                      HearthResonatorPhase.Destroyed =>
-                          "The Hearth Resonator is destroyed; rebuilding it would restore 4.",
-                      HearthResonatorPhase.Rebuilding =>
-                          "The Hearth Resonator is rebuilding and contributes 0 until complete.",
-                      HearthResonatorPhase.UnderConstruction =>
-                          "The Hearth Resonator is unfinished and contributes 0 until complete.",
-                      _ => "An intact Hearth Resonator at Home would add 4.",
-                  })
-                : $"That Expression needs {load} Load; next Attunement capacity is {loadCapacity}.";
-            return false;
-        }
-
-        slot = new LoadoutSlot(
-            verbId,
+        var definitions = modifiers.Select(WordCatalogue.Get).ToArray();
+        var usedLoad = verb.Load + definitions.Sum(definition => definition.Load);
+        var usedLinks = 1 + modifiers.Length;
+        var expression = new LoadoutSlot(
+            verbId.Value,
             Modifier: modifiers.Length == 0 ? null : modifiers[0],
             Modifier2: modifiers.Length < 2 ? null : modifiers[1]);
-        message = $"Attuned {ExpressionName(slot)} ({load}/{loadCapacity} Load at Heartbeat {state.Tick}).";
-        return true;
+        var effect = WordEffects.Compose(verb, definitions);
+        if (modifiers.Any(id => !state.Codex.Contains(id)))
+        {
+            return Result(AttunementAvailabilityReason.ModifierNotLearned);
+        }
+
+        if (definitions.Any(modifier => !WordCatalogue.AreCompatible(verb, modifier)))
+        {
+            return Result(AttunementAvailabilityReason.IncompatibleModifier);
+        }
+
+        var exceedsLinks = requestedModifiers.Count > linkCapacity - 1;
+        var exceedsLoad = usedLoad > loadCapacity;
+        return Result(
+            exceedsLinks && exceedsLoad
+                ? AttunementAvailabilityReason.LinkAndLoadExceeded
+                : exceedsLinks
+                    ? AttunementAvailabilityReason.LinkCapacityExceeded
+                    : exceedsLoad
+                        ? AttunementAvailabilityReason.LoadCapacityExceeded
+                        : AttunementAvailabilityReason.Available);
+
+        AttunementPreviewSnapshot Invalid(AttunementAvailabilityReason reason) =>
+            new(
+                reason,
+                default,
+                0,
+                loadCapacity,
+                verbId is null ? 0 : 1 + requestedModifiers.Count,
+                linkCapacity,
+                WordEffect.None,
+                sourcePhase);
+
+        AttunementPreviewSnapshot Result(AttunementAvailabilityReason reason) =>
+            new(
+                reason,
+                expression,
+                usedLoad,
+                loadCapacity,
+                usedLinks,
+                linkCapacity,
+                effect,
+                sourcePhase);
     }
+
+    internal static string AttunementMessage(
+        ChronicleState state,
+        WordId verbId,
+        AttunementPreviewSnapshot preview) =>
+        preview.Availability switch
+        {
+            AttunementAvailabilityReason.Available =>
+                $"Attuned {ExpressionName(preview.Expression)} " +
+                $"({preview.UsedLoad}/{preview.LoadCapacity} Load at Heartbeat {state.Tick}).",
+            AttunementAvailabilityReason.UnknownVerb => "That Verb is unknown.",
+            AttunementAvailabilityReason.VerbNotLearned =>
+                $"{WordCatalogue.Get(verbId).DisplayName} is not in the Codex.",
+            AttunementAvailabilityReason.DuplicateModifier =>
+                "A Modifier may appear only once in an Expression.",
+            AttunementAvailabilityReason.UnknownModifier =>
+                "Expressions may attach only known Modifiers.",
+            AttunementAvailabilityReason.ModifierNotLearned =>
+                "Every attached Modifier must be in the Codex.",
+            AttunementAvailabilityReason.IncompatibleModifier =>
+                $"That Modifier is incompatible with {WordCatalogue.Get(verbId).DisplayName}.",
+            AttunementAvailabilityReason.LinkAndLoadExceeded =>
+                $"That Expression exceeds the {preview.LinkCapacity}-Link limit and needs " +
+                $"{preview.UsedLoad} Load; next Attunement capacity is {preview.LoadCapacity}.",
+            AttunementAvailabilityReason.LinkCapacityExceeded =>
+                $"This Expression exceeds the {preview.LinkCapacity}-Link limit.",
+            AttunementAvailabilityReason.LoadCapacityExceeded =>
+                HoldingFacts.IsAvailable(state) &&
+                preview.LoadCapacity == HoldingFacts.InherentLoadCapacity
+                    ? $"Needs {preview.UsedLoad} Load; next Attunement capacity is " +
+                      $"{preview.LoadCapacity}. " +
+                      (preview.SourcePhase switch
+                      {
+                          HearthResonatorPhase.Destroyed =>
+                              "The Hearth Resonator is destroyed; rebuilding it would restore 4.",
+                          HearthResonatorPhase.Rebuilding =>
+                              "The Hearth Resonator is rebuilding and contributes 0 until complete.",
+                          HearthResonatorPhase.UnderConstruction =>
+                              "The Hearth Resonator is unfinished and contributes 0 until complete.",
+                          _ => "An intact Hearth Resonator at Home would add 4.",
+                      })
+                    : $"That Expression needs {preview.UsedLoad} Load; next Attunement " +
+                      $"capacity is {preview.LoadCapacity}.",
+            _ => "That Expression cannot be Attuned.",
+        };
 
     internal static ChronicleState ApplyEngagement(
         ChronicleState state,

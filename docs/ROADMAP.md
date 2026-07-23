@@ -502,10 +502,11 @@ Decision record:
 
 ## Goal 7 — Home Has People
 
-**Status:** Goals 7A and 7B are complete and player-accepted as of 2026-07-22.
-Goal 7B passed its complete retained automated gate and both isolated player
-UAT journeys under its five approved bounded fixture decisions. Goal 7C and
-all later work remain unauthorized.
+**Status:** Goals 7A, 7B, and 7C are complete and player-accepted. Goal 7C
+passed its complete retained/new automated gate and player re-UAT on
+2026-07-23 under six frozen fixture decisions. Goal 7D contract definition is
+the next design step; Goal 7D production and all later work remain
+unauthorized.
 
 ### 7A — Someone Comes Home
 
@@ -542,15 +543,85 @@ deterministic replay/migration, packaged/manual parity, actual Godot input, and
 eight rendered HUD proofs are green. The player passed both UAT journeys on
 2026-07-22.
 
-### 7C — Absence Produces History
+### 7C — From Harness to Game
+
+**Status:** Complete and player-accepted on 2026-07-23. The complete
+retained/new automated gate passes, and player re-UAT accepted the second
+bounded correction's map-first play, legible tile inspection, semantic sound,
+invisible keyboard WASD, arrow-key selection, mouse inspection/routing, compact
+bottom actions, two-view Context/Chronicle rail, and semantic color roles. The
+first correction's bounded chronological copy, dialogue recession, identity
+hiding, and mouse/Look separation remain intact. It adds no mechanic or general
+UI/pathfinding framework. Goal 7D contract definition is now the next design
+step; its production remains unauthorized.
+
+The accepted simulation now needs a bounded experience goal before additional
+systems make its proof language harder to dislodge. The approved
+[Experience Pass 1 direction](EXPERIENCE-PASS-1-FROM-HARNESS-TO-GAME.md)
+supports Goal 7C's map-first Chronicle, deterministic Core, P-GEN isolation,
+and all accepted mechanics while establishing a less robotic player voice,
+contextual dialogue, progressive decision detail, physical action feedback,
+graphics/sound passes, personality, and goal-based UAT without fixture
+instructions. Its tightened
+direction assigns information to always-visible, contextual, and on-demand
+surfaces; makes the right rail follow observation, commitment, and consequence
+rather than stale fixture categories; requires bounded semantic sound with
+sound-off and reduced-motion parity; and selects three existing journeys:
+Primer through Mire Brute, the physical Lode/Resonator loop, and Tamar's
+welcome/Suggest/Command history.
+
+The companion
+[Power Progression Direction](POWER-PROGRESSION-DIRECTION.md) asks how one
+scorch becomes dragon-killing, army-leading, and city-changing power. It
+proposes body, language, and material/social leverage as distinct growth
+layers; concrete effect dimensions; ten candidate Verbs across offensive
+magic, utility, physical combat, minions/allies, and wildcards; and ten
+support-like Modifiers inspired by Path of Exile's behavior-changing build
+depth. Body capability does not settle a level or attribute model. A future
+Modifier must change a decision, expose a player-visible price, remain a real
+build choice, and prove cross-Verb breadth unless narrow compatibility is
+deliberate. Effect dimensions must change presentation as well as arithmetic,
+and extraordinary Expression examples remain contingent Target stories rather
+than prescribed recipes. The candidates are design probes, not catalogue or
+progression authorization.
+
+The player then authorized deep research and replacement of the generic RPG
+design skill with **Palimpsest's Creative Director**. The resulting
+[primary-source brief](PALIMPSEST-CREATIVE-DIRECTOR-RESEARCH.md) resolves the
+Qud map contradiction—the inspiration's macro world map is handmade/static—
+and gives each influence an explicit take/reject boundary. The installed skill
+reads Palimpsest canon and authority first, makes one recommendation, writes
+concrete player stories, traces system consequences, and ends in a bounded
+falsifiable proof. This project tooling does not authorize a gameplay system,
+Goal 7C implementation, Goal 7D, or any other production change.
+
+Goal 7C player re-UAT passed on 2026-07-23. The next design step is a bounded
+Goal 7D contract for one causally legible off-camera Pressure and its material
+and Chronicle consequences. Goal 7D production remains unauthorized until that
+contract is written and explicitly approved. Power progression remains product
+direction until a later contract selects one falsifiable growth proof; neither
+direction document itself authorizes implementation.
+
+The implementation preserves strict v9/WG6 and every accepted mechanic. It
+provides one bounded current-catalogue Codex/Loadout surface, with five fixture
+Words exercised directly; three contextual-rail roles; semantic motion/sound
+with accessible parity; exact P-GEN/Visual Grammar/Godot ownership; one
+five-intent, two-cadence Tamar voice kit; semantic rather than frozen-prose
+oracles; and three isolated UAT profiles. The root gate proves all retained
+Goal 6A–7B journeys, 17 native Goal 7C captures, packaged/manual Inspector
+parity, and exact four-file P-GEN isolation with zero build warnings or errors.
+Those six fixture decisions remain approved and frozen.
+
+### 7D — Absence Produces History
 
 Add one causally legible Pressure. Leave Home, allow one off-camera event to
 resolve, then return to a material change and a Chronicle Record that identifies
 its cause, participants, and outcome.
 
-**Goal 7 accepts when:** the player understands who acted, why they acted, what
-changed while the camera was elsewhere, and why Command never became perfect
-unit control.
+**Goal 7 accepts when:** the player can discover and express power through a
+coherent interface, recognizes Tamar as a particular autonomous person, and
+understands who acted, why they acted, what changed while the camera was
+elsewhere, and why Command never became perfect unit control.
 
 ## Slice 8 — The First Raid
 

@@ -96,7 +96,7 @@ profile that does not match its stable provenance.
 Goal 7A resolves only the one locally present, consequential Agent. A structural
 scale fixture proves hundreds of identities and saved Agent records without
 rendering them or pretending that distant lives already have full simulation.
-Goal 7C owns distant causal events. No per-world eager population, global
+Goal 7D owns distant causal events. No per-world eager population, global
 per-Heartbeat AI loop, or hidden settlement simulation is permitted here.
 
 ## Agent facts
@@ -458,7 +458,7 @@ Do not add:
   conversation UI, unrelated actor-art redesign, or general animation system;
 - inventory, loot, general personal-object ownership, furniture, or bed systems;
 - new Load, Attunement, Source, combat, Word, Target, or opening rules; or
-  Goal 7B, Goal 7C, Slice 8, or unrelated visual work.
+  Goal 7B, Goal 7C, Goal 7D, Slice 8, or unrelated visual work.
 
 The road-roll is one non-interactable durable proof of Tamar's relationship to
 Home. It grants no capacity and establishes no general object framework.
@@ -485,12 +485,12 @@ The player approved all five fixture decisions and authorized implementation on
 
 Implementation and both player UAT journeys are complete. Goal 7A is closed.
 Its acceptance does not authorize Areas, base building, Goal 7B, Goal 7C,
-Slice 8, or any excluded framework.
+Goal 7D, Slice 8, or any excluded framework.
 
 ## Recommended production-authorization prompt
 
 > Implement Goal 7A under `docs/GOAL-7A-SOMEONE-COMES-HOME.md` on
 > `codex/goal-7a-someone-comes-home`. Approve the five fixture decisions as
 > written, preserve the complete retained gate, and stop with both player UAT
-> journeys pending. Do not begin Areas, base building, Goal 7B, Goal 7C, Slice
-> 8, or any excluded framework.
+> journeys pending. Do not begin Areas, base building, Goal 7B, Goal 7C, Goal
+> 7D, Slice 8, or any excluded framework.

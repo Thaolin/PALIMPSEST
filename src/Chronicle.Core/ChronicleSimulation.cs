@@ -26,6 +26,60 @@ public sealed class ChronicleSimulation
     public TargetPreviewSnapshot PreviewTarget(WorldAddress target) =>
         CombatRules.PreviewTarget(State, target);
 
+    /// <summary>
+    /// Describes the existing atomic Attunement command without changing the
+    /// Chronicle. Presentation uses this single rule source for proposed
+    /// Loadouts and disabled reasons.
+    /// </summary>
+    public AttunementPreviewSnapshot PreviewAttunement(
+        WordId? verb,
+        IReadOnlyList<WordId>? modifiers = null)
+    {
+        modifiers ??= [];
+        if (!CombatRules.IsAvailable(State))
+        {
+            return Blocked(AttunementAvailabilityReason.WorldGrammarUnavailable);
+        }
+
+        if (CombatRules.IsImmediateDanger(State))
+        {
+            return Blocked(AttunementAvailabilityReason.ImmediateDanger);
+        }
+
+        if (HoldingFacts.IsCarrying(State))
+        {
+            return Blocked(AttunementAvailabilityReason.CarryingLode);
+        }
+
+        if (HoldingFacts.HasCommitment(State))
+        {
+            return Blocked(AttunementAvailabilityReason.PhysicalCommitment);
+        }
+
+        return CombatRules.PreviewExpression(State, verb, modifiers);
+
+        AttunementPreviewSnapshot Blocked(AttunementAvailabilityReason reason)
+        {
+            var expression = verb is { } proposedVerb
+                ? new LoadoutSlot(
+                    proposedVerb,
+                    modifiers.Count > 0 ? modifiers[0] : null,
+                    modifiers.Count > 1 ? modifiers[1] : null)
+                : default;
+            return new(
+                reason,
+                expression,
+                0,
+                HoldingFacts.NextAttunementCapacity(State),
+                verb is null ? 0 : 1 + modifiers.Count,
+                HoldingFacts.LinkCapacityFor(State),
+                WordEffect.None,
+                HoldingFacts.IsAvailable(State)
+                    ? State.PowerHome!.Resonator?.Phase
+                    : null);
+        }
+    }
+
     public PowerComesHomeContextSnapshot PowerComesHomeContext =>
         HoldingRules.Snapshot(State);
 
@@ -37,6 +91,17 @@ public sealed class ChronicleSimulation
 
     public StudySourceSnapshot? CurrentStudySource =>
         StudySourceGrammar.At(State, State.Address);
+
+    /// <summary>
+    /// Read-only occupancy fact for the current Chronicle. Presentation may
+    /// use it to preview a bounded visible-map route, while every actual step
+    /// still goes through <see cref="MoveIncarnation"/>.
+    /// </summary>
+    public bool IsMovementBlocked(WorldAddress address) =>
+        !string.Equals(address.Stratum, State.Address.Stratum, StringComparison.Ordinal) ||
+        CombatRules.IsOccupiedByLivingMireBrute(State, address) ||
+        AgentRules.IsOccupied(State, address) ||
+        HoldingFacts.BlocksMovement(State, address);
 
     public ConflictContextSnapshot? ConflictContext => State.FirstConflict is { } conflict
         ? new ConflictContextSnapshot(
@@ -321,51 +386,45 @@ public sealed class ChronicleSimulation
 
     private ChronicleCommandResult Attune(AttuneExpression command)
     {
-        if (!CombatRules.IsAvailable(State))
-        {
-            return ChronicleCommandResult.Rejected(
-                "Successor Expressions require a World Grammar v4 Chronicle.");
-        }
-
-        if (CombatRules.IsImmediateDanger(State))
-        {
-            return ChronicleCommandResult.Rejected(
-                "Attunement is available only while immediate danger is absent.");
-        }
-
-        if (HoldingFacts.IsCarrying(State))
-        {
-            return ChronicleCommandResult.Rejected(
-                "Set down the Resonant Lode before Attunement; carrying occupies focused Attunement.");
-        }
-
-        if (HoldingFacts.HasCommitment(State))
-        {
-            return ChronicleCommandResult.Rejected(
-                "Finish or cancel the physical commitment before Attunement.");
-        }
-
         var modifiers = command.Modifiers ?? [];
-        if (!CombatRules.TryValidateExpression(
-                State,
-                command.Verb,
-                modifiers,
-                out var slot,
-                out var message))
+        var preview = PreviewAttunement(command.Verb, modifiers);
+        if (!preview.Available)
         {
-            return ChronicleCommandResult.Rejected(message);
+            return ChronicleCommandResult.Rejected(AttunementRejection(command.Verb, preview));
         }
 
         State = State with
         {
-            Loadout = LoadoutState.Empty.WithSlot(0, slot),
+            Loadout = LoadoutState.Empty.WithSlot(0, preview.Expression),
             Attunement = new LoadAttunementState(
                 HoldingFacts.NextAttunementCapacity(State),
                 State.Tick),
         };
+        var message = CombatRules.AttunementMessage(State, command.Verb, preview);
         AddCombatResult(new CombatResultSnapshot(State.Tick, CombatResultKind.Command, message));
         return ChronicleCommandResult.Succeeded(message);
     }
+
+    private string AttunementRejection(
+        WordId verb,
+        AttunementPreviewSnapshot preview) =>
+        preview.Availability switch
+        {
+            AttunementAvailabilityReason.WorldGrammarUnavailable =>
+                "Successor Expressions require a World Grammar v4 Chronicle.",
+            AttunementAvailabilityReason.ImmediateDanger =>
+                "Attunement is available only while immediate danger is absent.",
+            AttunementAvailabilityReason.CarryingLode =>
+                "Set down the Resonant Lode before Attunement; carrying occupies focused Attunement.",
+            AttunementAvailabilityReason.PhysicalCommitment =>
+                "Finish or cancel the physical commitment before Attunement.",
+            AttunementAvailabilityReason.NoVerb =>
+                "Choose a Verb before Attunement.",
+            _ => CombatRules.AttunementMessage(
+                State,
+                verb,
+                preview),
+        };
 
     private ChronicleCommandResult ConfigurePlan(ConfigureEngagementPlan command)
     {

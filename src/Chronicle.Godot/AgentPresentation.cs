@@ -24,11 +24,11 @@ internal static class AgentPresentation
             AgentPresenceState.ApproachingHome => new[]
             {
                 $"CHECKLIST · {agent.DisplayName.ToUpperInvariant()} APPROACHES",
-                $"[ ] NEXT · steps toward Home at {agent.WaitingAddress.X},{agent.WaitingAddress.Y}",
+                "[ ] NEXT · another step toward the First Hearth",
                 $"[ ] WHEN · active Heartbeat H{agent.NextHeartbeat}",
                 agent.Blocker == AgentBlockerKind.None
                     ? "[ ] INTERRUPTS · pause or a blocked next cell"
-                    : $"[!] BLOCKED · {Blocker(agent.Blocker)} at {agent.NextAddress}",
+                    : $"[!] BLOCKED · {Blocker(agent.Blocker)} blocks the next step",
                 $"[ ] PREVENTS · nothing; {agent.DisplayName} chooses the route",
             },
             AgentPresenceState.WaitingAtHome when
@@ -53,7 +53,7 @@ internal static class AgentPresentation
                 $"CHECKLIST · {agent.DisplayName.ToUpperInvariant()} AT HOME",
                 "[x] REFUGE · satisfied",
                 $"[x] RELATIONSHIP · Guest since H{agent.HomeRelationship.EstablishedTick}",
-                $"[x] ROAD-ROLL · {agent.RoadRollAddress}",
+                "[x] ROAD-ROLL · placed beside Tamar at Home",
                 $"[x] COMMAND · none; {agent.DisplayName} keeps their own agency",
             },
             _ => ["CHECKLIST · AGENT STATE UNKNOWN"],
@@ -67,7 +67,7 @@ internal static class AgentPresentation
     internal static string Facts(AgentSnapshot agent) =>
         $"NEEDS · Refuge — {NeedStatus(agent.Need.Status)}\n" +
         "WHY HERE · Followed your Resonant Lode from the emptied Seam\n" +
-        $"ORIGIN · {agent.OriginAddress}";
+        "ORIGIN · the distant Singing Seam";
 
     internal static string Decision(AgentSnapshot agent, bool paused) => agent switch
     {
@@ -99,13 +99,13 @@ internal static class AgentPresentation
         { Presence: AgentPresenceState.ApproachingHome, Blocker: not AgentBlockerKind.None } =>
         [
             $"H{agent.NextHeartbeat} · BLOCKED by {Blocker(agent.Blocker)}",
-            $"NEXT CELL · {agent.NextAddress}",
+            "NEXT STEP · waits until the way is clear",
         ],
         { Presence: AgentPresenceState.ApproachingHome } =>
         [
             paused
                 ? $"H{agent.NextHeartbeat} · PAUSED; no step"
-                : $"H{agent.NextHeartbeat} · steps to {agent.NextAddress}",
+                : $"H{agent.NextHeartbeat} · takes another step toward Home",
         ],
         { HomeRelationship.Kind: AgentHomeRelationshipKind.WelcomeOffered } =>
         [
@@ -158,8 +158,8 @@ internal static class AgentPresentation
     internal static string Log(AgentEventSnapshot item, string displayName) => item.Kind switch
     {
         AgentEventKind.Promoted => $"H{item.Tick}: {displayName} follows the Resonant Lode toward Home.",
-        AgentEventKind.Moved => $"H{item.Tick}: {displayName} steps to {item.Address}.",
-        AgentEventKind.Blocked => $"H{item.Tick}: {displayName} is blocked by {Blocker(item.Blocker)} at {item.Address}.",
+        AgentEventKind.Moved => $"H{item.Tick}: {displayName} takes another step toward Home.",
+        AgentEventKind.Blocked => $"H{item.Tick}: {displayName} is blocked by {Blocker(item.Blocker)}.",
         AgentEventKind.Arrived => $"H{item.Tick}: {displayName} arrives at Home and waits.",
         AgentEventKind.WelcomeOffered => $"H{item.Tick}: Welcome offered; {displayName} answers next active Heartbeat.",
         AgentEventKind.WelcomeWithdrawn => $"H{item.Tick}: Welcome withdrawn before {displayName} answered.",

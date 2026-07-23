@@ -145,26 +145,36 @@ internal static class HoldingPresentation
             return $"RESONATOR · {SourcePhase(source.Phase).ToUpperInvariant()}";
         }
 
-        return $"RESONANT LODE · {power.Lode.Disposition.ToString().ToUpperInvariant()}";
+        return power.Lode.Disposition switch
+        {
+            ResonantLodeDisposition.Embedded => "RESONANT LODE · IN THE SINGING SEAM",
+            ResonantLodeDisposition.Loose => "RESONANT LODE · LOOSE",
+            ResonantLodeDisposition.Carried => "RESONANT LODE · IN YOUR HANDS",
+            ResonantLodeDisposition.Installed => "RESONANT LODE · INSTALLED AT HOME",
+            _ => "RESONANT LODE",
+        };
     }
 
     internal static string MaterialFacts(PowerComesHomeContextSnapshot power)
     {
         if (!power.BurnPrimer.IsRead)
         {
-            return $"Primer {power.BurnPrimer.Address} · unread\n" +
+            return "A marked primer waits near the First Hearth.\n" +
                    "Read once; Burn, Quickly, and Lasting persist in the Codex.";
         }
 
-        var currentAddress = power.Lode.Address is { } address
-            ? address.ToString()
-            : power.Lode.CarrierIncarnationId is { } carrier
-                ? $"carried by body {carrier}"
-                : "installed at Home";
+        var currentPlace = power.Lode.Disposition switch
+        {
+            ResonantLodeDisposition.Embedded => "still held by the Singing Seam",
+            ResonantLodeDisposition.Loose => "loose beside the emptied Seam",
+            ResonantLodeDisposition.Carried => "carried by you",
+            ResonantLodeDisposition.Installed => "installed at the First Hearth",
+            _ => "its place is unknown",
+        };
         var source = power.Resonator is null
             ? "No Load Source yet"
             : $"Source {SourcePhase(power.Resonator.Phase)}";
-        return $"Origin {power.Lode.OriginAddress} · now {currentAddress}\n" +
+        return $"From the Singing Seam · now {currentPlace}\n" +
                $"{source} · CURRENT {power.Attunement.CurrentUsedLoad} · " +
                $"NEXT {power.Attunement.NextAttunementCapacity}";
     }

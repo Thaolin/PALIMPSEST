@@ -6,66 +6,62 @@ using Chronicle.Core;
 internal static class InspectionPresentation
 {
     internal static string Heading(WorldCell cell) =>
-        $"INSPECT · {cell.Address.Stratum.ToUpperInvariant()} {cell.Address.X},{cell.Address.Y}";
+        cell.Subjects.FirstOrDefault() is { } subject
+            ? $"LOOK · {DisplayName(subject).ToUpperInvariant()}"
+            : $"LOOK · {Readable(cell.Ground.ToString()).ToUpperInvariant()}";
 
     internal static string Facts(WorldCell cell)
     {
-        var feature = cell.Feature is null ? "none" : cell.Feature.ToString()!.ToLowerInvariant();
+        var place = Readable(cell.Ground.ToString());
+        var feature = cell.Feature is null
+            ? string.Empty
+            : $" · {Readable(cell.Feature.ToString()!)}";
         if (cell.Subjects.Count == 0)
         {
-            return $"TERRAIN · {cell.Ground.ToString().ToUpperInvariant()} · {feature.ToUpperInvariant()}\n" +
-                   "SUBJECTS · NONE";
+            return $"{place}{feature}\nNothing else occupies this cell.";
         }
 
         var subject = cell.Subjects[0];
-        return $"TERRAIN · {cell.Ground.ToString().ToUpperInvariant()} · {feature.ToUpperInvariant()}\n" +
-               $"{subject.Kind.ToString().ToUpperInvariant()} · {DisplayName(subject)}\n" +
-               $"STATE · {subject.Condition.ToUpperInvariant()}{OwnerLabel(subject)}";
+        return $"{place}{feature}\n" +
+               $"{DisplayName(subject)} · {Readable(subject.Condition)}{OwnerLabel(subject)}";
     }
 
-    internal static string Decision(WorldCell cell, bool selected) =>
-        $"NEXT · {(selected ? "cell selected" : "Enter selects cell")}\n" +
-        "WHEN · now; no Heartbeat\n" +
-        "INTERRUPTS · Escape\n" +
-        "PREVENTS · WASD Incarnation movement";
+    internal static string Decision(WorldCell cell, bool selected) => selected
+        ? "This cell is pinned.\nMove to return to the world, or press I to look around."
+        : "Arrow keys move the look cursor.\nEnter pins this cell. I or Escape closes.";
 
-    internal static string Checklist(WorldCell cell, bool selected) => string.Join('\n', new[]
-    {
-        "CHECKLIST · VISIBLE CELL",
-        $"[x] ADDRESS · {cell.Address}",
-        $"[x] TERRAIN · {cell.Ground}{(cell.Feature is null ? string.Empty : $" + {cell.Feature}")}",
-        $"[{(selected ? "x" : " ")}] ENTER · select · {cell.Subjects.Count} subject(s)",
-        "[ ] WASD cursor · ESC exit · no time passes",
-    });
+    internal static string Checklist(WorldCell cell, bool selected) =>
+        selected
+            ? $"PINNED · {cell.Address.X}, {cell.Address.Y}\nMove or Escape to return."
+            : $"LOOKING · {cell.Address.X}, {cell.Address.Y}\nArrows move · Enter pin · Escape close";
 
     internal static IReadOnlyList<string> Forecast(WorldCell cell) =>
         cell.Subjects.Count == 0
-            ? ["READ ONLY · ordinary terrain; no contextual action"]
-            : cell.Subjects.Select(subject =>
-                    $"{DisplayName(subject).ToUpperInvariant()} · {subject.Condition} · ID {ShortIdentity(subject.Identity)}")
+            ? ["READ ONLY · no contextual action here"]
+            : cell.Subjects
                 .Take(3)
+                .Select(subject =>
+                    $"{DisplayName(subject).ToUpperInvariant()} · {Readable(subject.Condition).ToUpperInvariant()}")
                 .ToArray();
 
     private static string DisplayName(WorldSubject subject) =>
-        string.IsNullOrWhiteSpace(subject.DisplayName) ? subject.Archetype : subject.DisplayName;
+        string.IsNullOrWhiteSpace(subject.DisplayName) ? Readable(subject.Archetype) : subject.DisplayName;
 
     private static string OwnerLabel(WorldSubject subject)
     {
-        if (string.IsNullOrWhiteSpace(subject.OwnerIdentity))
+        if (!string.IsNullOrWhiteSpace(subject.OwnerIdentity))
         {
-            return subject.Progress is { } progress
-                ? $" · {progress.Current}/{progress.Maximum}"
-                : string.Empty;
+            return " · owned";
         }
 
-        var display = DisplayName(subject);
-        var owner = display.EndsWith("'s road-roll", StringComparison.OrdinalIgnoreCase)
-            ? display[..^"'s road-roll".Length]
-            : ShortIdentity(subject.OwnerIdentity);
-        return $" · OWNER {owner.ToUpperInvariant()}";
+        return subject.Progress is { } progress
+            ? $" · {progress.Current}/{progress.Maximum}"
+            : string.Empty;
     }
 
-    private static string ShortIdentity(string identity) => identity.Length <= 18
-        ? identity
-        : $"{identity[..14]}…";
+    private static string Readable(string value) =>
+        string.Concat(value.Select((character, index) =>
+            index > 0 && char.IsUpper(character) && char.IsLower(value[index - 1])
+                ? $" {character}"
+                : character.ToString())).ToLowerInvariant();
 }

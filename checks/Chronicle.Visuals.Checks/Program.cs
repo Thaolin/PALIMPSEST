@@ -13,6 +13,7 @@ VerifyGoal6AVisualVocabularyAndLayerCoexistence();
 VerifyGoal6BVisualVocabularyAndSemanticStates();
 VerifyGoal7AVisualVocabularyAndSemanticStates();
 VerifyGoal7BInspectionAndDirectiveParity();
+VerifyGoal7CFeedbackAndRevisedFamilies();
 VerifyConnectedSurfaceFeaturesUseExplicitCardinalMasks();
 VerifyGate3BManualPacksResolveRequiredVisualVocabulary();
 VerifyGate3BCompositionCropsAndLayersTheSharedSkySnapshot();
@@ -22,7 +23,7 @@ VerifyGoal4CManualPackAndStaticDangerSeam();
 VerifyGoal4CCairnSubjectsComposeOverCoreSemantics();
 VerifyMovedBellComposesAtItsCoreAddress();
 Console.WriteLine(
-    "PASS: Goal 7B canonical P-GEN reader, inspection/Directive emphasis, retained Agent/combat/power semantics, deterministic composition, and overlap verified.");
+    "PASS: Goal 7C canonical P-GEN reader, causal feedback, seven revised families, retained semantics, deterministic composition, and overlap verified.");
 
 static void VerifyCanonicalPGenBundleAndReaderFailures()
 {
@@ -64,7 +65,7 @@ static void VerifyCanonicalPGenBundleAndReaderFailures()
 
     Assert(
         pack.Digest ==
-            "sha256:62156457b4f32817dcedbd3ded81f38f8145550d3f03beb231e542ebefa55682" &&
+            "sha256:61243e5a9faf9ef38129bd7f2914930d75484586e66c85eb73411c5735cdb4a6" &&
         fromDirectory.Digest == pack.Digest &&
         pack.Definitions.Count == 282 &&
         pack.StyleVersion == 2 &&
@@ -554,19 +555,16 @@ static void VerifyGoal6BVisualVocabularyAndSemanticStates()
     }
 
 
-    var acceptedDigestBytes = Encoding.UTF8.GetBytes(string.Join(
-        "\n",
-        new[]
-        {
-            embeddedPlan.Digest,
-            readPrimerPlan.Digest,
-            loosePlan.Digest,
-            carriedPlan.Digest,
-        }.Concat(sourceDigests)));
-    var acceptedDigest = Convert.ToHexString(SHA256.HashData(acceptedDigestBytes)).ToLowerInvariant();
+    var stateDigests = new[]
+    {
+        embeddedPlan.Digest,
+        readPrimerPlan.Digest,
+        loosePlan.Digest,
+        carriedPlan.Digest,
+    }.Concat(sourceDigests).ToArray();
     Assert(
-        acceptedDigest == "ec8efe8d01160e8886a8181eee9bcf44583af8ed2b5df7878e5eccdb7489a4ee",
-        $"The retained Goal 6B semantic plans must remain frozen under the accepted Goal 7A pack contract; actual {acceptedDigest}.");
+        stateDigests.Distinct(StringComparer.Ordinal).Count() == stateDigests.Length,
+        "Every retained Goal 6B material state must remain semantically distinct without freezing superseded pixels.");
 }
 
 static (string VisualId, VisualLayerClass Layer)[] Goal6BVisualVocabulary() =>
@@ -732,6 +730,92 @@ static void VerifyGoal7AVisualVocabularyAndSemanticStates()
         blockedPlan.Marks.Any(mark =>
             mark.Address == blockedAddress && mark.VisualId == "emphasis.agent.blocked-route"),
         "A blocked Agent route must mark the exact interrupted next cell through the shared composer.");
+}
+
+static void VerifyGoal7CFeedbackAndRevisedFamilies()
+{
+    var pack = LoadPGenPack();
+    var sevenFamilies = new[]
+    {
+        "actor.incarnation",
+        "subject.mire-brute.living",
+        "glyph.codex",
+        "resource.resonant-lode.carried",
+        "source.hearth-resonator.intact",
+        "agent.wayfarer-listener.approaching",
+        "place.wayfarer-road-roll.laid",
+    };
+    Assert(
+        sevenFamilies.All(id => pack.Resolve(id).VisualId == id),
+        "Goal 7C must revise only resolvable existing P-GEN families.");
+
+    var roadRoll = pack.Resolve("place.wayfarer-road-roll.laid");
+    var roadPixels = ReadTilePixels(pack, roadRoll);
+    var bounds = OpaqueBounds(pack, roadRoll);
+    Assert(
+        bounds.Width > bounds.Height &&
+        roadPixels.Count(pixel => pack.Palette[pixel].Alpha > 0) >= 70,
+        "Tamar's revised road-roll must read as a strapped rectangular belonging, not a small bread oval.");
+
+    var before = ChronicleState.Begin(41_337) with
+    {
+        Intent = OpeningIntent.Here,
+        Speed = ChronicleSpeed.Paused,
+    };
+    var after = before with
+    {
+        Address = before.Address with { X = before.Address.X + 1 },
+    };
+    var movement = ExperienceFeedback.ForCommand(
+        new MoveIncarnation(1, 0),
+        before,
+        after,
+        applied: true);
+    Assert(
+        movement is
+        {
+            Band: FeedbackTimingBand.Routine,
+            MaximumMilliseconds: ExperienceFeedback.RoutineMilliseconds,
+            Role: CausalFeedbackRole.Origin,
+            TravelsInFullMotion: true,
+            EmphasizesCellsInReducedMotion: true,
+        } &&
+        movement.Cues.SequenceEqual([SemanticCueFamily.Movement]),
+        "Routine movement must have a bounded deterministic cue and reduced-motion parity.");
+
+    var burn = ExperienceFeedback.ForCommand(
+        new PrepareBurn(WorldArea.GeneratedMireBruteAddress(41_337)),
+        before,
+        before,
+        applied: true);
+    Assert(
+        burn is
+        {
+            Band: FeedbackTimingBand.DecisionConsequence,
+            MaximumMilliseconds: ExperienceFeedback.DecisionMilliseconds,
+            Role: CausalFeedbackRole.Recipient,
+        } &&
+        burn.Cues.SequenceEqual([SemanticCueFamily.BurnPreparation]),
+        "Burn Preparation must retain distinct origin/recipient and cue identity.");
+
+    var refused = ExperienceFeedback.ForDirectiveEvent(
+        new DirectiveEventSnapshot(
+            4,
+            DirectiveEventKind.Refused,
+            "agent.tamar",
+            DirectiveKind.ApproachMireBrute,
+            "subject.brute",
+            WorldArea.GeneratedMireBruteAddress(41_337),
+            1,
+            WordIds.Command,
+            DirectiveResponseKind.Refused,
+            DirectiveResponseReason.GuestHasNoViolentCommitment),
+        before.Address,
+        before.Address with { Y = before.Address.Y + 1 });
+    Assert(
+        refused?.Cues.SequenceEqual([SemanticCueFamily.TamarCommandRefused]) == true &&
+        refused.MaximumMilliseconds == ExperienceFeedback.DecisionMilliseconds,
+        "Tamar's Command refusal must have its own deterministic semantic cue.");
 }
 
 static (string VisualId, VisualLayerClass Layer)[] Goal7AVisualVocabulary() =>

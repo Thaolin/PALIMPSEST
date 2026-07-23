@@ -636,6 +636,7 @@ public static class ManualVisualPack
         canvas.Triangle(center - s / 4, s - 3, center, 7, center + s / 4, s - 3, ActorDark);
         canvas.Triangle(center - s / 5, s - 4, center, 8, center + s / 5, s - 4, Actor);
         canvas.Vertical(center, 8, s - 5, accent);
+        canvas.Line(center - 3, 8, center + 3, s - 6, accent);
 
         switch (state)
         {
@@ -661,9 +662,16 @@ public static class ManualVisualPack
     private static void PaintWayfarerRoadRoll(PixelCanvas canvas)
     {
         var center = canvas.Size / 2;
-        canvas.Diamond(center, center + 3, Math.Max(3, canvas.Size / 3), ActorDark);
-        canvas.Diamond(center, center + 3, Math.Max(2, canvas.Size / 3 - 2), Gold);
-        canvas.Horizontal(center - 4, center + 4, center + 3, ActorLight);
+        var width = canvas.Size == 20 ? 14 : 10;
+        var height = canvas.Size == 20 ? 8 : 6;
+        var left = center - width / 2;
+        var top = center - height / 2 + 2;
+        canvas.Rect(left, top, width, height, ActorDark);
+        canvas.Rect(left + 1, top + 1, width - 2, height - 2, Gold);
+        canvas.Vertical(center - 3, top, top + height - 1, ActorLight);
+        canvas.Vertical(center + 3, top, top + height - 1, ActorLight);
+        canvas.Line(left + 2, top + height, left + 1, top + height + 2, ActorDark);
+        canvas.Line(left + width - 3, top + height, left + width - 2, top + height + 2, ActorDark);
     }
 
     private static void PaintSeam(PixelCanvas canvas, bool filled)
@@ -685,6 +693,8 @@ public static class ManualVisualPack
         canvas.Diamond(center, center, Math.Max(3, canvas.Size / 4), GoldDark);
         canvas.Diamond(center, center, Math.Max(2, canvas.Size / 6), Gold);
         canvas.Vertical(center, center - 2, center + 2, readColor);
+        canvas.Line(center - 3, center, center, center - 4, GoldBright);
+        canvas.Line(center + 3, center, center, center - 4, GoldBright);
     }
 
     private static void PaintPowerSource(PixelCanvas canvas, byte stateColor, int bars)
@@ -693,6 +703,8 @@ public static class ManualVisualPack
         var inset = canvas.Size == 20 ? 4 : 3;
         canvas.Rect(inset, inset, canvas.Size - inset * 2, canvas.Size - inset * 2, StoneDark);
         canvas.Rect(inset + 2, inset + 2, canvas.Size - (inset + 2) * 2, canvas.Size - (inset + 2) * 2, stateColor);
+        canvas.Diamond(center, center, Math.Max(2, canvas.Size / 6), StoneDark);
+        canvas.Diamond(center, center, Math.Max(1, canvas.Size / 8), Gold);
         for (var index = 0; index < bars; index++)
         {
             canvas.Horizontal(inset + 2, canvas.Size - inset - 3, center - 3 + index * 3, GoldBright);
@@ -1141,6 +1153,8 @@ public static class ManualVisualPack
         canvas.Triangle(center - s / 3, s - 2, center, s / 3, center + s / 3, s - 2, ActorLight);
         canvas.Triangle(center - s / 4, s - 3, center, s / 2 - 1, center + s / 4, s - 3, Actor);
         canvas.Vertical(center, s / 2, s - 4, ActorLight);
+        canvas.Line(center - 3, s / 2, center + 3, s - 5, ActorDark);
+        canvas.Pixel(center, s / 2 + 2, ActorLight);
         canvas.Pixel(center - 1, 4, ActorDark);
         canvas.Pixel(center + 1, 4, ActorDark);
     }
@@ -1218,6 +1232,8 @@ public static class ManualVisualPack
     {
         var s = canvas.Size;
         var center = s / 2;
+        canvas.Line(center - 2, 3, center - 6, 1, ActorDark);
+        canvas.Line(center + 2, 3, center + 6, 1, ActorDark);
         canvas.Diamond(center, center - 4, Math.Max(3, s / 4), ActorDark);
         canvas.Diamond(center, center - 4, Math.Max(2, s / 4 - 1), Actor);
         canvas.Diamond(center, center + 4, Math.Max(4, s / 3), ActorDark);
@@ -1380,6 +1396,8 @@ public static class ManualVisualPack
         canvas.Vertical(s / 2 - 1, 3, s - 4, UiDark);
         canvas.Horizontal(4, s / 2 - 3, 6, UiDark);
         canvas.Horizontal(s / 2 + 2, s - 4, 6, UiDark);
+        canvas.Triangle(s / 2 - 2, s - 4, s / 2, s - 9, s / 2 + 2, s - 4, Gold);
+        canvas.Pixel(s / 2, s - 5, GoldBright);
     }
 
     private static void PaintLoadout(PixelCanvas canvas)
